@@ -4,7 +4,9 @@ use criterion::{
     criterion_group, criterion_main, measurement::Measurement, BenchmarkGroup, Criterion,
 };
 
-use crypto_primes::hazmat::{lucas, lucas2, lucas_new, random_odd_uint, MillerRabin, Sieve};
+use crypto_primes::hazmat::{
+    is_strong_lucas_prime, random_odd_uint, BruteForceBase, MillerRabin, SelfridgeBase, Sieve,
+};
 
 fn bench_sieve<'a, M: Measurement>(group: &mut BenchmarkGroup<'a, M>) {
     let start = random_odd_uint::<16, _>(&mut OsRng, 1024);
@@ -39,10 +41,7 @@ fn bench_lucas<'a, M: Measurement>(group: &mut BenchmarkGroup<'a, M>) {
     let mut sieve = Sieve::new(&start, 1024);
     group.bench_function("(U1024) Sieve + Lucas test (Selfridge base)", |b| {
         b.iter(|| {
-            lucas_new::is_strong_lucas_prime::<lucas_new::SelfridgeBase, 16>(
-                &sieve.next().unwrap(),
-                true,
-            );
+            is_strong_lucas_prime::<SelfridgeBase, 16>(&sieve.next().unwrap(), true);
         })
     });
 
@@ -50,10 +49,7 @@ fn bench_lucas<'a, M: Measurement>(group: &mut BenchmarkGroup<'a, M>) {
         "(U1024) Sieve + Lucas test (brute force base, almost extra strong)",
         |b| {
             b.iter(|| {
-                lucas_new::is_strong_lucas_prime::<lucas_new::BruteForceBase, 16>(
-                    &sieve.next().unwrap(),
-                    false,
-                );
+                is_strong_lucas_prime::<BruteForceBase, 16>(&sieve.next().unwrap(), false);
             })
         },
     );
@@ -62,10 +58,7 @@ fn bench_lucas<'a, M: Measurement>(group: &mut BenchmarkGroup<'a, M>) {
         "(U1024) Sieve + Lucas test (brute force base, extra strong)",
         |b| {
             b.iter(|| {
-                lucas_new::is_strong_lucas_prime::<lucas_new::BruteForceBase, 16>(
-                    &sieve.next().unwrap(),
-                    true,
-                );
+                is_strong_lucas_prime::<BruteForceBase, 16>(&sieve.next().unwrap(), true);
             })
         },
     );
