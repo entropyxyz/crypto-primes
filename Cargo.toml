@@ -1,0 +1,27 @@
+[package]
+name = "crypto-primes"
+version = "0.1.0"
+edition = "2021"
+license = "AGPL-3.0-only"
+description = "Random prime number generation and primality checking library"
+repository = "https://github.com/entropyxyz/crypto-primes"
+readme = "README.md"
+categories = ["cryptography", "no-std"]
+
+[dependencies]
+crypto-bigint = { path = "/Users/bogdan/wb/github/crypto-bigint", features = ["rand"] }
+rand_core = { version = "0.6", features = ["getrandom"] }
+lazy_static = "1.4"
+
+[dev-dependencies]
+rand_chacha = "0.3"
+criterion = { version = "0.4", features = ["html_reports"] }
+rand = "0.8"
+num-modular = { version = "0.5", features = ["num-bigint"] }
+num-bigint = "0.4"
+proptest = "1"
+number-theory = "0.0.17"
+
+[[bench]]
+name = "bench"
+harness = false
