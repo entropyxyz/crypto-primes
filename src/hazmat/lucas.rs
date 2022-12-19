@@ -34,14 +34,29 @@ const MAX_ATTEMPTS: u32 = 10000;
 // can be found in [^1], section 7; for the brute force method it seems to be about the same).
 const ATTEMPTS_BEFORE_SQRT: u32 = 30;
 
+/// A method for selecting the base `(P, Q)` for the Lucas primality test.
 pub trait LucasBase {
+    /// Given an odd integer, returns `Ok((P, Q))` on success,
+    /// or `Err(is_prime)` if the primality for the given integer was discovered
+    /// during the search for the base.
     fn generate<const L: usize>(n: &Uint<L>) -> Result<(u32, i32), bool>;
 }
 
+/// "Method A" for selecting the base given in Baillie & Wagstaff[^Baillie1980],
+/// attributed to Selfridge.
+///
+/// [^Baillie1980]:
+///   R. Baillie, S. S. Wagstaff, "Lucas pseudoprimes",
+///   Math. Comp. 35 1391-1417 (1980),
+///   DOI: [10.2307/2006406](https://dx.doi.org/10.2307/2006406),
+///   <http://mpqs.free.fr/LucasPseudoprimes.pdf>
 pub struct SelfridgeBase;
 
 impl LucasBase for SelfridgeBase {
     fn generate<const L: usize>(n: &Uint<L>) -> Result<(u32, i32), bool> {
+        // Try D = 1 - 4Q = 5, -7, 9, -11, 13, ... until Jacobi(D, n) = -1.
+        // Return P = 1, Q = (1 - D) / 4).
+
         let mut d = 5_i32;
         let n_is_small = n.bits_vartime() < (Limb::BIT_SIZE - 1);
         let small_n = n.as_words()[0] as u32;
@@ -68,6 +83,7 @@ impl LucasBase for SelfridgeBase {
                 // If `d == (+,-)n`, (e.g., `n` = 5 or 11) try the next `d` instead of quitting;
                 // this small modification of Selfridge's method A
                 // enables 5 and 11 to be classified as Lucas probable primes.
+                // Otherwise GCD(D, n) > 1, and therefore n is not prime.
                 if !(n_is_small && small_n == d.abs_diff(0)) {
                     return Err(false);
                 }
@@ -85,15 +101,17 @@ impl LucasBase for SelfridgeBase {
     }
 }
 
+/// "Method C" for selecting the base given by Baillie[^Baillie].
+///
+/// [^Baillie]:
+///   R. Baillie, Mathematica code for extra strong Lucas pseudoprimes,
+///   <https://oeis.org/A217719/a217719.txt>
 pub struct BruteForceBase;
 
 impl LucasBase for BruteForceBase {
     fn generate<const L: usize>(n: &Uint<L>) -> Result<(u32, i32), bool> {
-        // Baillie-OEIS "method C" for choosing D, P, Q (see [^2]):
-        // Try increasing P ≥ 3 such that D = P² - 4 (so Q = 1) until Jacobi(D, n) = -1.
-        // The search is expected to succeed for non-square n after just a few trials.
-        // After more than expected failures, check whether n is square
-        // (which would cause Jacobi(D, n) = 1 for all D not dividing n).
+        // Try P = 3, 4, 5, ... until (D/n) = -1, where D = P^2 - 4Q.
+        // Return the found P, and Q = 1.
 
         let mut p = 3_u32;
         let mut attempts = 0;
@@ -117,11 +135,11 @@ impl LucasBase for BruteForceBase {
                 break;
             }
             if j == JacobiSymbol::Zero {
-                // D = p²-4 = (p-2)(p+2).
+                // D = P^2 - 4 = (P - 2)(P + 2).
                 // If (D/n) == 0 then D shares a prime factor with n.
-                // Since the loop proceeds in increasing p and starts with p-2==1,
-                // the shared prime factor must be p+2.
-                // If p+2 == n, then n is prime; otherwise p+2 is a proper factor of n.
+                // Since the loop proceeds in increasing P and starts with P - 2 == 1,
+                // the shared prime factor must be P + 2.
+                // If P + 2 == n, then n is prime; otherwise P + 2 is a proper factor of n.
                 return Err(n == &Uint::<L>::from(p + 2));
             }
 
@@ -133,91 +151,100 @@ impl LucasBase for BruteForceBase {
     }
 }
 
-/// Performs the extra strong Lucas primality test, as defined by Grantham[^4].
+/// Performs the strong Lucas primality test by Baillie & Wagstaff[^Baillie1980],
+/// with the "extra strong" check for available bases
+/// (defined by Mo[^Mo1993], also described by Grantham[^Grantham2001]).
 ///
-/// NOTE: despite the name, this is **not** a superset of "strong Lucas test"
-/// defined by Baillie and Wagstaff[^1]; although it appears[^5] that it has a similar ratio
-/// of pseudoprimes, and, like for the strong test, they have not been demonstrated to intersect
-/// with Miller-Rabin pseudoprimes.
+/// In more detail, there are three types of checks that can be done,
+/// given the Lucas sequence built from some base `(P, Q)`
+/// (determined by the choice of [`LucasBase`]) up to the elements `V(d)`, `U(d)`
+/// where `d * 2^s == n - (D/n)`, `d` odd, and `D = P^2 - 4Q`:
 ///
-/// [^1]: R. Baillie, S. S. Wagstaff, "Lucas pseudoprimes",
+/// 1. Check that that any of `V(d*2^r) == 0` for `0 <= r < s`.
+/// 2. Check that `U(d) == 0`.
+/// 3. Check that `V(d) == ±2` (only valid when `Q == 1`, and not performed otherwise).
+///
+/// If 1 or 2 are true, `n` is a "strong Lucas probable prime"[^Baillie1980].
+/// If the base is [`SelfridgeBase`], known false positives are listed in OEIS:A217255[^A217255].
+///
+/// If 1, or 2 and 3 together are true (and the base was chosen such that `Q == 1`),
+/// `n` is an "extra strong Lucas probable prime"[^Mo1993].
+/// If the base is [`BruteForceBase`], known false positives are listed in OEIS:A217719[^A217719].
+///
+/// If 1 or 3 are true (and the base was chosen such that `Q == 1`),
+/// `n` is an "almost extra strong Lucas probable prime".
+/// If the base is [`BruteForceBase`], known false positives listed by Jacobsen[^Jacobsen].
+///
+/// One can disable the check 2 by passing `check_u = false`.
+/// This option is mainly intended for testing with known false positives;
+/// make sure you know the risks if you do it.
+///
+/// [^Baillie1980]: R. Baillie, S. S. Wagstaff, "Lucas pseudoprimes",
 ///       Math. Comp. 35 1391-1417 (1980),
 ///       DOI: [10.2307/2006406](https://dx.doi.org/10.2307/2006406),
 ///       <http://mpqs.free.fr/LucasPseudoprimes.pdf>
 ///
-/// [^2]: R. Baillie, Mathematica code for extra strong Lucas pseudoprimes,
-///       <https://oeis.org/A217719/a217719.txt>
+/// [^A217255]: <https://oeis.org/A217255>
 ///
-/// [^3]: R. Crandall, C. Pomerance, "Prime numbers: a computational perspective",
+/// [^A217719]: <https://oeis.org/A217719>
+///
+/// [^Crandall2005]: R. Crandall, C. Pomerance, "Prime numbers: a computational perspective",
 ///       2nd ed., Springer (2005) (ISBN: 0-387-25282-7, 978-0387-25282-7)
 ///
-/// [^4]: J. Grantham, "Frobenius pseudoprimes",
+/// [^Grantham2001]: J. Grantham, "Frobenius pseudoprimes",
 ///       Math. Comp. 70 873-891 (2001),
 ///       DOI: [10.1090/S0025-5718-00-01197-2](https://dx.doi.org/10.1090/S0025-5718-00-01197-2)
 ///
-/// [^5]: D. Jacobsen, "Pseudoprime Statistics, Tables, and Data",
+/// [^Jacobsen]: D. Jacobsen, "Pseudoprime Statistics, Tables, and Data",
 ///       <http://ntheory.org/pseudoprimes.html>
 ///
-/// [^6]: R. Baillie, Mathematica program to generate terms,
-///       <https://oeis.org/A217120/a217120_1.txt>
-///
-/// [^7]: Zhaiyu Mo, "Diophantine equations, lucas sequences and pseudoprimes",
+/// [^Mo1993]: Zhaiyu Mo, "Diophantine equations, Lucas sequences and pseudoprimes",
 ///       graduate thesis, University of Calgary, Calgary, AB (1993)
 ///       DOI: [10.11575/PRISM/10820](https://dx.doi.org/10.11575/PRISM/10820)
-pub fn is_strong_lucas_prime<B: LucasBase, const L: usize>(
-    n: &Uint<L>,
-    full_uk_check: bool,
-) -> bool {
+pub fn is_strong_lucas_prime<B: LucasBase, const L: usize>(n: &Uint<L>, check_u: bool) -> bool {
+    if n.is_even().into() {
+        return false;
+    }
+
+    // Find the base for the Lucas sequence.
     let (p, q) = match B::generate(n) {
         Ok((p, q)) => (p, q),
         Err(is_prime) => return is_prime,
     };
 
+    // If either is true, it allows us to optimize certain parts of the calculations.
     let p_is_one = p == 1;
     let q_is_one = q == 1;
 
-    // The definition of "extra strong Lucas pseudoprime" in [^7], Def. 7.4
-    // or [^4], after Thm 2.3 on p. 876 ([^4] only defines it for `Q == 1`)
-    // (D, P, Q above have become Δ, b, 1):
-    //
-    // Let U_n = U_n(b, 1), V_n = V_n(b, 1), and Δ = b²-4.
-    // An extra strong Lucas pseudoprime to base b is a composite n = 2^r s + Jacobi(Δ, n),
-    // where s is odd and gcd(n, 2*Δ) = 1, such that either (i) U_s ≡ 0 mod n and V_s ≡ ±2 mod n,
-    // or (ii) V_{2^t s} ≡ 0 mod n for some 0 ≤ t < r-1.
-    //
-    // We know gcd(n, Δ) = 1 or else we'd have found Jacobi(d, n) == 0 above.
-    // We know gcd(n, 2) = 1 because n is odd.
-    //
-    // Arrange s = (n - Jacobi(Δ, n)) / 2^r = (n+1) / 2^r.
-    let mut s = n.wrapping_add(&Uint::<L>::ONE);
-    let r = trailing_zeros(&s);
-    s >>= r;
+    // The definitions can be found in:
+    // - "strong pseudoprime": [^Baillie1980], Section 3.
+    // - "extra strong pseudoprime" (esprp): [^Mo1993], Def. 7.4,
+    //   and [^Grantham2001], definition after Thm 2.3.
+    // If `Q == 1`, every n satisfying "extra strong" conditions
+    // also satisfies the "strong" ones for the same `P`.
 
-    // Compute Lucas sequence V_s(1, b), where:
-    //
-    //  V(0) = 2
-    //  V(1) = P
-    //  V(k) = P V(k-1) - Q V(k-2).
-    //
-    // (Remember that due to method C above, P = 1, Q = b.)
-    //
-    // In general V(k) = α^k + β^k, where α and β are roots of x² - Px + Q.
-    // [^3], eq. (3.14) observe that for 0 ≤ j ≤ k,
-    //
-    //  V(j+k) = V(j)V(k) - Q^j * V(k-j).
-    //
-    // So in particular, to quickly double the subscript:
-    //
-    //  V(2k) = V(k)² - 2 * Q^k
-    //  V(2k+1) = V(k) V(k+1) - Q^k
-    //
-    // We can therefore start with k=0 and build up to k=s in log₂(s) steps.
+    // Both of the definitions require gcd(n, 2QD) == 1.
+    // We know gcd(n, D) = 1 by construction of the base (D is chosen such that (D/n) != 0).
+    // We know gcd(n, 2) = 1 because n is odd.
+    // TODO: make sure that the logic here is correct:
+    // If the checks below succeed, gcd(n, Q) == 1
+    // (proved in [^Baillie1980], right after the definition of "strong pseudoprime")
+
+    // Find d and s, such that d is odd and d * 2^s = (n - (D/n)).
+    let mut d = n.wrapping_add(&Uint::<L>::ONE);
+    let s = trailing_zeros(&d);
+    d >>= s;
+
+    // Some constants in Montgomery form
+
     let params = DynResidueParams::<L>::new(*n);
 
     let zero_m = DynResidue::<L>::zero(params);
     let one_m = DynResidue::<L>::one(params);
-    let two_m = DynResidue::<L>::new(Uint::<L>::from(2u32), params);
+    let two_m = one_m.add(&one_m);
     let minus_two_m = zero_m.sub(&two_m);
+
+    // Convert Q to Montgomery form
 
     let q_m = if q_is_one {
         one_m
@@ -230,41 +257,58 @@ pub fn is_strong_lucas_prime<B: LucasBase, const L: usize>(
         }
     };
 
+    // Convert P to Montgomery form
+
     let p_m = if p_is_one {
         one_m
     } else {
         DynResidue::<L>::new(Uint::<L>::from(p), params)
     };
 
-    let mut vk_m = two_m;
-    let mut vk1_m = p_m;
-    let mut qk = one_m;
-    let mut qk_times_p = if p_is_one { one_m } else { p_m };
+    // Compute d-th element of Lucas sequence V_d(P, Q), where:
+    //
+    //  V_0 = 2
+    //  V_1 = P
+    //  V_k = P V_{k-1} - Q V_{k-2}.
+    //
+    // In general V(k) = α^k + β^k, where α and β are roots of x^2 - Px + Q.
+    // [^Crandall2005], eq. (3.14) observe that for 0 <= j <= k,
+    //
+    //  V_{j+k} = V_j V_k - Q^j * V_{k-j}.
+    //
+    // So in particular, to quickly double the subscript:
+    //
+    //  V_{2k} = V_k^2 - 2 * Q^k
+    //  V_{2k+1} = V_k V_{k+1} - Q^k
+    //
+    // We can therefore start with k=0 and build up to k=d in log2(d) steps.
 
-    for i in (0..s.bits_vartime()).rev() {
-        if s.bit_vartime(i) == 1 {
+    let mut vk_m = two_m; // keeps V_k
+    let mut vk1_m = p_m; // keeps V_{k+1}
+    let mut qk = one_m; // keeps Q^k
+    let mut qk_times_p = if p_is_one { one_m } else { p_m }; // keeps P Q^{k}
+
+    for i in (0..d.bits_vartime()).rev() {
+        if d.bit_vartime(i) == 1 {
             // k' = 2k+1
 
-            // V(k') = V(2k+1) = V(k) V(k+1) - Q^k * P
+            // V_k' = V_{2k+1} = V_k V_{k+1} - P Q^k
             vk_m = vk_m.mul(&vk1_m).sub(&qk_times_p);
 
-            // V(k'+1) = V(2k+2) = V(k+1)² - 2 * Q^(k+1)
-            let qk1 = qk.mul(&q_m);
-
-            let two_qk1 = if q_is_one { two_m } else { qk1.add(&qk1) };
-
+            // V_{k'+1} = V_{2k+2} = V_{k+1}^2 - 2 Q^{k+1}
+            let qk1 = qk.mul(&q_m); // Q^{k+1}
+            let two_qk1 = if q_is_one { two_m } else { qk1.add(&qk1) }; // 2 Q^{k+1}
             vk1_m = vk1_m.square().sub(&two_qk1);
             qk = qk.mul(&qk1);
         } else {
             // k' = 2k
 
-            // V(k'+1) = V(2k+1) = V(k) V(k+1) - Q^k * P
+            // V_{k'+1} = V_{2k+1} = V_k V_{k+1} - P Q^k
             vk1_m = vk_m.mul(&vk1_m).sub(&qk_times_p);
 
-            // V(k') = V(2k) = V(k)² - 2 * Q^k
-            let two_qk1 = if q_is_one { two_m } else { qk.add(&qk) };
-
-            vk_m = vk_m.square().sub(&two_qk1);
+            // V_k' = V_{2k} = V_k^2 - 2 Q^k
+            let two_qk = if q_is_one { two_m } else { qk.add(&qk) }; // 2 Q^k
+            vk_m = vk_m.square().sub(&two_qk);
             qk = qk.square();
         }
 
@@ -275,9 +319,14 @@ pub fn is_strong_lucas_prime<B: LucasBase, const L: usize>(
         }
     }
 
-    // Strong Lucas pseudorpime involves checking for `U(s) ≡ 0 mod n`.
-    // Extra strong check (from [^7]) adds to that checking for `V(s) ≡ ±2 mod n`.
-    // Since the latter does not require additional calculations, we check it first.
+    // Now k=d, so vk = V_d, vk_1 = V_{d+1}.
+
+    // Extra strong check (from [^Mo1993]): `V_d == ±2 mod n`.
+    // Do it first since it is cheap.
+    //
+    // Note that it only applies if Q = 1, since it is a consequence
+    // of a property of Lucas series: V_k^2 - 4 Q^k = D U_k^2 mod n.
+    // If Q = 1 we can easily decompose the left side of the equation leading to the check above.
     let vk_equals_two = if q_is_one {
         vk_m == two_m || vk_m == minus_two_m
     } else {
@@ -285,11 +334,14 @@ pub fn is_strong_lucas_prime<B: LucasBase, const L: usize>(
     };
 
     if vk_equals_two {
-        // Check U(s) ≡ 0.
-        // As suggested by [^5], apply eq. 3.13 from [^3]:
+        // Strong check:`U_d == 0 mod n`.
+        // As suggested by [^Jacobsen], apply Eq. (3.13) from [^Crandall2005]:
         //
-        //  U(k) = D⁻¹ (2 V(k+1) - P V(k))
-        if full_uk_check {
+        //  U_k = D^{-1} (2 V_{k+1} - P V_k)
+        //
+        // Some implementations just test for 2 V_{k+1} == P V_{k},
+        // but we don't have any reference pseudoprime lists for this, so we are not doing it.
+        if check_u {
             let d = (p * p) as i32 - 4 * q;
             let abs_d_m = DynResidue::<L>::new(Uint::<L>::from(d.abs_diff(0)), params);
             let d_m = if d < 0 {
@@ -306,20 +358,20 @@ pub fn is_strong_lucas_prime<B: LucasBase, const L: usize>(
                 return true;
             }
         } else {
-            // TODO: could compare 2 V(k+1) == P V(k)
+            // This is "almost extra strong check": we only checked for `V_d ` earlier.
             return true;
         }
     }
 
-    // Now k=s, so vk = V(s).
+    // Check if V_{2^d t} == 0 mod n for some 0 <= t < s.
+
     if vk_m == zero_m {
         return true;
     }
 
-    // Check V(2^t s) ≡ 0 mod n for some 1 ≤ t ≤ r-1 (we checked that for `t == 0` just above).
-    for _ in 1..r {
-        // Optimization: V(k) = ±2 is a fixed point for V(k') = V(k)² - 2,
-        // so if V(k) = 2, we can stop: we will never find a future V(k) == 0.
+    for _ in 1..s {
+        // Optimization: V_k = ±2 is a fixed point for V_k' = V_k^2 - 2 Q^k with Q = 1,
+        // so if V_k = ±2, we can stop: we will never find a future V_k == 0.
         if q_is_one && (vk_m == two_m || vk_m == minus_two_m) {
             return false;
         }
@@ -327,7 +379,10 @@ pub fn is_strong_lucas_prime<B: LucasBase, const L: usize>(
         // k' = 2k
         // V(k') = V(2k) = V(k)² - 2 * Q^k
         vk_m = vk_m.mul(&vk_m).sub(&qk).sub(&qk);
-        qk = qk.square();
+
+        if !q_is_one {
+            qk = qk.square();
+        }
 
         if vk_m == zero_m {
             return true;
@@ -368,9 +423,6 @@ mod tests {
 
     fn test_sequence_selfridge(numbers: &[u32], expected_result: bool) {
         for num in numbers.iter() {
-            // Many of the lists have intersections with strong Lucas pseudoprimes,
-            // and our test is expected to report them as primes.
-            // Skipping those, since we will test them separately.
             let false_positive = is_slpsp(*num);
             let actual_expected_result = if false_positive {
                 true
@@ -390,12 +442,9 @@ mod tests {
         }
     }
 
-    fn test_sequence_brute_force(numbers: &[u32], full_uk_check: bool, expected_result: bool) {
+    fn test_sequence_brute_force(numbers: &[u32], check_u: bool, expected_result: bool) {
         for num in numbers.iter() {
-            // Many of the lists have intersections with extra strong Lucas pseudoprimes,
-            // and our test is expected to report them as primes.
-            // Skipping those, since we will test them separately.
-            let false_positive = if full_uk_check {
+            let false_positive = if check_u {
                 is_eslpsp(*num)
             } else {
                 is_aeslpsp(*num)
@@ -408,14 +457,14 @@ mod tests {
 
             // Test both single-limb and multi-limb, just in case.
             assert_eq!(
-                is_prime::<BruteForceBase, 1>(&Uint::<1>::from(*num), full_uk_check),
+                is_prime::<BruteForceBase, 1>(&Uint::<1>::from(*num), check_u),
                 actual_expected_result,
-                "Brute force base, n = {}, full_uk_check = {}",
+                "Brute force base, n = {}, check_u = {}",
                 num,
-                full_uk_check,
+                check_u,
             );
             assert_eq!(
-                is_prime::<BruteForceBase, 2>(&Uint::<2>::from(*num), full_uk_check),
+                is_prime::<BruteForceBase, 2>(&Uint::<2>::from(*num), check_u),
                 actual_expected_result
             );
         }
@@ -454,9 +503,7 @@ mod tests {
     fn almost_extra_strong_lucas_pseudoprimes() {
         test_sequence_selfridge(pseudoprimes::ALMOST_EXTRA_STRONG_LUCAS, false);
 
-        // Check specifically that we are running an extra strong test with brute force (P,Q),
-        // and not an almost extra strong one (that is, we check U(s) == 0).
-        // If that condition is not checked, this should fail.
+        // Check for the difference between the almost extra strong and extra strong tests.
         test_sequence_brute_force(pseudoprimes::ALMOST_EXTRA_STRONG_LUCAS, true, false);
         test_sequence_brute_force(pseudoprimes::ALMOST_EXTRA_STRONG_LUCAS, false, true);
     }
@@ -465,7 +512,8 @@ mod tests {
     fn extra_strong_lucas_pseudoprimes() {
         test_sequence_selfridge(pseudoprimes::EXTRA_STRONG_LUCAS, false);
 
-        // We expect our Lucas test to incorrectly classify them as primes.
+        // These are the known false positives for the extra strong test
+        // with brute force base selection.
         test_sequence_brute_force(pseudoprimes::EXTRA_STRONG_LUCAS, true, true);
     }
 
@@ -478,7 +526,8 @@ mod tests {
 
     #[test]
     fn strong_lucas_pseudoprimes() {
-        // We expect our Lucas test to incorrectly classify them as primes.
+        // These are the known false positives for the strong test
+        // with Selfridge base selection.
         test_sequence_selfridge(pseudoprimes::STRONG_LUCAS, true);
 
         test_sequence_brute_force(pseudoprimes::STRONG_LUCAS, false, false);
@@ -490,14 +539,13 @@ mod tests {
         // Cross-test against the pseudoprimes that circumvent the MR test base 2.
         // We expect the Lucas test to correctly classify them as composites.
         test_sequence_selfridge(pseudoprimes::STRONG_BASE_2, false);
-
         test_sequence_brute_force(pseudoprimes::STRONG_BASE_2, false, false);
         test_sequence_brute_force(pseudoprimes::STRONG_BASE_2, true, false);
     }
 
     #[test]
     fn exhaustive() {
-        // Test all the odd numbers up to the last extra strong Lucas pseudoprime (approximately),
+        // Test all the odd numbers up to the last strong Lucas pseudoprime,
         // and compare the results with the reference.
         let last = pseudoprimes::STRONG_LUCAS[pseudoprimes::STRONG_LUCAS.len() - 1];
         for num in (3..last).step_by(2) {
