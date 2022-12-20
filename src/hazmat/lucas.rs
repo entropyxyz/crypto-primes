@@ -79,7 +79,8 @@ impl LucasBase for SelfridgeBase {
                 break;
             }
             if j == JacobiSymbol::Zero {
-                // Modification of Method A by Baillie [^6]:
+                // Modification of Method A by Baillie, in an example to OEIS:A217120
+                // (https://oeis.org/A217120/a217120_1.txt):
                 // If `d == (+,-)n`, (e.g., `n` = 5 or 11) try the next `d` instead of quitting;
                 // this small modification of Selfridge's method A
                 // enables 5 and 11 to be classified as Lucas probable primes.
@@ -165,15 +166,15 @@ impl LucasBase for BruteForceBase {
 /// 3. Check that `V(d) == ±2` (only valid when `Q == 1`, and not performed otherwise).
 ///
 /// If 1 or 2 are true, `n` is a "strong Lucas probable prime"[^Baillie1980].
-/// If the base is [`SelfridgeBase`], known false positives are listed in OEIS:A217255[^A217255].
+/// If the base is [`SelfridgeBase`], known false positives constitute OEIS:A217255[^A217255].
 ///
 /// If 1, or 2 and 3 together are true (and the base was chosen such that `Q == 1`),
 /// `n` is an "extra strong Lucas probable prime"[^Mo1993].
-/// If the base is [`BruteForceBase`], known false positives are listed in OEIS:A217719[^A217719].
+/// If the base is [`BruteForceBase`], known false positives constitute OEIS:A217719[^A217719].
 ///
 /// If 1 or 3 are true (and the base was chosen such that `Q == 1`),
 /// `n` is an "almost extra strong Lucas probable prime".
-/// If the base is [`BruteForceBase`], known false positives listed by Jacobsen[^Jacobsen].
+/// If the base is [`BruteForceBase`], some known false positives are listed by Jacobsen[^Jacobsen].
 ///
 /// One can disable the check 2 by passing `check_u = false`.
 /// This option is mainly intended for testing with known false positives;
