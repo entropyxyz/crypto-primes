@@ -1,7 +1,12 @@
 //! This module contains various types pseudoprimes
 //! (composites that are classified as primes by various tests) for testing purposes.
+use crypto_bigint::{U1536, U64};
 
-/// Extra strong Lucas pseudoprimes (OEIS:A217719) under 500,000.
+/// The limit up to which we have exceptions to implemented tests listed (see below),
+/// so we can run an exhaustive test on every number knowing when it is expected to fail.
+pub(crate) const EXHAUSTIVE_TEST_LIMIT: u32 = 500000;
+
+/// Extra strong Lucas pseudoprimes (OEIS:A217719) under `EXHAUSTIVE_TEST_LIMIT`.
 /// Should pass the strong Lucas test with Selfridge base (Baillie method A).
 pub(crate) const EXTRA_STRONG_LUCAS: &[u32] = &[
     989, 3239, 5777, 10877, 27971, 29681, 30739, 31631, 39059, 72389, 73919, 75077, 100127, 113573,
@@ -9,7 +14,7 @@ pub(crate) const EXTRA_STRONG_LUCAS: &[u32] = &[
     429479, 430127, 459191, 473891, 480689,
 ];
 
-/// Strong Lucas pseudoprimes (OEIS:A217255) under 500,000.
+/// Strong Lucas pseudoprimes (OEIS:A217255) under `EXHAUSTIVE_TEST_LIMIT`.
 /// Should pass the extra strong Lucas test with brute force base (Baillie method C).
 pub(crate) const STRONG_LUCAS: &[u32] = &[
     5459, 5777, 10877, 16109, 18971, 22499, 24569, 25199, 40309, 58519, 75077, 97439, 100127,
@@ -18,7 +23,7 @@ pub(crate) const STRONG_LUCAS: &[u32] = &[
     430127, 436409, 455519, 487199,
 ];
 
-/// Almost extra strong Lucas pseudoprimes under 500,000.
+/// Almost extra strong Lucas pseudoprimes under `EXHAUSTIVE_TEST_LIMIT`.
 /// Taken from D. Jacobsen, "Pseudoprime Statistics, Tables, and Data",
 /// <http://ntheory.org/pseudoprimes.html>
 pub(crate) const ALMOST_EXTRA_STRONG_LUCAS: &[u32] = &[
@@ -27,12 +32,19 @@ pub(crate) const ALMOST_EXTRA_STRONG_LUCAS: &[u32] = &[
     233659, 249331, 370229, 429479, 430127, 459191, 472453, 473891, 480689,
 ];
 
+/// Strong pseudoprimes to base 2 (OEIS:A001262) under `EXHAUSTIVE_TEST_LIMIT`.
+pub(crate) const STRONG_BASE_2: &[u32] = &[
+    2047, 3277, 4033, 4681, 8321, 15841, 29341, 42799, 49141, 52633, 65281, 74665, 80581, 85489,
+    88357, 90751, 104653, 130561, 196093, 220729, 233017, 252601, 253241, 256999, 271951, 280601,
+    314821, 357761, 390937, 458989, 476971, 486737, 489997,
+];
+
 /// Strong Fibonacci pseudoprimes, Type I.
 ///
 /// See R. G. E. Pinch "The Carmichael Numbers up to 10^15",
 /// Mathematics of Computation, Vol. 61, No. 203 381-391 (1993)
 /// (DOI: 10.2307/2152963).
-pub(crate) const STRONG_FIBONACCI: &[u64] = &[443372888629441];
+pub(crate) const STRONG_FIBONACCI: &[U64] = &[U64::from_be_hex("0001933ecb87a0c1")];
 
 /// Odd Fibonacci pseudoprimes (OEIS:A081264).
 pub(crate) const FIBONACCI: &[u32] = &[
@@ -55,9 +67,22 @@ pub(crate) const LUCAS: &[u32] = &[
     35207, 39059, 39203, 39689, 40309, 44099, 46979, 47879,
 ];
 
-/// Strong pseudoprimes to base 2 (OEIS:A001262).
-pub(crate) const STRONG_BASE_2: &[u32] = &[
-    2047, 3277, 4033, 4681, 8321, 15841, 29341, 42799, 49141, 52633, 65281, 74665, 80581, 85489,
-    88357, 90751, 104653, 130561, 196093, 220729, 233017, 252601, 253241, 256999, 271951, 280601,
-    314821, 357761, 390937, 458989, 476971, 486737,
-];
+/// A large Carmichael number.
+/// Source: F. Arnault, "Constructing Carmichael Numbers Which Are Strong
+/// Pseudoprimes to Several Bases". Journal of Symbolic Computation 20(2) 151–161 (1995),
+/// DOI: 10.1006/jsco.1995.1042.
+/// This is a composite that can pass Miller-Rabin test to all prime bases less than 307.
+pub(crate) const LARGE_CARMICHAEL_NUMBER: U1536 = U1536::from_be_hex(concat![
+    "00000000000000000000000000000000",
+    "0000000000000000000000204b212272",
+    "807927b357671aefdd4b4b7a0f127496",
+    "25cd71b549d6b8b9895e97fcf9fadcaf",
+    "26c618da83c9ec7f6b39020661ba422e",
+    "6c820ac14d3b8329d6c71d16a1953afd",
+    "60a0aa4c63019f9c29c08d05b0c4fcd0",
+    "41febeaa5b0e8475e6e96cc49478ef6e",
+    "9ae877b4d3be8107bd3c64b35ebc7f2b",
+    "d719c6417207aaec2151812719b5b5ba",
+    "e64562bcd2ed44177a2ac314a44f344d",
+    "f4a12e0d4fb8ff99c4099bfc77924b2b"
+]);

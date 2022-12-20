@@ -39,7 +39,7 @@ pub trait LucasBase {
     /// Given an odd integer, returns `Ok((P, Q))` on success,
     /// or `Err(is_prime)` if the primality for the given integer was discovered
     /// during the search for the base.
-    fn generate<const L: usize>(n: &Uint<L>) -> Result<(u32, i32), bool>;
+    fn generate<const L: usize>(&self, n: &Uint<L>) -> Result<(u32, i32), bool>;
 }
 
 /// "Method A" for selecting the base given in Baillie & Wagstaff[^Baillie1980],
@@ -53,7 +53,7 @@ pub trait LucasBase {
 pub struct SelfridgeBase;
 
 impl LucasBase for SelfridgeBase {
-    fn generate<const L: usize>(n: &Uint<L>) -> Result<(u32, i32), bool> {
+    fn generate<const L: usize>(&self, n: &Uint<L>) -> Result<(u32, i32), bool> {
         // Try D = 1 - 4Q = 5, -7, 9, -11, 13, ... until Jacobi(D, n) = -1.
         // Return P = 1, Q = (1 - D) / 4).
 
@@ -110,7 +110,7 @@ impl LucasBase for SelfridgeBase {
 pub struct BruteForceBase;
 
 impl LucasBase for BruteForceBase {
-    fn generate<const L: usize>(n: &Uint<L>) -> Result<(u32, i32), bool> {
+    fn generate<const L: usize>(&self, n: &Uint<L>) -> Result<(u32, i32), bool> {
         // Try P = 3, 4, 5, ... until (D/n) = -1, where D = P^2 - 4Q.
         // Return the found P, and Q = 1.
 
@@ -202,13 +202,17 @@ impl LucasBase for BruteForceBase {
 /// [^Mo1993]: Zhaiyu Mo, "Diophantine equations, Lucas sequences and pseudoprimes",
 ///       graduate thesis, University of Calgary, Calgary, AB (1993)
 ///       DOI: [10.11575/PRISM/10820](https://dx.doi.org/10.11575/PRISM/10820)
-pub fn is_strong_lucas_prime<B: LucasBase, const L: usize>(n: &Uint<L>, check_u: bool) -> bool {
+pub fn is_strong_lucas_prime<const L: usize>(
+    n: &Uint<L>,
+    base: impl LucasBase,
+    check_u: bool,
+) -> bool {
     if n.is_even().into() {
         return false;
     }
 
     // Find the base for the Lucas sequence.
-    let (p, q) = match B::generate(n) {
+    let (p, q) = match base.generate(n) {
         Ok((p, q)) => (p, q),
         Err(is_prime) => return is_prime,
     };
@@ -422,7 +426,7 @@ mod tests {
             .is_some()
     }
 
-    fn test_sequence_selfridge(numbers: &[u32], expected_result: bool) {
+    fn test_composites_selfridge(numbers: &[u32], expected_result: bool) {
         for num in numbers.iter() {
             let false_positive = is_slpsp(*num);
             let actual_expected_result = if false_positive {
@@ -433,17 +437,17 @@ mod tests {
 
             // Test both single-limb and multi-limb, just in case.
             assert_eq!(
-                is_prime::<SelfridgeBase, 1>(&Uint::<1>::from(*num), true),
+                is_prime(&Uint::<1>::from(*num), SelfridgeBase, true),
                 actual_expected_result
             );
             assert_eq!(
-                is_prime::<SelfridgeBase, 2>(&Uint::<2>::from(*num), true),
+                is_prime(&Uint::<2>::from(*num), SelfridgeBase, true),
                 actual_expected_result
             );
         }
     }
 
-    fn test_sequence_brute_force(numbers: &[u32], check_u: bool, expected_result: bool) {
+    fn test_composites_brute_force(numbers: &[u32], check_u: bool, expected_result: bool) {
         for num in numbers.iter() {
             let false_positive = if check_u {
                 is_eslpsp(*num)
@@ -458,14 +462,14 @@ mod tests {
 
             // Test both single-limb and multi-limb, just in case.
             assert_eq!(
-                is_prime::<BruteForceBase, 1>(&Uint::<1>::from(*num), check_u),
+                is_prime(&Uint::<1>::from(*num), BruteForceBase, check_u),
                 actual_expected_result,
                 "Brute force base, n = {}, check_u = {}",
                 num,
                 check_u,
             );
             assert_eq!(
-                is_prime::<BruteForceBase, 2>(&Uint::<2>::from(*num), check_u),
+                is_prime(&Uint::<2>::from(*num), BruteForceBase, check_u),
                 actual_expected_result
             );
         }
@@ -473,90 +477,93 @@ mod tests {
 
     #[test]
     fn strong_fibonacci_pseudoprimes() {
-        // Can't use `test_sequence()` since `STRONG_FIBONACCI` is `u64`,
-        // and we need to be mindful of 32-bit systems which don't have `Uint::from(u64)`.
+        // Can't use `test_composites()` since `STRONG_FIBONACCI` is `U64`.
         // Good thing we don't need to test for intersection
         // with `EXTRA_STRONG_LUCAS` or `STRONG_LUCAS` - there's none.
         for num in pseudoprimes::STRONG_FIBONACCI.iter() {
-            let num_hi = num >> 32;
-            let num_lo = num & ((1 << 32) - 1);
-            let uint2 = Uint::<2>::from(num_lo) | (Uint::<2>::from(num_hi) << 32);
-            assert!(!is_prime::<SelfridgeBase, 2>(&uint2, true));
-            assert!(!is_prime::<BruteForceBase, 2>(&uint2, true));
+            assert!(!is_prime(num, SelfridgeBase, true));
+            assert!(!is_prime(num, BruteForceBase, true));
         }
     }
 
     #[test]
     fn fibonacci_pseudoprimes() {
-        test_sequence_selfridge(pseudoprimes::FIBONACCI, false);
-        test_sequence_brute_force(pseudoprimes::FIBONACCI, false, false);
-        test_sequence_brute_force(pseudoprimes::FIBONACCI, true, false);
+        test_composites_selfridge(pseudoprimes::FIBONACCI, false);
+        test_composites_brute_force(pseudoprimes::FIBONACCI, false, false);
+        test_composites_brute_force(pseudoprimes::FIBONACCI, true, false);
     }
 
     #[test]
     fn bruckman_lucas_pseudoprimes() {
-        test_sequence_selfridge(pseudoprimes::BRUCKMAN_LUCAS, false);
-        test_sequence_brute_force(pseudoprimes::BRUCKMAN_LUCAS, false, false);
-        test_sequence_brute_force(pseudoprimes::BRUCKMAN_LUCAS, true, false);
+        test_composites_selfridge(pseudoprimes::BRUCKMAN_LUCAS, false);
+        test_composites_brute_force(pseudoprimes::BRUCKMAN_LUCAS, false, false);
+        test_composites_brute_force(pseudoprimes::BRUCKMAN_LUCAS, true, false);
     }
 
     #[test]
     fn almost_extra_strong_lucas_pseudoprimes() {
-        test_sequence_selfridge(pseudoprimes::ALMOST_EXTRA_STRONG_LUCAS, false);
+        test_composites_selfridge(pseudoprimes::ALMOST_EXTRA_STRONG_LUCAS, false);
 
         // Check for the difference between the almost extra strong and extra strong tests.
-        test_sequence_brute_force(pseudoprimes::ALMOST_EXTRA_STRONG_LUCAS, true, false);
-        test_sequence_brute_force(pseudoprimes::ALMOST_EXTRA_STRONG_LUCAS, false, true);
+        test_composites_brute_force(pseudoprimes::ALMOST_EXTRA_STRONG_LUCAS, true, false);
+        test_composites_brute_force(pseudoprimes::ALMOST_EXTRA_STRONG_LUCAS, false, true);
     }
 
     #[test]
     fn extra_strong_lucas_pseudoprimes() {
-        test_sequence_selfridge(pseudoprimes::EXTRA_STRONG_LUCAS, false);
+        test_composites_selfridge(pseudoprimes::EXTRA_STRONG_LUCAS, false);
 
         // These are the known false positives for the extra strong test
         // with brute force base selection.
-        test_sequence_brute_force(pseudoprimes::EXTRA_STRONG_LUCAS, true, true);
+        test_composites_brute_force(pseudoprimes::EXTRA_STRONG_LUCAS, true, true);
     }
 
     #[test]
     fn lucas_pseudoprimes() {
-        test_sequence_selfridge(pseudoprimes::LUCAS, false);
-        test_sequence_brute_force(pseudoprimes::LUCAS, false, false);
-        test_sequence_brute_force(pseudoprimes::LUCAS, true, false);
+        test_composites_selfridge(pseudoprimes::LUCAS, false);
+        test_composites_brute_force(pseudoprimes::LUCAS, false, false);
+        test_composites_brute_force(pseudoprimes::LUCAS, true, false);
     }
 
     #[test]
     fn strong_lucas_pseudoprimes() {
         // These are the known false positives for the strong test
         // with Selfridge base selection.
-        test_sequence_selfridge(pseudoprimes::STRONG_LUCAS, true);
+        test_composites_selfridge(pseudoprimes::STRONG_LUCAS, true);
 
-        test_sequence_brute_force(pseudoprimes::STRONG_LUCAS, false, false);
-        test_sequence_brute_force(pseudoprimes::STRONG_LUCAS, true, false);
+        test_composites_brute_force(pseudoprimes::STRONG_LUCAS, false, false);
+        test_composites_brute_force(pseudoprimes::STRONG_LUCAS, true, false);
     }
 
     #[test]
     fn strong_pseudoprimes_base_2() {
         // Cross-test against the pseudoprimes that circumvent the MR test base 2.
         // We expect the Lucas test to correctly classify them as composites.
-        test_sequence_selfridge(pseudoprimes::STRONG_BASE_2, false);
-        test_sequence_brute_force(pseudoprimes::STRONG_BASE_2, false, false);
-        test_sequence_brute_force(pseudoprimes::STRONG_BASE_2, true, false);
+        test_composites_selfridge(pseudoprimes::STRONG_BASE_2, false);
+        test_composites_brute_force(pseudoprimes::STRONG_BASE_2, false, false);
+        test_composites_brute_force(pseudoprimes::STRONG_BASE_2, true, false);
+    }
+
+    #[test]
+    fn large_carmichael_number() {
+        let p = pseudoprimes::LARGE_CARMICHAEL_NUMBER;
+        assert!(!is_prime(&p, SelfridgeBase, true));
+        assert!(!is_prime(&p, BruteForceBase, false));
+        assert!(!is_prime(&p, BruteForceBase, true));
     }
 
     #[test]
     fn exhaustive() {
-        // Test all the odd numbers up to the last strong Lucas pseudoprime,
+        // Test all the odd numbers up to the limit where we know the false positives,
         // and compare the results with the reference.
-        let last = pseudoprimes::STRONG_LUCAS[pseudoprimes::STRONG_LUCAS.len() - 1];
-        for num in (3..last).step_by(2) {
+        for num in (3..pseudoprimes::EXHAUSTIVE_TEST_LIMIT).step_by(2) {
             let res_ref = num.is_prime();
 
             let eslpsp = is_eslpsp(num);
             let aeslpsp = is_aeslpsp(num);
             let slpsp = is_slpsp(num);
 
-            let res = is_prime::<BruteForceBase, 1>(&Uint::<1>::from(num), false);
+            let res = is_prime(&Uint::<1>::from(num), BruteForceBase, false);
             let expected = aeslpsp || res_ref;
             assert_eq!(
                 res, expected,
@@ -564,7 +571,7 @@ mod tests {
                 num, expected, res,
             );
 
-            let res = is_prime::<BruteForceBase, 1>(&Uint::<1>::from(num), true);
+            let res = is_prime(&Uint::<1>::from(num), BruteForceBase, true);
             let expected = eslpsp || res_ref;
             assert_eq!(
                 res, expected,
@@ -572,7 +579,7 @@ mod tests {
                 num, expected, res,
             );
 
-            let res = is_prime::<SelfridgeBase, 1>(&Uint::<1>::from(num), true);
+            let res = is_prime(&Uint::<1>::from(num), SelfridgeBase, true);
             let expected = slpsp || res_ref;
             assert_eq!(
                 res, expected,

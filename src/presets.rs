@@ -12,13 +12,13 @@ pub fn is_prime<const L: usize>(rng: &mut (impl CryptoRng + RngCore), num: &Uint
     if !mr.check_basis_two() {
         return false;
     }
-    if !is_strong_lucas_prime::<SelfridgeBase, L>(num, true) {
+    if !is_strong_lucas_prime(num, SelfridgeBase, true) {
         return false;
     }
     if !mr.check_random_basis(rng) {
         return false;
     }
-    return true;
+    true
 }
 
 pub fn prime_with_rng<const L: usize>(
