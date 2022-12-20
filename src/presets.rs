@@ -9,13 +9,13 @@ pub fn prime<const L: usize>(bit_length: usize) -> Uint<L> {
 
 pub fn is_prime<const L: usize>(rng: &mut (impl CryptoRng + RngCore), num: &Uint<L>) -> bool {
     let mr = MillerRabin::new(num);
-    if !mr.check_basis_two() {
+    if !mr.check_base_two() {
         return false;
     }
     if !is_strong_lucas_prime(num, SelfridgeBase, true) {
         return false;
     }
-    if !mr.check_random_basis(rng) {
+    if !mr.check_random_base(rng) {
         return false;
     }
     true

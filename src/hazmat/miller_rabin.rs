@@ -40,12 +40,12 @@ impl<const L: usize> MillerRabin<L> {
         }
     }
 
-    pub fn check(&self, basis: &Uint<L>) -> bool {
-        // TODO: it may be faster to first check that gcd(basis, candidate) == 1,
+    pub fn check(&self, base: &Uint<L>) -> bool {
+        // TODO: it may be faster to first check that gcd(base, candidate) == 1,
         // otherwise we can return `false` right away.
 
-        let basis_m = DynResidue::<L>::new(*basis, self.montgomery_params);
-        let mut test_m = basis_m.pow(&self.d);
+        let base_m = DynResidue::<L>::new(*base, self.montgomery_params);
+        let mut test_m = base_m.pow(&self.d);
 
         if test_m == self.one_m || test_m == self.cand_minus_one_m {
             return true;
@@ -61,13 +61,13 @@ impl<const L: usize> MillerRabin<L> {
         false
     }
 
-    pub fn check_basis_two(&self) -> bool {
+    pub fn check_base_two(&self) -> bool {
         self.check(&Uint::<L>::from(2u32))
     }
 
-    pub fn check_random_basis<R: CryptoRng + RngCore>(&self, rng: &mut R) -> bool {
-        // We sample a random basis from the range `[3, candidate-2]`:
-        // - we have a separate method for basis 2;
+    pub fn check_random_base<R: CryptoRng + RngCore>(&self, rng: &mut R) -> bool {
+        // We sample a random base from the range `[3, candidate-2]`:
+        // - we have a separate method for base 2;
         // - the test holds trivially for bases 1 or `candidate-1`.
         let range = self.candidate.wrapping_sub(&Uint::<L>::from(4u32));
         let range_nonzero = NonZero::new(range).unwrap();
@@ -113,7 +113,7 @@ mod tests {
         count: usize,
     ) -> usize {
         (0..count)
-            .map(|_| if mr.check_random_basis(rng) { 1 } else { 0 })
+            .map(|_| if mr.check_random_base(rng) { 1 } else { 0 })
             .sum()
     }
 
@@ -134,12 +134,12 @@ mod tests {
             // 35 out of 100 false positives, seems to work.
 
             let mr = MillerRabin::new(&Uint::<1>::from(*num));
-            assert_eq!(mr.check_basis_two(), actual_expected_result);
+            assert_eq!(mr.check_base_two(), actual_expected_result);
             let reported_prime = random_checks(&mut rng, &mr, 100);
             assert!(reported_prime < 35);
 
             let mr = MillerRabin::new(&Uint::<2>::from(*num));
-            assert_eq!(mr.check_basis_two(), actual_expected_result);
+            assert_eq!(mr.check_base_two(), actual_expected_result);
             let reported_prime = random_checks(&mut rng, &mr, 100);
             assert!(reported_prime < 35);
         }
@@ -166,9 +166,9 @@ mod tests {
         let num = Uint::<2>::from_be_hex("7fffffffffffffffffffffffffffffff");
 
         let mr = MillerRabin::new(&num);
-        assert!(mr.check_basis_two());
+        assert!(mr.check_base_two());
         for _ in 0..10 {
-            assert!(mr.check_random_basis(&mut rng));
+            assert!(mr.check_random_base(&mut rng));
         }
     }
 
@@ -178,9 +178,9 @@ mod tests {
 
         for num in pseudoprimes::STRONG_FIBONACCI.iter() {
             let mr = MillerRabin::new(&num);
-            assert!(!mr.check_basis_two());
+            assert!(!mr.check_base_two());
             for _ in 0..1000 {
-                assert!(!mr.check_random_basis(&mut rng));
+                assert!(!mr.check_random_base(&mut rng));
             }
         }
     }
@@ -208,10 +208,10 @@ mod tests {
         let mr = MillerRabin::new(&pseudoprimes::LARGE_CARMICHAEL_NUMBER);
 
         // It is known to pass MR tests for all prime bases <307
-        assert!(mr.check_basis_two());
+        assert!(mr.check_base_two());
         assert!(mr.check(&U1536::from(293u64)));
 
-        // A test with basis 307 correctly reports the number as composite.
+        // A test with base 307 correctly reports the number as composite.
         assert!(!mr.check(&U1536::from(307u64)));
     }
 
@@ -225,7 +225,7 @@ mod tests {
             let spsp = is_spsp(num);
 
             let mr = MillerRabin::new(&Uint::<1>::from(num));
-            let res = mr.check_basis_two();
+            let res = mr.check_base_two();
             let expected = spsp || res_ref;
             assert_eq!(
                 res, expected,
