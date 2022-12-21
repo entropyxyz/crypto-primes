@@ -98,7 +98,7 @@ mod tests {
     use rand_core::{CryptoRng, RngCore, SeedableRng};
 
     use super::MillerRabin;
-    use crate::hazmat::{pseudoprimes, random_odd_uint, Sieve};
+    use crate::hazmat::{primes, pseudoprimes, random_odd_uint, Sieve};
 
     fn is_spsp(num: u32) -> bool {
         pseudoprimes::STRONG_BASE_2
@@ -213,6 +213,26 @@ mod tests {
 
         // A test with base 307 correctly reports the number as composite.
         assert!(!mr.check(&U1536::from(307u64)));
+    }
+
+    fn test_large_primes<const L: usize>(nums: &[Uint<L>]) {
+        let mut rng = ChaCha8Rng::from_seed(*b"01234567890123456789012345678901");
+        for num in nums {
+            let mr = MillerRabin::new(&num);
+            assert!(mr.check_base_two());
+            for _ in 0..10 {
+                assert!(mr.check_random_base(&mut rng));
+            }
+        }
+    }
+
+    #[test]
+    fn large_primes() {
+        test_large_primes(primes::PRIMES_128);
+        test_large_primes(primes::PRIMES_256);
+        test_large_primes(primes::PRIMES_384);
+        test_large_primes(primes::PRIMES_512);
+        test_large_primes(primes::PRIMES_1024);
     }
 
     #[test]

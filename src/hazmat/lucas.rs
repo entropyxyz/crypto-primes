@@ -403,7 +403,7 @@ mod tests {
     use number_theory::NumberTheory;
 
     use super::{is_strong_lucas_prime as is_prime, BruteForceBase, SelfridgeBase};
-    use crate::hazmat::pseudoprimes;
+    use crate::hazmat::{primes, pseudoprimes};
 
     fn is_slpsp(num: u32) -> bool {
         pseudoprimes::STRONG_LUCAS
@@ -550,6 +550,23 @@ mod tests {
         assert!(!is_prime(&p, SelfridgeBase, true));
         assert!(!is_prime(&p, BruteForceBase, false));
         assert!(!is_prime(&p, BruteForceBase, true));
+    }
+
+    fn test_large_primes<const L: usize>(nums: &[Uint<L>]) {
+        for num in nums {
+            assert!(is_prime(&num, SelfridgeBase, true));
+            assert!(is_prime(&num, BruteForceBase, false));
+            assert!(is_prime(&num, BruteForceBase, true));
+        }
+    }
+
+    #[test]
+    fn large_primes() {
+        test_large_primes(primes::PRIMES_128);
+        test_large_primes(primes::PRIMES_256);
+        test_large_primes(primes::PRIMES_384);
+        test_large_primes(primes::PRIMES_512);
+        test_large_primes(primes::PRIMES_1024);
     }
 
     #[test]

@@ -6,6 +6,8 @@ mod lucas;
 mod miller_rabin;
 mod precomputed;
 #[cfg(test)]
+mod primes;
+#[cfg(test)]
 mod pseudoprimes;
 mod sieve;
 
