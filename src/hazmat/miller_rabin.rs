@@ -1,8 +1,4 @@
-//! Miller-Rabin primality test; the numbers that pass it
-//! are also called "strong probable-/pseudoprimes".
-//!
-//! See C. Pomerance, J. L. Selfridge, S. S. Wagstaff "The Pseudoprimes to 25*10^9",
-//! Math. Comp. 35 1003-1026 (1980) (DOI: [10.2307/2006210](https://dx.doi.org/10.2307/2006210))
+//! Miller-Rabin primality test.
 
 use rand_core::{CryptoRng, RngCore};
 
@@ -14,6 +10,14 @@ use crypto_bigint::{
     Integer, NonZero, RandomMod, Uint,
 };
 
+/// Precomputed data used to perform Miller-Rabin primality test[^Pomerance1980].
+/// The numbers that pass it are commonly called "strong probable primes"
+/// (or "strong pseudoprimes" if they are, in fact, composite).
+///
+/// [^Pomerance1980]:
+///   C. Pomerance, J. L. Selfridge, S. S. Wagstaff "The Pseudoprimes to 25*10^9",
+///   Math. Comp. 35 1003-1026 (1980),
+///   DOI: [10.2307/2006210](https://dx.doi.org/10.2307/2006210)
 pub struct MillerRabin<const L: usize> {
     candidate: Uint<L>,
     montgomery_params: DynResidueParams<L>,
@@ -24,7 +28,10 @@ pub struct MillerRabin<const L: usize> {
 }
 
 impl<const L: usize> MillerRabin<L> {
+    /// Initializes a Miller-Rabin test for `candidate`.
+    /// `candidate` must be odd.
     pub fn new(candidate: &Uint<L>) -> Self {
+        debug_assert!(bool::from(candidate.is_odd()));
         let params = DynResidueParams::<L>::new(*candidate);
         let one_m = DynResidue::<L>::new(Uint::<L>::ONE, params);
         let cand_minus_one = candidate.wrapping_sub(&Uint::<L>::ONE);
@@ -40,6 +47,7 @@ impl<const L: usize> MillerRabin<L> {
         }
     }
 
+    /// Perform a Miller-Rabin check with a given base.
     pub fn check(&self, base: &Uint<L>) -> bool {
         // TODO: it may be faster to first check that gcd(base, candidate) == 1,
         // otherwise we can return `false` right away.
@@ -61,10 +69,12 @@ impl<const L: usize> MillerRabin<L> {
         false
     }
 
+    /// Perform a Miller-Rabin check with base 2.
     pub fn check_base_two(&self) -> bool {
         self.check(&Uint::<L>::from(2u32))
     }
 
+    /// Perform a Miller-Rabin check with a random base drawn using the provided RNG.
     pub fn check_random_base<R: CryptoRng + RngCore>(&self, rng: &mut R) -> bool {
         // We sample a random base from the range `[3, candidate-2]`:
         // - we have a separate method for base 2;

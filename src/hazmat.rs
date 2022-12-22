@@ -6,11 +6,11 @@ mod lucas;
 mod miller_rabin;
 mod precomputed;
 #[cfg(test)]
-mod primes;
+pub(crate) mod primes;
 #[cfg(test)]
-mod pseudoprimes;
+pub(crate) mod pseudoprimes;
 mod sieve;
 
 pub use lucas::{is_strong_lucas_prime, BruteForceBase, LucasBase, SelfridgeBase};
 pub use miller_rabin::MillerRabin;
-pub use sieve::{random_odd_uint, Sieve};
+pub use sieve::{random_odd_uint, sieve_once, Sieve};

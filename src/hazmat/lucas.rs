@@ -180,28 +180,33 @@ impl LucasBase for BruteForceBase {
 /// This option is mainly intended for testing with known false positives;
 /// make sure you know the risks if you do it.
 ///
-/// [^Baillie1980]: R. Baillie, S. S. Wagstaff, "Lucas pseudoprimes",
-///       Math. Comp. 35 1391-1417 (1980),
-///       DOI: [10.2307/2006406](https://dx.doi.org/10.2307/2006406),
-///       <http://mpqs.free.fr/LucasPseudoprimes.pdf>
+/// [^Baillie1980]:
+///   R. Baillie, S. S. Wagstaff, "Lucas pseudoprimes",
+///   Math. Comp. 35 1391-1417 (1980),
+///   DOI: [10.2307/2006406](https://dx.doi.org/10.2307/2006406),
+///   <http://mpqs.free.fr/LucasPseudoprimes.pdf>
 ///
 /// [^A217255]: <https://oeis.org/A217255>
 ///
 /// [^A217719]: <https://oeis.org/A217719>
 ///
-/// [^Crandall2005]: R. Crandall, C. Pomerance, "Prime numbers: a computational perspective",
-///       2nd ed., Springer (2005) (ISBN: 0-387-25282-7, 978-0387-25282-7)
+/// [^Crandall2005]:
+///   R. Crandall, C. Pomerance, "Prime numbers: a computational perspective",
+///   2nd ed., Springer (2005) (ISBN: 0-387-25282-7, 978-0387-25282-7)
 ///
-/// [^Grantham2001]: J. Grantham, "Frobenius pseudoprimes",
-///       Math. Comp. 70 873-891 (2001),
-///       DOI: [10.1090/S0025-5718-00-01197-2](https://dx.doi.org/10.1090/S0025-5718-00-01197-2)
+/// [^Grantham2001]:
+///   J. Grantham, "Frobenius pseudoprimes",
+///   Math. Comp. 70 873-891 (2001),
+///   DOI: [10.1090/S0025-5718-00-01197-2](https://dx.doi.org/10.1090/S0025-5718-00-01197-2)
 ///
-/// [^Jacobsen]: D. Jacobsen, "Pseudoprime Statistics, Tables, and Data",
-///       <http://ntheory.org/pseudoprimes.html>
+/// [^Jacobsen]:
+///   D. Jacobsen, "Pseudoprime Statistics, Tables, and Data",
+///   <http://ntheory.org/pseudoprimes.html>
 ///
-/// [^Mo1993]: Zhaiyu Mo, "Diophantine equations, Lucas sequences and pseudoprimes",
-///       graduate thesis, University of Calgary, Calgary, AB (1993)
-///       DOI: [10.11575/PRISM/10820](https://dx.doi.org/10.11575/PRISM/10820)
+/// [^Mo1993]:
+///   Zhaiyu Mo, "Diophantine equations, Lucas sequences and pseudoprimes",
+///   graduate thesis, University of Calgary, Calgary, AB (1993)
+///   DOI: [10.11575/PRISM/10820](https://dx.doi.org/10.11575/PRISM/10820)
 pub fn is_strong_lucas_prime<const L: usize>(
     n: &Uint<L>,
     base: impl LucasBase,

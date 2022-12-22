@@ -1,7 +1,7 @@
 //! An iterator for weeding out multiples of small primes,
 //! before proceeding with slower tests.
 
-use crypto_bigint::{Integer, Limb, Random, Uint, Word};
+use crypto_bigint::{Integer, Limb, Random, Uint, Word, Zero};
 use rand_core::{CryptoRng, RngCore};
 
 use crate::hazmat::precomputed::{SmallPrime, SMALL_PRIMES, SMALL_PRIMES_RECIPROCALS};
@@ -12,6 +12,13 @@ pub fn random_odd_uint<const L: usize, R: CryptoRng + RngCore + ?Sized>(
     rng: &mut R,
     bit_length: usize,
 ) -> Uint<L> {
+    if bit_length > Limb::BIT_SIZE * L {
+        panic!(
+            "The requested bit length ({}) is larger than the chosen Uint size",
+            bit_length
+        );
+    }
+
     // TODO: not particularly efficient, can be improved by zeroing high bits instead of shifting
     let mut random = Uint::<L>::random(rng);
     if bit_length != Limb::BIT_SIZE * L {
@@ -139,6 +146,23 @@ impl<const L: usize> Iterator for Sieve<L> {
         }
         None
     }
+}
+
+pub fn sieve_once<const L: usize>(num: &Uint<L>) -> Option<bool> {
+    // Our reciprocals start from 3, so we check for 2 separately
+    if num == &Uint::<L>::from(2u32) {
+        return Some(true);
+    }
+    if num.is_even().into() {
+        return Some(false);
+    }
+    for reciprocal in SMALL_PRIMES_RECIPROCALS.iter() {
+        let (quo, rem) = num.ct_div_rem_limb_with_reciprocal(reciprocal);
+        if rem.is_zero().into() {
+            return Some(quo == Uint::<L>::ONE);
+        }
+    }
+    None
 }
 
 #[cfg(test)]
