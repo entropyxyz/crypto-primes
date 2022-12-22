@@ -148,6 +148,9 @@ impl<const L: usize> Iterator for Sieve<L> {
     }
 }
 
+/// Performs trial division of the given number by a list of small primes.
+/// Returns `Some(is_prime)` if there was a definitive conclusion about `num`'s primality,
+/// and `None` otherwise.
 pub fn sieve_once<const L: usize>(num: &Uint<L>) -> Option<bool> {
     // Our reciprocals start from 3, so we check for 2 separately
     if num == &Uint::<L>::from(2u32) {
