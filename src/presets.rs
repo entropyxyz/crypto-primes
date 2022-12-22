@@ -243,3 +243,119 @@ mod tests {
         }
     }
 }
+
+#[cfg(feature = "tests-openssl")]
+mod tests_openssl {
+    use crypto_bigint::U128;
+    use openssl::bn::{BigNum, BigNumContext};
+    use rand_core::OsRng;
+
+    use super::{is_prime, prime};
+    use crate::hazmat::random_odd_uint;
+
+    fn openssl_is_prime(num: &BigNum, ctx: &mut BigNumContext) -> bool {
+        num.is_prime(64, ctx).unwrap()
+    }
+
+    fn to_openssl(num: &U128) -> BigNum {
+        BigNum::from_hex_str(&format!("{:x}", num)).unwrap()
+    }
+
+    fn from_openssl(num: &BigNum) -> U128 {
+        U128::from_be_hex(&num.to_hex_str().unwrap())
+    }
+
+    #[test]
+    fn openssl_cross_check() {
+        let mut ctx = BigNumContext::new().unwrap();
+
+        // Generate primes, let OpenSSL check them
+        for _ in 0..100 {
+            let p: U128 = prime(128);
+            let p_bn = to_openssl(&p);
+            assert!(
+                openssl_is_prime(&p_bn, &mut ctx),
+                "OpenSSL reports {} as composite",
+                p
+            );
+        }
+
+        // Generate primes with OpenSSL, check them
+        let mut p_bn = BigNum::new().unwrap();
+        for _ in 0..100 {
+            p_bn.generate_prime(128, false, None, None).unwrap();
+            let p = from_openssl(&p_bn);
+            assert!(is_prime(&p), "we report {} as composite", p);
+        }
+
+        // Generate random numbers, check if our test agrees with OpenSSL
+        for _ in 0..100 {
+            let p: U128 = random_odd_uint(&mut OsRng, 128);
+            let actual = is_prime(&p);
+            let p_bn = to_openssl(&p);
+            let expected = openssl_is_prime(&p_bn, &mut ctx);
+            assert_eq!(
+                actual, expected,
+                "difference between OpenSSL and us: OpenSSL reports {}, we report {}",
+                expected, actual
+            );
+        }
+    }
+}
+
+#[cfg(feature = "tests-gmp")]
+mod tests_gmp {
+    use crypto_bigint::U128;
+    use rand_core::OsRng;
+    use rug::{
+        integer::{IsPrime, Order},
+        Integer,
+    };
+
+    use super::{is_prime, prime};
+    use crate::hazmat::random_odd_uint;
+
+    fn gmp_is_prime(num: &Integer) -> bool {
+        matches!(num.is_probably_prime(25), IsPrime::Yes | IsPrime::Probably)
+    }
+
+    fn to_gmp(num: &U128) -> Integer {
+        Integer::from_digits(num.as_words(), Order::Lsf)
+    }
+
+    fn from_gmp(num: &Integer) -> U128 {
+        U128::from_words(num.to_digits(Order::Lsf).try_into().unwrap())
+    }
+
+    #[test]
+    fn gmp_cross_check() {
+        // Generate primes, let GMP check them
+        for _ in 0..100 {
+            let p: U128 = prime(128);
+            let p_bn = to_gmp(&p);
+            assert!(gmp_is_prime(&p_bn), "GMP reports {} as composite", p);
+        }
+
+        // Generate primes with GMP, check them
+        for _ in 0..100 {
+            let start: U128 = random_odd_uint(&mut OsRng, 128);
+            let start_bn = to_gmp(&start);
+            let p_bn = start_bn.next_prime();
+            let p = from_gmp(&p_bn);
+            assert!(is_prime(&p), "we report {} as composite", p);
+        }
+
+        // Generate random numbers, check if our test agrees with GMP
+        for _ in 0..100 {
+            let p: U128 = random_odd_uint(&mut OsRng, 128);
+            let actual = is_prime(&p);
+            let p_bn = to_gmp(&p);
+            let expected = gmp_is_prime(&p_bn);
+            assert_eq!(
+                actual, expected,
+                "difference between GMP and us: GMP reports {}, we report {}",
+                expected, actual
+            );
+        }
+    }
+}

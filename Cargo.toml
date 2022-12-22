@@ -12,6 +12,8 @@ categories = ["cryptography", "no-std"]
 crypto-bigint = { git = "https://github.com/RustCrypto/crypto-bigint", branch = "master", features = ["rand"] }
 rand_core = { version = "0.6", features = ["getrandom"] }
 lazy_static = "1.4"
+openssl = { version = "0.10", optional = true }
+rug = { version = "1.18", default-features = false, features = ["integer"], optional = true }
 
 [dev-dependencies]
 rand_chacha = "0.3"
@@ -21,6 +23,10 @@ num-modular = { version = "0.5", features = ["num-bigint"] }
 num-bigint = "0.4"
 proptest = "1"
 number-theory = "0.0.17"
+
+[features]
+tests-openssl = ["openssl"]
+tests-gmp = ["rug"]
 
 [[bench]]
 name = "bench"
