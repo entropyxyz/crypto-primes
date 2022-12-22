@@ -155,9 +155,9 @@ fn _is_prime_with_rng<const L: usize>(rng: &mut (impl CryptoRng + RngCore), num:
 
 #[cfg(test)]
 mod tests {
-    use crypto_bigint::{CheckedAdd, Uint, U64};
+    use crypto_bigint::{CheckedAdd, Uint, U128, U64};
 
-    use super::{is_prime, is_safe_prime};
+    use super::{is_prime, is_safe_prime, prime, safe_prime};
     use crate::hazmat::{primes, pseudoprimes};
 
     fn test_large_primes<const L: usize>(nums: &[Uint<L>]) {
@@ -222,6 +222,24 @@ mod tests {
         }
         for (length, num) in primes::CUNNINGHAM_CHAINS_512 {
             test_cunningham_chain(*length, num);
+        }
+    }
+
+    #[test]
+    fn generate_prime() {
+        for bit_length in (28..=128).step_by(10) {
+            let p: U128 = prime(bit_length);
+            assert!(p.bits_vartime() == bit_length);
+            assert!(is_prime(&p));
+        }
+    }
+
+    #[test]
+    fn generate_safe_prime() {
+        for bit_length in (28..=128).step_by(10) {
+            let p: U128 = safe_prime(bit_length);
+            assert!(p.bits_vartime() == bit_length);
+            assert!(is_safe_prime(&p));
         }
     }
 }
