@@ -231,7 +231,7 @@ pub fn is_strong_lucas_prime<const L: usize>(
     // Both of the definitions require gcd(n, 2QD) == 1.
     // We know gcd(n, D) = 1 by construction of the base (D is chosen such that (D/n) != 0).
     // We know gcd(n, 2) = 1 because n is odd.
-    // TODO: make sure that the logic here is correct:
+    // TODO (#1): make sure that the logic here is correct:
     // If the checks below succeed, gcd(n, Q) == 1
     // (proved in [^Baillie1980], right after the definition of "strong pseudoprime")
 
