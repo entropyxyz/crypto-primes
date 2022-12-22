@@ -222,3 +222,33 @@ pub(crate) const PRIMES_1024: &[U1024] = &[
         "11e01f4abb50178cdb73023cdd71d6f1",
     ]),
 ];
+
+// A Cunningham chain (of the first kind) is a sequence of `k` numbers
+// such that `n_{k+1} = n{k} * 2 + 1`, and each `n_k` is prime.
+// We provide pairs `(k, n_0)` here.
+
+pub(crate) const CUNNINGHAM_CHAINS_128: &[(usize, U128)] = &[
+    (17, U128::from_be_hex("00000000000000959c603768458440ef")),
+    (16, U128::from_be_hex("0000000000001355a29aa8a1159d827f")),
+];
+
+pub(crate) const CUNNINGHAM_CHAINS_512: &[(usize, U512)] = &[
+    (
+        14,
+        U512::from_be_hex(concat![
+            "00000000000000000000000000000000",
+            "00000000000000015554e93d3f6ddebb",
+            "ba232f8e5d8f9fed9c5febd7cd293977",
+            "0cee48c95a5fd0af9aea46743d782bff"
+        ]),
+    ),
+    (
+        13,
+        U512::from_be_hex(concat![
+            "00000000000000000000000000000000",
+            "000000015d2866f53c7c1d8895fc5d80",
+            "c3c12d1304cacffd7f1b2a543881d0b0",
+            "3849948d12793a3e8b60f74933ccc1ff"
+        ]),
+    ),
+];

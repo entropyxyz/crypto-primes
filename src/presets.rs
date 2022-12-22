@@ -155,15 +155,14 @@ fn _is_prime_with_rng<const L: usize>(rng: &mut (impl CryptoRng + RngCore), num:
 
 #[cfg(test)]
 mod tests {
-    use crypto_bigint::Uint;
-    use rand_core::OsRng;
+    use crypto_bigint::{CheckedAdd, Uint, U64};
 
-    use super::is_prime_with_rng;
-    use crate::hazmat::primes;
+    use super::{is_prime, is_safe_prime};
+    use crate::hazmat::{primes, pseudoprimes};
 
     fn test_large_primes<const L: usize>(nums: &[Uint<L>]) {
         for num in nums {
-            assert!(is_prime_with_rng(&mut OsRng, num));
+            assert!(is_prime(num));
         }
     }
 
@@ -174,5 +173,55 @@ mod tests {
         test_large_primes(primes::PRIMES_384);
         test_large_primes(primes::PRIMES_512);
         test_large_primes(primes::PRIMES_1024);
+    }
+
+    fn test_pseudoprimes(nums: &[u32]) {
+        for num in nums {
+            assert!(!is_prime(&U64::from(*num)));
+        }
+    }
+
+    #[test]
+    fn pseudoprimes() {
+        test_pseudoprimes(pseudoprimes::EXTRA_STRONG_LUCAS);
+        test_pseudoprimes(pseudoprimes::STRONG_LUCAS);
+        test_pseudoprimes(pseudoprimes::ALMOST_EXTRA_STRONG_LUCAS);
+        test_pseudoprimes(pseudoprimes::STRONG_BASE_2);
+        test_pseudoprimes(pseudoprimes::FIBONACCI);
+        test_pseudoprimes(pseudoprimes::BRUCKMAN_LUCAS);
+        test_pseudoprimes(pseudoprimes::LUCAS);
+
+        for num in pseudoprimes::STRONG_FIBONACCI {
+            assert!(!is_prime(num));
+        }
+
+        assert!(!is_prime(&pseudoprimes::LARGE_CARMICHAEL_NUMBER));
+    }
+
+    fn test_cunningham_chain<const L: usize>(length: usize, num: &Uint<L>) {
+        let mut next = *num;
+        for i in 0..length {
+            assert!(is_prime(&next));
+
+            // The start of the chain isn't a safe prime by definition
+            if i > 0 {
+                assert!(is_safe_prime(&next));
+            }
+
+            next = (next << 1).checked_add(&Uint::<L>::ONE).unwrap();
+        }
+
+        // The chain ended.
+        assert!(!is_prime(&next));
+    }
+
+    #[test]
+    fn cunningham_chains() {
+        for (length, num) in primes::CUNNINGHAM_CHAINS_128 {
+            test_cunningham_chain(*length, num);
+        }
+        for (length, num) in primes::CUNNINGHAM_CHAINS_512 {
+            test_cunningham_chain(*length, num);
+        }
     }
 }
