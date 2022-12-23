@@ -1,4 +1,4 @@
-# Random prime number generation and primality checking library
+# Prime number tools for `crypto-bigint`
 
 [![crate][crate-image]][crate-link]
 [![Docs][docs-image]][docs-link]
@@ -6,7 +6,16 @@
 [![Build Status][build-image]][build-link]
 [![Coverage][coverage-image]][coverage-link]
 
-For more information and usage examples please refer to the documentation.
+This library implements prime number generation and primality checking for [`crypto-bigint`](https://crates.io/crates/crypto-bigint) integers.
+In particular:
+
+- Generating random primes and safe primes of given bit size;
+- Sieving iterator and one-time trial division by small integers;
+- Miller-Rabin test;
+- Strong and extra strong Lucas tests.
+
+See the documentation for the specific tests for more information and references.
+
 
 [crate-image]: https://img.shields.io/crates/v/crypto-primes.svg
 [crate-link]: https://crates.io/crates/crypto-primes
