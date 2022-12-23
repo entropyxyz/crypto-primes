@@ -26,11 +26,11 @@ fn bench_miller_rabin<'a, M: Measurement>(group: &mut BenchmarkGroup<'a, M>) {
     let start = random_odd_uint::<16, _>(&mut OsRng, 1024);
     let mut sieve = Sieve::new(&start, 1024);
     group.bench_function(
-        "(U1024) Sieve + Miller-Rabin creation + random basis check",
+        "(U1024) Sieve + Miller-Rabin creation + random base check",
         |b| {
             b.iter(|| {
                 let mr = MillerRabin::new(&sieve.next().unwrap());
-                mr.check_random_basis(&mut OsRng);
+                mr.check_random_base(&mut OsRng);
             })
         },
     );
@@ -41,7 +41,7 @@ fn bench_lucas<'a, M: Measurement>(group: &mut BenchmarkGroup<'a, M>) {
     let mut sieve = Sieve::new(&start, 1024);
     group.bench_function("(U1024) Sieve + Lucas test (Selfridge base)", |b| {
         b.iter(|| {
-            is_strong_lucas_prime::<SelfridgeBase, 16>(&sieve.next().unwrap(), true);
+            is_strong_lucas_prime(&sieve.next().unwrap(), SelfridgeBase, true);
         })
     });
 
@@ -49,7 +49,7 @@ fn bench_lucas<'a, M: Measurement>(group: &mut BenchmarkGroup<'a, M>) {
         "(U1024) Sieve + Lucas test (brute force base, almost extra strong)",
         |b| {
             b.iter(|| {
-                is_strong_lucas_prime::<BruteForceBase, 16>(&sieve.next().unwrap(), false);
+                is_strong_lucas_prime(&sieve.next().unwrap(), BruteForceBase, false);
             })
         },
     );
@@ -58,7 +58,7 @@ fn bench_lucas<'a, M: Measurement>(group: &mut BenchmarkGroup<'a, M>) {
         "(U1024) Sieve + Lucas test (brute force base, extra strong)",
         |b| {
             b.iter(|| {
-                is_strong_lucas_prime::<BruteForceBase, 16>(&sieve.next().unwrap(), true);
+                is_strong_lucas_prime(&sieve.next().unwrap(), BruteForceBase, true);
             })
         },
     );

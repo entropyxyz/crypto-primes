@@ -255,6 +255,7 @@ mod tests {
     }
 }
 
+#[cfg(test)]
 #[cfg(feature = "tests-openssl")]
 mod tests_openssl {
     use alloc::format;
@@ -316,6 +317,7 @@ mod tests_openssl {
     }
 }
 
+#[cfg(test)]
 #[cfg(feature = "tests-gmp")]
 mod tests_gmp {
     use crypto_bigint::U128;
