@@ -114,10 +114,7 @@ mod tests {
     use crate::hazmat::{primes, pseudoprimes, random_odd_uint, Sieve};
 
     fn is_spsp(num: u32) -> bool {
-        pseudoprimes::STRONG_BASE_2
-            .iter()
-            .position(|x| *x == num)
-            .is_some()
+        pseudoprimes::STRONG_BASE_2.iter().any(|x| *x == num)
     }
 
     fn random_checks<const L: usize>(
@@ -190,7 +187,7 @@ mod tests {
         let mut rng = ChaCha8Rng::from_seed(*b"01234567890123456789012345678901");
 
         for num in pseudoprimes::STRONG_FIBONACCI.iter() {
-            let mr = MillerRabin::new(&num);
+            let mr = MillerRabin::new(num);
             assert!(!mr.check_base_two());
             for _ in 0..1000 {
                 assert!(!mr.check_random_base(&mut rng));
@@ -231,7 +228,7 @@ mod tests {
     fn test_large_primes<const L: usize>(nums: &[Uint<L>]) {
         let mut rng = ChaCha8Rng::from_seed(*b"01234567890123456789012345678901");
         for num in nums {
-            let mr = MillerRabin::new(&num);
+            let mr = MillerRabin::new(num);
             assert!(mr.check_base_two());
             for _ in 0..10 {
                 assert!(mr.check_random_base(&mut rng));

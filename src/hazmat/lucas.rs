@@ -416,24 +416,17 @@ mod tests {
     use crate::hazmat::{primes, pseudoprimes};
 
     fn is_slpsp(num: u32) -> bool {
-        pseudoprimes::STRONG_LUCAS
-            .iter()
-            .position(|x| *x == num)
-            .is_some()
+        pseudoprimes::STRONG_LUCAS.iter().any(|x| *x == num)
     }
 
     fn is_aeslpsp(num: u32) -> bool {
         pseudoprimes::ALMOST_EXTRA_STRONG_LUCAS
             .iter()
-            .position(|x| *x == num)
-            .is_some()
+            .any(|x| *x == num)
     }
 
     fn is_eslpsp(num: u32) -> bool {
-        pseudoprimes::EXTRA_STRONG_LUCAS
-            .iter()
-            .position(|x| *x == num)
-            .is_some()
+        pseudoprimes::EXTRA_STRONG_LUCAS.iter().any(|x| *x == num)
     }
 
     fn test_composites_selfridge(numbers: &[u32], expected_result: bool) {
@@ -564,9 +557,9 @@ mod tests {
 
     fn test_large_primes<const L: usize>(nums: &[Uint<L>]) {
         for num in nums {
-            assert!(is_prime(&num, SelfridgeBase, true));
-            assert!(is_prime(&num, BruteForceBase, false));
-            assert!(is_prime(&num, BruteForceBase, true));
+            assert!(is_prime(num, SelfridgeBase, true));
+            assert!(is_prime(num, BruteForceBase, false));
+            assert!(is_prime(num, BruteForceBase, true));
         }
     }
 

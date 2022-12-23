@@ -257,6 +257,8 @@ mod tests {
 
 #[cfg(feature = "tests-openssl")]
 mod tests_openssl {
+    use alloc::format;
+
     use crypto_bigint::U128;
     use openssl::bn::{BigNum, BigNumContext};
     use rand_core::OsRng;
