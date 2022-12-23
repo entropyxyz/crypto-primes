@@ -84,9 +84,9 @@ jobs:
       matrix:
         include:
           # 32-bit Linux
-          - target: i686-unknown-linux-gnu
-            rust: stable
-            deps: sudo apt update && sudo apt install gcc-multilib libssl-dev
+          #- target: i686-unknown-linux-gnu
+          #  rust: stable
+          #  deps: sudo apt update && sudo apt install gcc-multilib libssl-dev
 
           # 64-bit Linux
           - target: x86_64-unknown-linux-gnu
