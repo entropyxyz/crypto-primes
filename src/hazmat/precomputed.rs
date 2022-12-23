@@ -1,3 +1,5 @@
+use alloc::vec::Vec;
+
 use crypto_bigint::Reciprocal;
 use lazy_static::lazy_static;
 

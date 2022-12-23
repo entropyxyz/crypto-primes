@@ -1,6 +1,8 @@
 //! An iterator for weeding out multiples of small primes,
 //! before proceeding with slower tests.
 
+use alloc::{vec, vec::Vec};
+
 use crypto_bigint::{Integer, Limb, Random, Uint, Word, Zero};
 use rand_core::{CryptoRng, RngCore};
 
@@ -36,6 +38,7 @@ pub fn random_odd_uint<const L: usize, R: CryptoRng + RngCore + ?Sized>(
 
 /// An iterator returning numbers with up to and including given bit length,
 /// starting from a given number, that are not multiples of the first 2048 small primes.
+#[derive(Clone, Debug)]
 pub struct Sieve<const L: usize> {
     // Instead of dividing `Uint` by small primes every time (which is slow),
     // we keep a "base" and a small increment separately,
@@ -57,6 +60,8 @@ type Residue = u32;
 const INCR_LIMIT: Residue = Residue::MAX - SMALL_PRIMES[SMALL_PRIMES.len() - 1] as Residue + 1;
 
 impl<const L: usize> Sieve<L> {
+    /// Creates a new sieve, iterating from `start` and
+    /// until the last number with `max_bit_length` bits.
     pub fn new(start: &Uint<L>, max_bit_length: usize) -> Self {
         // Since 2 is not in `SMALL_PRIMES`, we need the starting number to be pre-selected
         // to not be divisible by it.
@@ -170,6 +175,8 @@ pub fn sieve_once<const L: usize>(num: &Uint<L>) -> Option<bool> {
 
 #[cfg(test)]
 mod tests {
+
+    use alloc::vec::Vec;
 
     use number_theory::NumberTheory;
     use rand_chacha::ChaCha8Rng;

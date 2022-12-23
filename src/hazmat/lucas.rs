@@ -50,6 +50,7 @@ pub trait LucasBase {
 ///   Math. Comp. 35 1391-1417 (1980),
 ///   DOI: [10.2307/2006406](https://dx.doi.org/10.2307/2006406),
 ///   <http://mpqs.free.fr/LucasPseudoprimes.pdf>
+#[derive(Copy, Clone, Debug)]
 pub struct SelfridgeBase;
 
 impl LucasBase for SelfridgeBase {
@@ -107,6 +108,7 @@ impl LucasBase for SelfridgeBase {
 /// [^Baillie]:
 ///   R. Baillie, Mathematica code for extra strong Lucas pseudoprimes,
 ///   <https://oeis.org/A217719/a217719.txt>
+#[derive(Copy, Clone, Debug)]
 pub struct BruteForceBase;
 
 impl LucasBase for BruteForceBase {

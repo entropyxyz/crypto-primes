@@ -9,8 +9,9 @@ readme = "README.md"
 categories = ["cryptography", "no-std"]
 
 [dependencies]
-crypto-bigint = { git = "https://github.com/RustCrypto/crypto-bigint", branch = "master", features = ["rand"] }
-rand_core = { version = "0.6", features = ["getrandom"] }
+crypto-bigint = { git = "https://github.com/RustCrypto/crypto-bigint", branch = "master", default-features = false, features = ["rand_core"] }
+rand_core = { version = "0.6", default-features = false }
+getrandom = { version = "0.2", optional = true, default-features = false, features = ["js"] }
 lazy_static = "1.4"
 openssl = { version = "0.10", optional = true }
 rug = { version = "1.18", default-features = false, features = ["integer"], optional = true }
@@ -25,6 +26,8 @@ proptest = "1"
 number-theory = "0.0.17"
 
 [features]
+default = ["default-rng"]
+default-rng = ["getrandom", "rand_core/getrandom"]
 tests-openssl = ["openssl"]
 tests-gmp = ["rug"]
 tests-exhaustive = []

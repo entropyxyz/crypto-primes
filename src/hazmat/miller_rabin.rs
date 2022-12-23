@@ -18,6 +18,7 @@ use crypto_bigint::{
 ///   C. Pomerance, J. L. Selfridge, S. S. Wagstaff "The Pseudoprimes to 25*10^9",
 ///   Math. Comp. 35 1003-1026 (1980),
 ///   DOI: [10.2307/2006210](https://dx.doi.org/10.2307/2006210)
+#[derive(Copy, Clone, Debug)]
 pub struct MillerRabin<const L: usize> {
     candidate: Uint<L>,
     montgomery_params: DynResidueParams<L>,
