@@ -405,6 +405,8 @@ pub fn is_strong_lucas_prime<const L: usize>(
 #[cfg(test)]
 mod tests {
     use crypto_bigint::Uint;
+
+    #[cfg(feature = "tests-exhaustive")]
     use number_theory::NumberTheory;
 
     use super::{is_strong_lucas_prime as is_prime, BruteForceBase, SelfridgeBase};
@@ -574,6 +576,7 @@ mod tests {
         test_large_primes(primes::PRIMES_1024);
     }
 
+    #[cfg(feature = "tests-exhaustive")]
     #[test]
     fn exhaustive() {
         // Test all the odd numbers up to the limit where we know the false positives,

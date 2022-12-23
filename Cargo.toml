@@ -27,6 +27,7 @@ number-theory = "0.0.17"
 [features]
 tests-openssl = ["openssl"]
 tests-gmp = ["rug"]
+tests-exhaustive = []
 
 [[bench]]
 name = "bench"

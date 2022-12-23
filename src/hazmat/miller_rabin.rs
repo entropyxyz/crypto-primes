@@ -103,9 +103,11 @@ fn decompose<const L: usize>(n: &Uint<L>) -> (u32, Uint<L>) {
 #[cfg(test)]
 mod tests {
     use crypto_bigint::{Uint, U1536};
-    use number_theory::NumberTheory;
     use rand_chacha::ChaCha8Rng;
     use rand_core::{CryptoRng, RngCore, SeedableRng};
+
+    #[cfg(feature = "tests-exhaustive")]
+    use number_theory::NumberTheory;
 
     use super::MillerRabin;
     use crate::hazmat::{primes, pseudoprimes, random_odd_uint, Sieve};
@@ -245,6 +247,7 @@ mod tests {
         test_large_primes(primes::PRIMES_1024);
     }
 
+    #[cfg(feature = "tests-exhaustive")]
     #[test]
     fn exhaustive() {
         // Test all the odd numbers up to the limit where we know the false positives,

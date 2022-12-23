@@ -4,6 +4,7 @@ use crypto_bigint::{U1536, U64};
 
 /// The limit up to which we have exceptions to implemented tests listed (see below),
 /// so we can run an exhaustive test on every number knowing when it is expected to fail.
+#[cfg(feature = "tests-exhaustive")]
 pub(crate) const EXHAUSTIVE_TEST_LIMIT: u32 = 500000;
 
 /// Extra strong Lucas pseudoprimes (OEIS:A217719) under `EXHAUSTIVE_TEST_LIMIT`.
