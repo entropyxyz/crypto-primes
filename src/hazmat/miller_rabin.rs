@@ -103,7 +103,7 @@ fn decompose<const L: usize>(n: &Uint<L>) -> (u32, Uint<L>) {
 
 #[cfg(test)]
 mod tests {
-    use crypto_bigint::{Uint, U1536};
+    use crypto_bigint::{Uint, U1024, U128, U1536, U64};
     use rand_chacha::ChaCha8Rng;
     use rand_core::{CryptoRng, RngCore, SeedableRng};
 
@@ -137,28 +137,25 @@ mod tests {
                 expected_result
             };
 
-            // Test both single-limb and multi-limb, just in case.
-
             // A random base MR test is expected to report a composite as a prime
             // with about 1/4 probability. So we're expecting less than
             // 35 out of 100 false positives, seems to work.
 
-            let mr = MillerRabin::new(&Uint::<1>::from(*num));
+            let mr = MillerRabin::new(&U64::from(*num));
             assert_eq!(mr.check_base_two(), actual_expected_result);
             let reported_prime = random_checks(&mut rng, &mr, 100);
-            assert!(reported_prime < 35);
-
-            let mr = MillerRabin::new(&Uint::<2>::from(*num));
-            assert_eq!(mr.check_base_two(), actual_expected_result);
-            let reported_prime = random_checks(&mut rng, &mr, 100);
-            assert!(reported_prime < 35);
+            assert!(
+                reported_prime < 35,
+                "reported as prime in {} out of 100 tests",
+                reported_prime
+            );
         }
     }
 
     #[test]
     fn trivial() {
         let mut rng = ChaCha8Rng::from_seed(*b"01234567890123456789012345678901");
-        let start = random_odd_uint::<16, _>(&mut rng, 1024);
+        let start: U1024 = random_odd_uint(&mut rng, 1024);
         for num in Sieve::new(&start, 1024).take(10) {
             let mr = MillerRabin::new(&num);
 
@@ -173,7 +170,7 @@ mod tests {
         let mut rng = ChaCha8Rng::from_seed(*b"01234567890123456789012345678901");
 
         // Mersenne prime 2^127-1
-        let num = Uint::<2>::from_be_hex("7fffffffffffffffffffffffffffffff");
+        let num = U128::from_be_hex("7fffffffffffffffffffffffffffffff");
 
         let mr = MillerRabin::new(&num);
         assert!(mr.check_base_two());
@@ -255,7 +252,7 @@ mod tests {
 
             let spsp = is_spsp(num);
 
-            let mr = MillerRabin::new(&Uint::<1>::from(num));
+            let mr = MillerRabin::new(&U64::from(num));
             let res = mr.check_base_two();
             let expected = spsp || res_ref;
             assert_eq!(

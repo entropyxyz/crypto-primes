@@ -3,27 +3,28 @@ use rand_core::OsRng;
 use criterion::{
     criterion_group, criterion_main, measurement::Measurement, BenchmarkGroup, Criterion,
 };
+use crypto_bigint::U1024;
 
 use crypto_primes::hazmat::{
     is_strong_lucas_prime, random_odd_uint, BruteForceBase, MillerRabin, SelfridgeBase, Sieve,
 };
 
 fn bench_sieve<'a, M: Measurement>(group: &mut BenchmarkGroup<'a, M>) {
-    let start = random_odd_uint::<16, _>(&mut OsRng, 1024);
+    let start: U1024 = random_odd_uint(&mut OsRng, 1024);
     group.bench_function("(U1024) Sieve, 1000 samples", |b| {
         b.iter(|| Sieve::new(&start, 1024).take(1000).for_each(drop))
     });
 }
 
 fn bench_miller_rabin<'a, M: Measurement>(group: &mut BenchmarkGroup<'a, M>) {
-    let start = random_odd_uint::<16, _>(&mut OsRng, 1024);
+    let start: U1024 = random_odd_uint(&mut OsRng, 1024);
     group.bench_function("(U1024) Miller-Rabin creation", |b| {
         b.iter(|| {
             MillerRabin::new(&start);
         })
     });
 
-    let start = random_odd_uint::<16, _>(&mut OsRng, 1024);
+    let start: U1024 = random_odd_uint(&mut OsRng, 1024);
     let mut sieve = Sieve::new(&start, 1024);
     group.bench_function(
         "(U1024) Sieve + Miller-Rabin creation + random base check",
@@ -37,7 +38,7 @@ fn bench_miller_rabin<'a, M: Measurement>(group: &mut BenchmarkGroup<'a, M>) {
 }
 
 fn bench_lucas<'a, M: Measurement>(group: &mut BenchmarkGroup<'a, M>) {
-    let start = random_odd_uint::<16, _>(&mut OsRng, 1024);
+    let start: U1024 = random_odd_uint(&mut OsRng, 1024);
     let mut sieve = Sieve::new(&start, 1024);
     group.bench_function("(U1024) Sieve + Lucas test (Selfridge base)", |b| {
         b.iter(|| {
