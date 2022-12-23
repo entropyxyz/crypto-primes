@@ -9,17 +9,6 @@ use crypto_bigint::{
 
 use super::jacobi::{jacobi_symbol, JacobiSymbol};
 
-/// Returns the number of least-significant bits that are zero
-fn trailing_zeros<B: Clone + Integer + core::ops::ShrAssign<usize>>(n: &B) -> usize {
-    let mut i = 0_usize;
-    let mut t = *n;
-    while t.is_even().into() {
-        i += 1;
-        t >>= 1_usize;
-    }
-    i
-}
-
 /// The maximum number of attempts to find `D` such that `(D/n) == -1`.
 // This is widely believed to be impossible.
 // So if we exceed it, we will panic reporting the value of `n`.
@@ -155,6 +144,25 @@ impl LucasBase for BruteForceBase {
     }
 }
 
+/// For the given odd `n`, finds `s` and odd `d` such that `n + 1 == 2^s * d`.
+fn decompose<const L: usize>(n: &Uint<L>) -> (u32, Uint<L>) {
+    debug_assert!(bool::from(n.is_odd()));
+
+    // Need to be careful here since `n + 1` can overflow.
+    // Instead of adding 1 and counting trailing 0s, we count trailing ones on the original `n`.
+
+    let mut n = *n;
+    let mut s = 0;
+
+    while n.is_odd().into() {
+        n >>= 1;
+        s += 1;
+    }
+
+    // This won't overflow since the original `n` was odd, so we right-shifted at least once.
+    (s, n.wrapping_add(&Uint::<L>::ONE))
+}
+
 /// Performs the strong Lucas primality test by Baillie & Wagstaff[^Baillie1980],
 /// with the "extra strong" check for available bases
 /// (defined by Mo[^Mo1993], also described by Grantham[^Grantham2001]).
@@ -244,9 +252,7 @@ pub fn is_strong_lucas_prime<const L: usize>(
     // (proved in [^Baillie1980], right after the definition of "strong pseudoprime")
 
     // Find d and s, such that d is odd and d * 2^s = (n - (D/n)).
-    let mut d = n.wrapping_add(&Uint::<L>::ONE);
-    let s = trailing_zeros(&d);
-    d >>= s;
+    let (s, d) = decompose(n);
 
     // Some constants in Montgomery form
 
@@ -407,13 +413,20 @@ pub fn is_strong_lucas_prime<const L: usize>(
 
 #[cfg(test)]
 mod tests {
-    use crypto_bigint::Uint;
+    use crypto_bigint::{Uint, U128};
 
     #[cfg(feature = "tests-exhaustive")]
     use number_theory::NumberTheory;
 
-    use super::{is_strong_lucas_prime as is_prime, BruteForceBase, SelfridgeBase};
+    use super::{decompose, is_strong_lucas_prime as is_prime, BruteForceBase, SelfridgeBase};
     use crate::hazmat::{primes, pseudoprimes};
+
+    #[test]
+    fn decomposition() {
+        assert_eq!(decompose(&U128::MAX), (128, U128::ONE));
+        assert_eq!(decompose(&U128::ONE), (1, U128::ONE));
+        assert_eq!(decompose(&U128::from(7766015u32)), (15, U128::from(237u32)));
+    }
 
     fn is_slpsp(num: u32) -> bool {
         pseudoprimes::STRONG_LUCAS.iter().any(|x| *x == num)
