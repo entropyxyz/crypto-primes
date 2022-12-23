@@ -180,7 +180,8 @@ mod tests {
 
     use alloc::vec::Vec;
 
-    use number_theory::NumberTheory;
+    use crypto_bigint::U64;
+    use num_prime::nt_funcs::factorize64;
     use rand_chacha::ChaCha8Rng;
     use rand_core::SeedableRng;
 
@@ -192,17 +193,13 @@ mod tests {
         let max_prime = SMALL_PRIMES[SMALL_PRIMES.len() - 1];
 
         let mut rng = ChaCha8Rng::from_seed(*b"01234567890123456789012345678901");
-        let start = random_odd_uint::<1, _>(&mut rng, 32);
+        let start: U64 = random_odd_uint(&mut rng, 32);
         for num in Sieve::new(&start, 32).take(100) {
             let num_u64: u64 = num.into();
             assert!(num_u64.leading_zeros() == 32);
 
-            let factors_and_powers = num_u64.factor();
-            let mut factors = factors_and_powers
-                .chunks(2)
-                .map(|pair| pair[0])
-                .collect::<Vec<_>>();
-            factors.sort_unstable();
+            let factors_and_powers = factorize64(num_u64);
+            let factors = factors_and_powers.into_keys().collect::<Vec<_>>();
 
             assert!(factors[0] > max_prime as u64);
         }

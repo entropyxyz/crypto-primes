@@ -108,7 +108,7 @@ mod tests {
     use rand_core::{CryptoRng, RngCore, SeedableRng};
 
     #[cfg(feature = "tests-exhaustive")]
-    use number_theory::NumberTheory;
+    use num_prime::nt_funcs::is_prime64;
 
     use super::MillerRabin;
     use crate::hazmat::{primes, pseudoprimes, random_odd_uint, Sieve};
@@ -251,7 +251,7 @@ mod tests {
         // Test all the odd numbers up to the limit where we know the false positives,
         // and compare the results with the reference.
         for num in (3..pseudoprimes::EXHAUSTIVE_TEST_LIMIT).step_by(2) {
-            let res_ref = num.is_prime();
+            let res_ref = is_prime64(num.into());
 
             let spsp = is_spsp(num);
 

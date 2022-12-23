@@ -416,7 +416,7 @@ mod tests {
     use crypto_bigint::{Uint, U128};
 
     #[cfg(feature = "tests-exhaustive")]
-    use number_theory::NumberTheory;
+    use num_prime::nt_funcs::is_prime64;
 
     use super::{decompose, is_strong_lucas_prime as is_prime, BruteForceBase, SelfridgeBase};
     use crate::hazmat::{primes, pseudoprimes};
@@ -591,7 +591,7 @@ mod tests {
         // Test all the odd numbers up to the limit where we know the false positives,
         // and compare the results with the reference.
         for num in (3..pseudoprimes::EXHAUSTIVE_TEST_LIMIT).step_by(2) {
-            let res_ref = num.is_prime();
+            let res_ref = is_prime64(num.into());
 
             let eslpsp = is_eslpsp(num);
             let aeslpsp = is_aeslpsp(num);

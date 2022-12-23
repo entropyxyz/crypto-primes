@@ -23,7 +23,7 @@ rand = "0.8"
 num-modular = { version = "0.5", features = ["num-bigint"] }
 num-bigint = "0.4"
 proptest = "1"
-number-theory = "0.0.17"
+num-prime = "0.4.3"
 
 [features]
 default = ["default-rng"]
