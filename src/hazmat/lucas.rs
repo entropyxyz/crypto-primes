@@ -4,7 +4,7 @@ use crypto_bigint::{
         runtime_mod::{DynResidue, DynResidueParams},
         AddResidue, InvResidue, MulResidue, SubResidue,
     },
-    Integer, Limb, Uint,
+    Integer, Limb, Uint, Word,
 };
 
 use super::jacobi::{jacobi_symbol, JacobiSymbol};
@@ -60,7 +60,8 @@ impl LucasBase for SelfridgeBase {
 
         let mut d = 5_i32;
         let n_is_small = n.bits_vartime() < (Limb::BIT_SIZE - 1);
-        let small_n = n.as_words()[0] as u32;
+        // Can unwrap here since it won't overflow after `&`
+        let small_n: u32 = (n.as_words()[0] & Word::from(u32::MAX)).try_into().unwrap();
         let mut attempts = 0;
         loop {
             if attempts >= MAX_ATTEMPTS {

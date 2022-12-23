@@ -3,7 +3,7 @@
 
 use alloc::{vec, vec::Vec};
 
-use crypto_bigint::{Integer, Limb, Random, Uint, Word, Zero};
+use crypto_bigint::{Integer, Limb, Random, Uint, Zero};
 use rand_core::{CryptoRng, RngCore};
 
 use crate::hazmat::precomputed::{SmallPrime, SMALL_PRIMES, SMALL_PRIMES_RECIPROCALS};
@@ -108,8 +108,10 @@ impl<const L: usize> Sieve<L> {
                 // We are close to `2^max_bit_length - 1`.
                 // Mark this round as the last.
                 self.last_round = true;
-                let incr_limit_word: Word = incr_limit.as_limbs()[0].into();
-                incr_limit_word as Residue
+                // Can unwrap here since we just checked above that `incr_limit <= INCR_LIMIT`,
+                // and `INCR_LIMIT` fits into `Residue`.
+                let incr_limit_small: Residue = incr_limit.as_words()[0].try_into().unwrap();
+                incr_limit_small
             };
         }
         true
