@@ -202,7 +202,7 @@ mod tests {
                 .chunks(2)
                 .map(|pair| pair[0])
                 .collect::<Vec<_>>();
-            factors.sort();
+            factors.sort_unstable();
 
             assert!(factors[0] > max_prime as u64);
         }
