@@ -31,6 +31,7 @@ default-rng = ["getrandom", "rand_core/getrandom"]
 tests-openssl = ["openssl"]
 tests-gmp = ["rug"]
 tests-exhaustive = []
+tests-all = ["tests-openssl", "tests-gmp", "tests-exhaustive"]
 
 [[bench]]
 name = "bench"
