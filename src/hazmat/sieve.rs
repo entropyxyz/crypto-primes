@@ -3,7 +3,7 @@
 
 use alloc::{vec, vec::Vec};
 
-use crypto_bigint::{Integer, Limb, Random, Uint, Zero};
+use crypto_bigint::{Integer, Random, Uint, Zero};
 use rand_core::{CryptoRng, RngCore};
 
 use crate::hazmat::precomputed::{SmallPrime, SMALL_PRIMES, SMALL_PRIMES_RECIPROCALS};
@@ -14,7 +14,7 @@ pub fn random_odd_uint<const L: usize, R: CryptoRng + RngCore + ?Sized>(
     rng: &mut R,
     bit_length: usize,
 ) -> Uint<L> {
-    if bit_length > Limb::BIT_SIZE * L {
+    if bit_length > Uint::<L>::BITS {
         panic!(
             "The requested bit length ({}) is larger than the chosen Uint size",
             bit_length
@@ -23,8 +23,8 @@ pub fn random_odd_uint<const L: usize, R: CryptoRng + RngCore + ?Sized>(
 
     // TODO: not particularly efficient, can be improved by zeroing high bits instead of shifting
     let mut random = Uint::<L>::random(rng);
-    if bit_length != Limb::BIT_SIZE * L {
-        random >>= Limb::BIT_SIZE * L - bit_length;
+    if bit_length != Uint::<L>::BITS {
+        random >>= Uint::<L>::BITS - bit_length;
     }
 
     // Make it odd

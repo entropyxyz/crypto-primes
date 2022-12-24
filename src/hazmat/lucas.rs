@@ -48,7 +48,7 @@ impl LucasBase for SelfridgeBase {
         // Return P = 1, Q = (1 - D) / 4).
 
         let mut d = 5_i32;
-        let n_is_small = n.bits_vartime() < (Limb::BIT_SIZE - 1);
+        let n_is_small = n.bits_vartime() < (Limb::BITS - 1);
         // Can unwrap here since it won't overflow after `&`
         let small_n: u32 = (n.as_words()[0] & Word::from(u32::MAX)).try_into().unwrap();
         let mut attempts = 0;

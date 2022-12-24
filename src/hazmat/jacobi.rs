@@ -105,7 +105,7 @@ pub(crate) fn jacobi_symbol<const L: usize>(a: i32, p_long: &Uint<L>) -> JacobiS
     let a_limb = Limb::from(a_pos);
 
     // Normalize input: at the end we want `a < p`, `p` odd, and both fitting into a `Word`.
-    let (result, a, p): (JacobiSymbol, Word, Word) = if p_long.bits_vartime() <= Limb::BIT_SIZE {
+    let (result, a, p): (JacobiSymbol, Word, Word) = if p_long.bits_vartime() <= Limb::BITS {
         let a = a_limb.0;
         let p = p_long.as_limbs()[0].0;
         (result, a % p, p)
