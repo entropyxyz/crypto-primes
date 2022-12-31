@@ -3,10 +3,10 @@
 
 use alloc::{vec, vec::Vec};
 
-use crypto_bigint::{Integer, Random, Uint, Zero};
+use crypto_bigint::{Integer, Limb, NonZero, Random, Uint, Zero};
 use rand_core::{CryptoRng, RngCore};
 
-use crate::hazmat::precomputed::{SmallPrime, SMALL_PRIMES, SMALL_PRIMES_RECIPROCALS};
+use crate::hazmat::precomputed::{SmallPrime, SMALL_PRIMES};
 
 /// Returns a random odd integer with given bit length
 /// (that is, with both `0` and `bit_length-1` bits set).
@@ -90,12 +90,10 @@ impl<const L: usize> Sieve<L> {
             self.incr = 0;
 
             // Re-calculate residues.
-            for (i, reciprocal) in SMALL_PRIMES_RECIPROCALS
-                .iter()
-                .enumerate()
-                .take(self.residues.len())
-            {
-                let (_quo, rem) = self.base.ct_div_rem_limb_with_reciprocal(reciprocal);
+            for (i, small_prime) in SMALL_PRIMES.iter().enumerate().take(self.residues.len()) {
+                let (_quo, rem) = self
+                    .base
+                    .div_rem_limb(NonZero::new(Limb::from(*small_prime)).unwrap());
                 self.residues[i] = rem.0 as SmallPrime;
             }
 
@@ -166,8 +164,8 @@ pub fn sieve_once<const L: usize>(num: &Uint<L>) -> Option<bool> {
     if num.is_even().into() {
         return Some(false);
     }
-    for reciprocal in SMALL_PRIMES_RECIPROCALS.iter() {
-        let (quo, rem) = num.ct_div_rem_limb_with_reciprocal(reciprocal);
+    for small_prime in SMALL_PRIMES.iter() {
+        let (quo, rem) = num.div_rem_limb(NonZero::new(Limb::from(*small_prime)).unwrap());
         if rem.is_zero().into() {
             return Some(quo == Uint::<L>::ONE);
         }

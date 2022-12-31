@@ -1,8 +1,3 @@
-use alloc::vec::Vec;
-
-use crypto_bigint::Reciprocal;
-use lazy_static::lazy_static;
-
 /// The type that fits any small prime from the table.
 pub(crate) type SmallPrime = u16;
 
@@ -147,14 +142,3 @@ pub(crate) const SMALL_PRIMES: [SmallPrime; 2047] = [
     17599, 17609, 17623, 17627, 17657, 17659, 17669, 17681, 17683, 17707, 17713, 17729, 17737,
     17747, 17749, 17761, 17783, 17789, 17791, 17807, 17827, 17837, 17839, 17851, 17863,
 ];
-
-lazy_static! {
-    pub(crate) static ref SMALL_PRIMES_RECIPROCALS: Vec<Reciprocal> = precompute_reciprocals();
-}
-
-fn precompute_reciprocals() -> Vec<Reciprocal> {
-    SMALL_PRIMES
-        .iter()
-        .map(|prime| Reciprocal::new((*prime).into()).unwrap())
-        .collect::<Vec<_>>()
-}
