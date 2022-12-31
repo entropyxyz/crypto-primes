@@ -1,10 +1,7 @@
 //! Lucas primality test.
 use crypto_bigint::{
-    modular::{
-        runtime_mod::{DynResidue, DynResidueParams},
-        AddResidue, InvResidue, MulResidue, SubResidue,
-    },
-    Integer, Limb, Uint, Word,
+    modular::runtime_mod::{DynResidue, DynResidueParams},
+    Integer, Invert, Limb, Square, Uint, Word,
 };
 
 use super::jacobi::{jacobi_symbol, JacobiSymbol};
@@ -219,19 +216,20 @@ fn decompose<const L: usize>(n: &Uint<L>) -> (u32, Uint<L>) {
 ///   graduate thesis, University of Calgary, Calgary, AB (1993)
 ///   DOI: [10.11575/PRISM/10820](https://dx.doi.org/10.11575/PRISM/10820)
 pub fn is_strong_lucas_prime<const L: usize>(
-    n: &Uint<L>,
+    candidate: &Uint<L>,
     base: impl LucasBase,
     check_u: bool,
 ) -> bool {
-    if n.is_even().into() {
+    if candidate.is_even().into() {
         return false;
     }
 
     // Find the base for the Lucas sequence.
-    let (p, q) = match base.generate(n) {
+    let (p, q) = match base.generate(candidate) {
         Ok((p, q)) => (p, q),
         Err(is_prime) => return is_prime,
     };
+    let discriminant = (p * p) as i32 - 4 * q;
 
     // If either is true, it allows us to optimize certain parts of the calculations.
     let p_is_one = p == 1;
@@ -252,34 +250,34 @@ pub fn is_strong_lucas_prime<const L: usize>(
     // (proved in [^Baillie1980], right after the definition of "strong pseudoprime")
 
     // Find d and s, such that d is odd and d * 2^s = (n - (D/n)).
-    let (s, d) = decompose(n);
+    let (s, d) = decompose(candidate);
 
     // Some constants in Montgomery form
 
-    let params = DynResidueParams::<L>::new(*n);
+    let params = DynResidueParams::<L>::new(*candidate);
 
-    let zero_m = DynResidue::<L>::zero(params);
-    let one_m = DynResidue::<L>::one(params);
-    let two_m = one_m.add(&one_m);
-    let minus_two_m = zero_m.sub(&two_m);
+    let zero = DynResidue::<L>::zero(params);
+    let one = DynResidue::<L>::one(params);
+    let two = one + one;
+    let minus_two = -two;
 
     // Convert Q to Montgomery form
 
-    let q_m = if q_is_one {
-        one_m
+    let q = if q_is_one {
+        one
     } else {
-        let abs_q_m = DynResidue::<L>::new(Uint::<L>::from(q.abs_diff(0)), params);
+        let abs_q = DynResidue::<L>::new(Uint::<L>::from(q.abs_diff(0)), params);
         if q < 0 {
-            DynResidue::<L>::zero(params).sub(&abs_q_m)
+            -abs_q
         } else {
-            abs_q_m
+            abs_q
         }
     };
 
     // Convert P to Montgomery form
 
-    let p_m = if p_is_one {
-        one_m
+    let p = if p_is_one {
+        one
     } else {
         DynResidue::<L>::new(Uint::<L>::from(p), params)
     };
@@ -302,39 +300,39 @@ pub fn is_strong_lucas_prime<const L: usize>(
     //
     // We can therefore start with k=0 and build up to k=d in log2(d) steps.
 
-    let mut vk_m = two_m; // keeps V_k
-    let mut vk1_m = p_m; // keeps V_{k+1}
-    let mut qk = one_m; // keeps Q^k
-    let mut qk_times_p = if p_is_one { one_m } else { p_m }; // keeps P Q^{k}
+    let mut vk = two; // keeps V_k
+    let mut vk1 = p; // keeps V_{k+1}
+    let mut qk = one; // keeps Q^k
+    let mut qk_times_p = if p_is_one { one } else { p }; // keeps P Q^{k}
 
     for i in (0..d.bits_vartime()).rev() {
         if d.bit_vartime(i) == 1 {
             // k' = 2k+1
 
             // V_k' = V_{2k+1} = V_k V_{k+1} - P Q^k
-            vk_m = vk_m.mul(&vk1_m).sub(&qk_times_p);
+            vk = vk * vk1 - qk_times_p;
 
             // V_{k'+1} = V_{2k+2} = V_{k+1}^2 - 2 Q^{k+1}
-            let qk1 = qk.mul(&q_m); // Q^{k+1}
-            let two_qk1 = if q_is_one { two_m } else { qk1.add(&qk1) }; // 2 Q^{k+1}
-            vk1_m = vk1_m.square().sub(&two_qk1);
-            qk = qk.mul(&qk1);
+            let qk1 = qk * q; // Q^{k+1}
+            let two_qk1 = if q_is_one { two } else { qk1 + qk1 }; // 2 Q^{k+1}
+            vk1 = vk1.square() - two_qk1;
+            qk *= qk1;
         } else {
             // k' = 2k
 
             // V_{k'+1} = V_{2k+1} = V_k V_{k+1} - P Q^k
-            vk1_m = vk_m.mul(&vk1_m).sub(&qk_times_p);
+            vk1 = vk * vk1 - qk_times_p;
 
             // V_k' = V_{2k} = V_k^2 - 2 Q^k
-            let two_qk = if q_is_one { two_m } else { qk.add(&qk) }; // 2 Q^k
-            vk_m = vk_m.square().sub(&two_qk);
+            let two_qk = if q_is_one { two } else { qk + qk }; // 2 Q^k
+            vk = vk.square() - two_qk;
             qk = qk.square();
         }
 
         if p_is_one {
             qk_times_p = qk;
         } else {
-            qk_times_p = qk.mul(&p_m);
+            qk_times_p = qk * p;
         }
     }
 
@@ -347,7 +345,7 @@ pub fn is_strong_lucas_prime<const L: usize>(
     // of a property of Lucas series: V_k^2 - 4 Q^k = D U_k^2 mod n.
     // If Q = 1 we can easily decompose the left side of the equation leading to the check above.
     let vk_equals_two = if q_is_one {
-        vk_m == two_m || vk_m == minus_two_m
+        vk == two || vk == minus_two
     } else {
         true
     };
@@ -361,19 +359,15 @@ pub fn is_strong_lucas_prime<const L: usize>(
         // Some implementations just test for 2 V_{k+1} == P V_{k},
         // but we don't have any reference pseudoprime lists for this, so we are not doing it.
         if check_u {
-            let d = (p * p) as i32 - 4 * q;
-            let abs_d_m = DynResidue::<L>::new(Uint::<L>::from(d.abs_diff(0)), params);
-            let d_m = if d < 0 {
-                DynResidue::<L>::zero(params).sub(&abs_d_m)
-            } else {
-                abs_d_m
-            };
-            let inv_d_m = d_m.inv().unwrap();
+            let abs_d = DynResidue::<L>::new(Uint::<L>::from(discriminant.abs_diff(0)), params);
+            let d_m = if discriminant < 0 { -abs_d } else { abs_d };
+            // `d` is guaranteed non-zero by construction, so we can safely unwrap
+            let inv_d = <DynResidue<L> as Invert>::invert(&d_m).unwrap();
 
-            let vk_times_p = if p_is_one { vk_m } else { vk_m.mul(&p_m) };
-            let uk_m = inv_d_m.mul(&(vk1_m.add(&vk1_m).sub(&vk_times_p)));
+            let vk_times_p = if p_is_one { vk } else { vk * p };
+            let uk = inv_d * (vk1 + vk1 - vk_times_p);
 
-            if uk_m == zero_m {
+            if uk == zero {
                 return true;
             }
         } else {
@@ -384,26 +378,26 @@ pub fn is_strong_lucas_prime<const L: usize>(
 
     // Check if V_{2^d t} == 0 mod n for some 0 <= t < s.
 
-    if vk_m == zero_m {
+    if vk == zero {
         return true;
     }
 
     for _ in 1..s {
         // Optimization: V_k = ±2 is a fixed point for V_k' = V_k^2 - 2 Q^k with Q = 1,
         // so if V_k = ±2, we can stop: we will never find a future V_k == 0.
-        if q_is_one && (vk_m == two_m || vk_m == minus_two_m) {
+        if q_is_one && (vk == two || vk == minus_two) {
             return false;
         }
 
         // k' = 2k
         // V(k') = V(2k) = V(k)² - 2 * Q^k
-        vk_m = vk_m.mul(&vk_m).sub(&qk).sub(&qk);
+        vk = vk * vk - qk - qk;
 
         if !q_is_one {
             qk = qk.square();
         }
 
-        if vk_m == zero_m {
+        if vk == zero {
             return true;
         }
     }

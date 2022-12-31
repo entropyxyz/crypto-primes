@@ -3,11 +3,8 @@
 use rand_core::{CryptoRng, RngCore};
 
 use crypto_bigint::{
-    modular::{
-        runtime_mod::{DynResidue, DynResidueParams},
-        MulResidue, PowResidue,
-    },
-    Integer, NonZero, RandomMod, Uint,
+    modular::runtime_mod::{DynResidue, DynResidueParams},
+    Integer, NonZero, RandomMod, Square, Uint,
 };
 
 /// Precomputed data used to perform Miller-Rabin primality test[^Pomerance1980].
@@ -22,8 +19,8 @@ use crypto_bigint::{
 pub struct MillerRabin<const L: usize> {
     candidate: Uint<L>,
     montgomery_params: DynResidueParams<L>,
-    one_m: DynResidue<L>,
-    cand_minus_one_m: DynResidue<L>,
+    one: DynResidue<L>,
+    minus_one: DynResidue<L>,
     s: u32,
     d: Uint<L>,
 }
@@ -34,15 +31,14 @@ impl<const L: usize> MillerRabin<L> {
     pub fn new(candidate: &Uint<L>) -> Self {
         debug_assert!(bool::from(candidate.is_odd()));
         let params = DynResidueParams::<L>::new(*candidate);
-        let one_m = DynResidue::<L>::new(Uint::<L>::ONE, params);
-        let cand_minus_one = candidate.wrapping_sub(&Uint::<L>::ONE);
-        let cand_minus_one_m = DynResidue::<L>::new(cand_minus_one, params);
+        let one = DynResidue::<L>::one(params);
+        let minus_one = -one;
         let (s, d) = decompose(candidate);
         Self {
             candidate: *candidate,
             montgomery_params: params,
-            one_m,
-            cand_minus_one_m,
+            one,
+            minus_one,
             s,
             d,
         }
@@ -53,17 +49,17 @@ impl<const L: usize> MillerRabin<L> {
         // TODO: it may be faster to first check that gcd(base, candidate) == 1,
         // otherwise we can return `false` right away.
 
-        let base_m = DynResidue::<L>::new(*base, self.montgomery_params);
-        let mut test_m = base_m.pow(&self.d);
+        let base = DynResidue::<L>::new(*base, self.montgomery_params);
+        let mut test = base.pow(&self.d);
 
-        if test_m == self.one_m || test_m == self.cand_minus_one_m {
+        if test == self.one || test == self.minus_one {
             return true;
         }
         for _ in 1..self.s {
-            test_m = test_m.square();
-            if test_m == self.one_m {
+            test = test.square();
+            if test == self.one {
                 return false;
-            } else if test_m == self.cand_minus_one_m {
+            } else if test == self.minus_one {
                 return true;
             }
         }
