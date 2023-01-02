@@ -5,7 +5,7 @@ use rand_core::{CryptoRng, RngCore};
 use rand_core::OsRng;
 
 use crate::hazmat::{
-    is_strong_lucas_prime, random_odd_uint, sieve_once, MillerRabin, SelfridgeBase, Sieve,
+    is_lucas_prime, random_odd_uint, sieve_once, LucasCheck, MillerRabin, SelfridgeBase, Sieve,
 };
 
 #[cfg(feature = "default-rng")]
@@ -92,7 +92,7 @@ pub fn safe_prime_with_rng<const L: usize>(
 /// - Strong Lucas check with Selfridge base (a.k.a. Baillie method A);
 /// - Miller-Rabin check with a random base.
 ///
-/// See [`MillerRabin`] and [`is_strong_lucas_prime`] for more details about the checks.
+/// See [`MillerRabin`] and [`is_lucas_prime`] for more details about the checks.
 ///
 /// The second and the third checks constitute the Baillie-PSW primality test[^Baillie1980];
 /// the third one is a precaution that follows the approach of GMP (as of v6.2.1).
@@ -155,7 +155,7 @@ fn _is_prime_with_rng<const L: usize>(rng: &mut (impl CryptoRng + RngCore), num:
     if !mr.check_base_two() {
         return false;
     }
-    if !is_strong_lucas_prime(num, SelfridgeBase, true) {
+    if !is_lucas_prime(num, SelfridgeBase, LucasCheck::Strong) {
         return false;
     }
     if !mr.check_random_base(rng) {

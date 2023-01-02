@@ -11,6 +11,6 @@ pub(crate) mod primes;
 pub(crate) mod pseudoprimes;
 mod sieve;
 
-pub use lucas::{is_strong_lucas_prime, BruteForceBase, LucasBase, SelfridgeBase};
+pub use lucas::{is_lucas_prime, AStarBase, BruteForceBase, LucasBase, LucasCheck, SelfridgeBase};
 pub use miller_rabin::MillerRabin;
 pub use sieve::{random_odd_uint, sieve_once, Sieve};

@@ -33,6 +33,24 @@ pub(crate) const ALMOST_EXTRA_STRONG_LUCAS: &[u32] = &[
     233659, 249331, 370229, 429479, 430127, 459191, 472453, 473891, 480689,
 ];
 
+/// Pseudoprimes for Lucas-V test, also known as Dickson pseudoprimes of the second kind,
+/// under `EXHAUSTIVE_TEST_LIMIT`.
+pub(crate) const LUCAS_V: &[u32] = &[913];
+
+/// First 5 pseudoprimes for Lucas-V test[^Baillie2021].
+///
+/// [^Baillie2021]: R. Baillie, A. Fiori, S. S. Wagstaff,
+///   "Strengthening the Baillie-PSW primality test",
+///   Math. Comp. 90 1931-1955 (2021),
+///   DOI: [10.1090/mcom/3616](https://doi.org/10.1090/mcom/3616)
+pub(crate) const LARGE_LUCAS_V: &[U64] = &[
+    U64::from_be_hex("0000000000000391"),
+    U64::from_be_hex("00000022fca192eb"),
+    U64::from_be_hex("000000643f4f0ba5"),
+    U64::from_be_hex("00000d6ca2385e03"),
+    U64::from_be_hex("0003541efcafa4cd"),
+];
+
 /// Strong pseudoprimes to base 2 (OEIS:A001262) under `EXHAUSTIVE_TEST_LIMIT`.
 pub(crate) const STRONG_BASE_2: &[u32] = &[
     2047, 3277, 4033, 4681, 8321, 15841, 29341, 42799, 49141, 52633, 65281, 74665, 80581, 85489,
@@ -40,11 +58,11 @@ pub(crate) const STRONG_BASE_2: &[u32] = &[
     314821, 357761, 390937, 458989, 476971, 486737, 489997,
 ];
 
-/// Strong Fibonacci pseudoprimes, Type I.
+/// Strong Fibonacci pseudoprimes, Type I[^Pinch].
 ///
-/// See R. G. E. Pinch "The Carmichael Numbers up to 10^15",
-/// Mathematics of Computation, Vol. 61, No. 203 381-391 (1993)
-/// (DOI: 10.2307/2152963).
+/// [^Pinch]: R. G. E. Pinch "The Carmichael Numbers up to 10^15",
+///   Mathematics of Computation 61, 381-391 (1993),
+///   DOI: [10.2307/2152963](https://doi.org/10.2307/2152963).
 pub(crate) const STRONG_FIBONACCI: &[U64] = &[U64::from_be_hex("0001933ecb87a0c1")];
 
 /// Odd Fibonacci pseudoprimes (OEIS:A081264).
