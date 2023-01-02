@@ -6,7 +6,10 @@ use alloc::{vec, vec::Vec};
 use crypto_bigint::{Integer, Limb, NonZero, Random, Uint, Zero};
 use rand_core::{CryptoRng, RngCore};
 
-use crate::hazmat::precomputed::{SmallPrime, SMALL_PRIMES};
+use crate::hazmat::{
+    precomputed::{SmallPrime, SMALL_PRIMES},
+    Primality,
+};
 
 /// Returns a random odd integer with given bit length
 /// (that is, with both `0` and `bit_length-1` bits set).
@@ -154,20 +157,25 @@ impl<const L: usize> Iterator for Sieve<L> {
 }
 
 /// Performs trial division of the given number by a list of small primes.
-/// Returns `Some(is_prime)` if there was a definitive conclusion about `num`'s primality,
+/// Returns `Some(primality)` if there was a definitive conclusion about `num`'s primality,
 /// and `None` otherwise.
-pub fn sieve_once<const L: usize>(num: &Uint<L>) -> Option<bool> {
+pub fn sieve_once<const L: usize>(num: &Uint<L>) -> Option<Primality> {
     // Our reciprocals start from 3, so we check for 2 separately
     if num == &Uint::<L>::from(2u32) {
-        return Some(true);
+        return Some(Primality::Prime);
     }
     if num.is_even().into() {
-        return Some(false);
+        return Some(Primality::Composite);
     }
     for small_prime in SMALL_PRIMES.iter() {
         let (quo, rem) = num.div_rem_limb(NonZero::new(Limb::from(*small_prime)).unwrap());
         if rem.is_zero().into() {
-            return Some(quo == Uint::<L>::ONE);
+            let primality = if quo == Uint::<L>::ONE {
+                Primality::Prime
+            } else {
+                Primality::Composite
+            };
+            return Some(primality);
         }
     }
     None

@@ -7,6 +7,8 @@ use crypto_bigint::{
     Integer, NonZero, RandomMod, Square, Uint,
 };
 
+use super::Primality;
+
 /// Precomputed data used to perform Miller-Rabin primality test[^Pomerance1980].
 /// The numbers that pass it are commonly called "strong probable primes"
 /// (or "strong pseudoprimes" if they are, in fact, composite).
@@ -45,34 +47,34 @@ impl<const L: usize> MillerRabin<L> {
     }
 
     /// Perform a Miller-Rabin check with a given base.
-    pub fn check(&self, base: &Uint<L>) -> bool {
+    pub fn check(&self, base: &Uint<L>) -> Primality {
         // TODO: it may be faster to first check that gcd(base, candidate) == 1,
-        // otherwise we can return `false` right away.
+        // otherwise we can return `Composite` right away.
 
         let base = DynResidue::<L>::new(*base, self.montgomery_params);
         let mut test = base.pow(&self.d);
 
         if test == self.one || test == self.minus_one {
-            return true;
+            return Primality::ProbablyPrime;
         }
         for _ in 1..self.s {
             test = test.square();
             if test == self.one {
-                return false;
+                return Primality::Composite;
             } else if test == self.minus_one {
-                return true;
+                return Primality::ProbablyPrime;
             }
         }
-        false
+        Primality::Composite
     }
 
     /// Perform a Miller-Rabin check with base 2.
-    pub fn check_base_two(&self) -> bool {
+    pub fn test_base_two(&self) -> Primality {
         self.check(&Uint::<L>::from(2u32))
     }
 
     /// Perform a Miller-Rabin check with a random base drawn using the provided RNG.
-    pub fn check_random_base<R: CryptoRng + RngCore>(&self, rng: &mut R) -> bool {
+    pub fn test_random_base<R: CryptoRng + RngCore>(&self, rng: &mut R) -> Primality {
         // We sample a random base from the range `[3, candidate-2]`:
         // - we have a separate method for base 2;
         // - the test holds trivially for bases 1 or `candidate-1`.
@@ -119,7 +121,7 @@ mod tests {
         count: usize,
     ) -> usize {
         (0..count)
-            .map(|_| if mr.check_random_base(rng) { 1 } else { 0 })
+            .map(|_| -> usize { mr.test_random_base(rng).is_probably_prime().into() })
             .sum()
     }
 
@@ -138,7 +140,10 @@ mod tests {
             // 35 out of 100 false positives, seems to work.
 
             let mr = MillerRabin::new(&U64::from(*num));
-            assert_eq!(mr.check_base_two(), actual_expected_result);
+            assert_eq!(
+                mr.test_base_two().is_probably_prime(),
+                actual_expected_result
+            );
             let reported_prime = random_checks(&mut rng, &mr, 100);
             assert!(
                 reported_prime < 35,
@@ -156,8 +161,10 @@ mod tests {
             let mr = MillerRabin::new(&num);
 
             // Trivial tests, must always be true.
-            assert!(mr.check(&1u32.into()));
-            assert!(mr.check(&num.wrapping_sub(&1u32.into())));
+            assert!(mr.check(&1u32.into()).is_probably_prime());
+            assert!(mr
+                .check(&num.wrapping_sub(&1u32.into()))
+                .is_probably_prime());
         }
     }
 
@@ -169,9 +176,9 @@ mod tests {
         let num = U128::from_be_hex("7fffffffffffffffffffffffffffffff");
 
         let mr = MillerRabin::new(&num);
-        assert!(mr.check_base_two());
+        assert!(mr.test_base_two().is_probably_prime());
         for _ in 0..10 {
-            assert!(mr.check_random_base(&mut rng));
+            assert!(mr.test_random_base(&mut rng).is_probably_prime());
         }
     }
 
@@ -181,9 +188,9 @@ mod tests {
 
         for num in pseudoprimes::STRONG_FIBONACCI.iter() {
             let mr = MillerRabin::new(num);
-            assert!(!mr.check_base_two());
+            assert!(!mr.test_base_two().is_probably_prime());
             for _ in 0..1000 {
-                assert!(!mr.check_random_base(&mut rng));
+                assert!(!mr.test_random_base(&mut rng).is_probably_prime());
             }
         }
     }
@@ -211,20 +218,20 @@ mod tests {
         let mr = MillerRabin::new(&pseudoprimes::LARGE_CARMICHAEL_NUMBER);
 
         // It is known to pass MR tests for all prime bases <307
-        assert!(mr.check_base_two());
-        assert!(mr.check(&U1536::from(293u64)));
+        assert!(mr.test_base_two().is_probably_prime());
+        assert!(mr.check(&U1536::from(293u64)).is_probably_prime());
 
         // A test with base 307 correctly reports the number as composite.
-        assert!(!mr.check(&U1536::from(307u64)));
+        assert!(!mr.check(&U1536::from(307u64)).is_probably_prime());
     }
 
     fn test_large_primes<const L: usize>(nums: &[Uint<L>]) {
         let mut rng = ChaCha8Rng::from_seed(*b"01234567890123456789012345678901");
         for num in nums {
             let mr = MillerRabin::new(num);
-            assert!(mr.check_base_two());
+            assert!(mr.test_base_two().is_probably_prime());
             for _ in 0..10 {
-                assert!(mr.check_random_base(&mut rng));
+                assert!(mr.test_random_base(&mut rng).is_probably_prime());
             }
         }
     }
@@ -249,7 +256,7 @@ mod tests {
             let spsp = is_spsp(num);
 
             let mr = MillerRabin::new(&U64::from(num));
-            let res = mr.check_base_two();
+            let res = mr.test_base_two().is_probably_prime();
             let expected = spsp || res_ref;
             assert_eq!(
                 res, expected,

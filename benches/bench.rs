@@ -6,7 +6,7 @@ use criterion::{
 use crypto_bigint::U1024;
 
 use crypto_primes::hazmat::{
-    is_lucas_prime, random_odd_uint, BruteForceBase, LucasCheck, MillerRabin, SelfridgeBase, Sieve,
+    lucas_test, random_odd_uint, BruteForceBase, LucasCheck, MillerRabin, SelfridgeBase, Sieve,
 };
 
 fn bench_sieve<'a, M: Measurement>(group: &mut BenchmarkGroup<'a, M>) {
@@ -31,7 +31,7 @@ fn bench_miller_rabin<'a, M: Measurement>(group: &mut BenchmarkGroup<'a, M>) {
         |b| {
             b.iter(|| {
                 let mr = MillerRabin::new(&sieve.next().unwrap());
-                mr.check_random_base(&mut OsRng);
+                mr.test_random_base(&mut OsRng);
             })
         },
     );
@@ -42,7 +42,7 @@ fn bench_lucas<'a, M: Measurement>(group: &mut BenchmarkGroup<'a, M>) {
     let mut sieve = Sieve::new(&start, 1024);
     group.bench_function("(U1024) Sieve + Lucas test (Selfridge base)", |b| {
         b.iter(|| {
-            is_lucas_prime(&sieve.next().unwrap(), SelfridgeBase, LucasCheck::Strong);
+            lucas_test(&sieve.next().unwrap(), SelfridgeBase, LucasCheck::Strong);
         })
     });
 
@@ -50,7 +50,7 @@ fn bench_lucas<'a, M: Measurement>(group: &mut BenchmarkGroup<'a, M>) {
         "(U1024) Sieve + Lucas test (brute force base, almost extra strong)",
         |b| {
             b.iter(|| {
-                is_lucas_prime(
+                lucas_test(
                     &sieve.next().unwrap(),
                     BruteForceBase,
                     LucasCheck::AlmostExtraStrong,
@@ -63,7 +63,7 @@ fn bench_lucas<'a, M: Measurement>(group: &mut BenchmarkGroup<'a, M>) {
         "(U1024) Sieve + Lucas test (brute force base, extra strong)",
         |b| {
             b.iter(|| {
-                is_lucas_prime(
+                lucas_test(
                     &sieve.next().unwrap(),
                     BruteForceBase,
                     LucasCheck::ExtraStrong,
@@ -86,7 +86,7 @@ fn bench_lucas<'a, M: Measurement>(group: &mut BenchmarkGroup<'a, M>) {
 
     group.bench_function("(U1024) Lucas test (Selfridge base), slow path", |b| {
         b.iter(|| {
-            is_lucas_prime(&slow_path, SelfridgeBase, LucasCheck::Strong);
+            lucas_test(&slow_path, SelfridgeBase, LucasCheck::Strong);
         })
     });
 }

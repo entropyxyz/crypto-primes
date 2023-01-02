@@ -5,7 +5,7 @@ use rand_core::{CryptoRng, RngCore};
 use rand_core::OsRng;
 
 use crate::hazmat::{
-    is_lucas_prime, random_odd_uint, sieve_once, LucasCheck, MillerRabin, SelfridgeBase, Sieve,
+    lucas_test, random_odd_uint, sieve_once, LucasCheck, MillerRabin, SelfridgeBase, Sieve,
 };
 
 /// Returns a random prime of size `bit_length` using [`OsRng`] as the RNG.
@@ -88,7 +88,7 @@ pub fn safe_prime_with_rng<const L: usize>(
 /// - Strong Lucas check with Selfridge base (a.k.a. Baillie method A);
 /// - Miller-Rabin check with a random base.
 ///
-/// See [`MillerRabin`] and [`is_lucas_prime`] for more details about the checks.
+/// See [`MillerRabin`] and [`lucas_test`] for more details about the checks.
 ///
 /// The second and the third checks constitute the Baillie-PSW primality test[^Baillie1980];
 /// the third one is a precaution that follows the approach of GMP (as of v6.2.1).
@@ -110,8 +110,8 @@ pub fn is_prime_with_rng<const L: usize>(
     rng: &mut (impl CryptoRng + RngCore),
     num: &Uint<L>,
 ) -> bool {
-    if let Some(is_prime) = sieve_once(num) {
-        return is_prime;
+    if let Some(primality) = sieve_once(num) {
+        return primality.is_probably_prime();
     }
     _is_prime_with_rng(rng, num)
 }
@@ -123,8 +123,8 @@ pub fn is_safe_prime_with_rng<const L: usize>(
     rng: &mut (impl CryptoRng + RngCore),
     num: &Uint<L>,
 ) -> bool {
-    if let Some(is_prime) = sieve_once(num) {
-        return is_prime;
+    if let Some(primality) = sieve_once(num) {
+        return primality.is_probably_prime();
     }
     _is_safe_prime_with_rng(rng, num)
 }
@@ -148,13 +148,13 @@ fn _is_safe_prime_with_rng<const L: usize>(
 fn _is_prime_with_rng<const L: usize>(rng: &mut (impl CryptoRng + RngCore), num: &Uint<L>) -> bool {
     debug_assert!(bool::from(num.is_odd()));
     let mr = MillerRabin::new(num);
-    if !mr.check_base_two() {
+    if !mr.test_base_two().is_probably_prime() {
         return false;
     }
-    if !is_lucas_prime(num, SelfridgeBase, LucasCheck::Strong) {
+    if !lucas_test(num, SelfridgeBase, LucasCheck::Strong).is_probably_prime() {
         return false;
     }
-    if !mr.check_random_base(rng) {
+    if !mr.test_random_base(rng).is_probably_prime() {
         return false;
     }
     true
