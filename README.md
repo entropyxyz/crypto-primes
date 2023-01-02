@@ -12,7 +12,7 @@ In particular:
 - Generating random primes and safe primes of given bit size;
 - Sieving iterator and one-time trial division by small integers;
 - Miller-Rabin test;
-- Strong and extra strong Lucas tests.
+- Strong and extra strong Lucas tests, and Lucas-V test.
 
 See the documentation for the specific tests for more information and references.
 
