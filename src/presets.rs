@@ -8,41 +8,37 @@ use crate::hazmat::{
     is_lucas_prime, random_odd_uint, sieve_once, LucasCheck, MillerRabin, SelfridgeBase, Sieve,
 };
 
-#[cfg(feature = "default-rng")]
-#[cfg_attr(docsrs, doc(cfg(feature = "default-rng")))]
 /// Returns a random prime of size `bit_length` using [`OsRng`] as the RNG.
 ///
 /// See [`is_prime_with_rng`] for details about the performed checks.
+#[cfg(feature = "default-rng")]
 pub fn prime<const L: usize>(bit_length: usize) -> Uint<L> {
     prime_with_rng(&mut OsRng, bit_length)
 }
 
-#[cfg(feature = "default-rng")]
-#[cfg_attr(docsrs, doc(cfg(feature = "default-rng")))]
 /// Returns a random safe prime (that is, such that `(n - 1) / 2` is also prime)
 /// of size `bit_length` using [`OsRng`] as the RNG.
 ///
 /// See [`is_prime_with_rng`] for details about the performed checks.
+#[cfg(feature = "default-rng")]
 pub fn safe_prime<const L: usize>(bit_length: usize) -> Uint<L> {
     safe_prime_with_rng(&mut OsRng, bit_length)
 }
 
-#[cfg(feature = "default-rng")]
-#[cfg_attr(docsrs, doc(cfg(feature = "default-rng")))]
 /// Checks probabilistically if the given number is prime using [`OsRng`] as the RNG.
 ///
 /// See [`is_prime_with_rng`] for details about the performed checks.
+#[cfg(feature = "default-rng")]
 pub fn is_prime<const L: usize>(num: &Uint<L>) -> bool {
     is_prime_with_rng(&mut OsRng, num)
 }
 
-#[cfg(feature = "default-rng")]
-#[cfg_attr(docsrs, doc(cfg(feature = "default-rng")))]
 /// Checks probabilistically if the given number is a safe prime
 /// (that is, such that `(n - 1) / 2` is also prime)
 /// using [`OsRng`] as the RNG.
 ///
 /// See [`is_prime_with_rng`] for details about the performed checks.
+#[cfg(feature = "default-rng")]
 pub fn is_safe_prime<const L: usize>(num: &Uint<L>) -> bool {
     is_safe_prime_with_rng(&mut OsRng, num)
 }
