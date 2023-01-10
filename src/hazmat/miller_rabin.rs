@@ -32,7 +32,7 @@ impl<const L: usize> MillerRabin<L> {
     /// `candidate` must be odd.
     pub fn new(candidate: &Uint<L>) -> Self {
         debug_assert!(bool::from(candidate.is_odd()));
-        let params = DynResidueParams::<L>::new(*candidate);
+        let params = DynResidueParams::<L>::new(candidate);
         let one = DynResidue::<L>::one(params);
         let minus_one = -one;
         let (s, d) = decompose(candidate);
@@ -51,7 +51,7 @@ impl<const L: usize> MillerRabin<L> {
         // TODO: it may be faster to first check that gcd(base, candidate) == 1,
         // otherwise we can return `Composite` right away.
 
-        let base = DynResidue::<L>::new(*base, self.montgomery_params);
+        let base = DynResidue::<L>::new(base, self.montgomery_params);
         let mut test = base.pow(&self.d);
 
         if test == self.one || test == self.minus_one {

@@ -305,7 +305,7 @@ pub fn lucas_test<const L: usize>(
 
     // Some constants in Montgomery form
 
-    let params = DynResidueParams::<L>::new(*candidate);
+    let params = DynResidueParams::<L>::new(candidate);
 
     let zero = DynResidue::<L>::zero(params);
     let one = DynResidue::<L>::one(params);
@@ -317,7 +317,7 @@ pub fn lucas_test<const L: usize>(
     let q = if q_is_one {
         one
     } else {
-        let abs_q = DynResidue::<L>::new(Uint::<L>::from(q.abs_diff(0)), params);
+        let abs_q = DynResidue::<L>::new(&Uint::<L>::from(q.abs_diff(0)), params);
         if q < 0 {
             -abs_q
         } else {
@@ -330,7 +330,7 @@ pub fn lucas_test<const L: usize>(
     let p = if p_is_one {
         one
     } else {
-        DynResidue::<L>::new(Uint::<L>::from(p), params)
+        DynResidue::<L>::new(&Uint::<L>::from(p), params)
     };
 
     // Compute d-th element of Lucas sequence V_d(P, Q), where:
@@ -357,7 +357,7 @@ pub fn lucas_test<const L: usize>(
     let mut qk_times_p = if p_is_one { one } else { p }; // keeps P Q^{k}
 
     for i in (0..d.bits_vartime()).rev() {
-        if d.bit_vartime(i) == 1 {
+        if d.bit_vartime(i) {
             // k' = 2k+1
 
             // V_k' = V_{2k+1} = V_k V_{k+1} - P Q^k
@@ -410,7 +410,7 @@ pub fn lucas_test<const L: usize>(
         // Some implementations just test for 2 V_{k+1} == P V_{k},
         // but we don't have any reference pseudoprime lists for this, so we are not doing it.
         if check == LucasCheck::Strong || check == LucasCheck::ExtraStrong {
-            let abs_d = DynResidue::<L>::new(Uint::<L>::from(discriminant.abs_diff(0)), params);
+            let abs_d = DynResidue::<L>::new(&Uint::<L>::from(discriminant.abs_diff(0)), params);
             let d_m = if discriminant < 0 { -abs_d } else { abs_d };
             // `d` is guaranteed non-zero by construction, so we can safely unwrap
             let inv_d = <DynResidue<L> as Invert>::invert(&d_m).unwrap();
