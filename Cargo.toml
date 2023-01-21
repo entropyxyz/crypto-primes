@@ -31,6 +31,11 @@ tests-gmp = ["rug"]
 tests-exhaustive = []
 tests-all = ["tests-openssl", "tests-gmp", "tests-exhaustive"]
 
+[package.metadata.docs.rs]
+features = ["default"]
+# Used to conditionally enable the unstable feature `doc-cfg`
+rustdoc-args = ["--cfg", "docsrs"]
+
 [[bench]]
 name = "bench"
 harness = false
