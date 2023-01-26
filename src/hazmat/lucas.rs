@@ -5,6 +5,7 @@ use crypto_bigint::{
 };
 
 use super::{
+    gcd::gcd,
     jacobi::{jacobi_symbol, JacobiSymbol},
     Primality,
 };
@@ -286,19 +287,20 @@ pub fn lucas_test<const L: usize>(
     let p_is_one = p == 1;
     let q_is_one = q == 1;
 
-    // The definitions can be found in:
-    // - "strong pseudoprime": [^Baillie1980], Section 3.
-    // - "extra strong pseudoprime" (esprp): [^Mo1993], Def. 7.4,
-    //   and [^Grantham2001], definition after Thm 2.3.
-    // If `Q == 1`, every n satisfying "extra strong" conditions
-    // also satisfies the "strong" ones for the same `P`.
+    // See the references for the specific checks in the docstrings for [`LucasCheck`].
 
-    // Both of the definitions require gcd(n, 2QD) == 1.
+    // All of the definitions require gcd(n, 2QD) == 1.
     // We know gcd(n, D) = 1 by construction of the base (D is chosen such that (D/n) != 0).
-    // We know gcd(n, 2) = 1 because n is odd.
-    // TODO (#1): make sure that the logic here is correct:
-    // If the checks below succeed, gcd(n, Q) == 1
-    // (proved in [^Baillie1980], right after the definition of "strong pseudoprime")
+    // We know gcd(n, 2) = 1 (we checked for it earlier).
+    // In practice, gcd(n, Q) = 1 is always true, because the Lucas test is preceded by a sieve,
+    // and since `Q` is always small, division by it would have been already checked.
+    // But in order to avoid an implicit assumption that a sieve has been run,
+    // we check that gcd(n, Q) = 1 anyway - again, since `Q` is small,
+    // it does not noticeably affect the performance.
+    let abs_q = q.abs_diff(0);
+    if abs_q != 1 && gcd(candidate, abs_q) != 1 && candidate > &Uint::<L>::from(abs_q) {
+        return Primality::Composite;
+    }
 
     // Find d and s, such that d is odd and d * 2^s = (n - (D/n)).
     let (s, d) = decompose(candidate);

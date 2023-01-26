@@ -1,6 +1,7 @@
 //! Components to build your own primality test.
 //! Handle with care.
 
+mod gcd;
 mod jacobi;
 mod lucas;
 mod miller_rabin;

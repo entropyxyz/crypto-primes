@@ -20,6 +20,7 @@ rand_chacha = "0.3"
 criterion = { version = "0.4", features = ["html_reports"] }
 num-modular = { version = "0.5", features = ["num-bigint"] }
 num-bigint = "0.4"
+num-integer = "0.1"
 proptest = "1"
 num-prime = "0.4.3"
 
