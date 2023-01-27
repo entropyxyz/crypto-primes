@@ -147,8 +147,7 @@ mod tests {
             let reported_prime = random_checks(&mut rng, &mr, 100);
             assert!(
                 reported_prime < 35,
-                "reported as prime in {} out of 100 tests",
-                reported_prime
+                "reported as prime in {reported_prime} out of 100 tests",
             );
         }
     }
@@ -260,8 +259,7 @@ mod tests {
             let expected = spsp || res_ref;
             assert_eq!(
                 res, expected,
-                "Miller-Rabin: n={}, expected={}, actual={}",
-                num, expected, res,
+                "Miller-Rabin: n={num}, expected={expected}, actual={res}",
             );
         }
     }

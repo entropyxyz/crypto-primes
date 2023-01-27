@@ -268,7 +268,7 @@ mod tests_openssl {
     }
 
     fn to_openssl(num: &U128) -> BigNum {
-        BigNum::from_hex_str(&format!("{:x}", num)).unwrap()
+        BigNum::from_hex_str(&format!("{num:x}")).unwrap()
     }
 
     fn from_openssl(num: &BigNum) -> U128 {
@@ -285,8 +285,7 @@ mod tests_openssl {
             let p_bn = to_openssl(&p);
             assert!(
                 openssl_is_prime(&p_bn, &mut ctx),
-                "OpenSSL reports {} as composite",
-                p
+                "OpenSSL reports {p} as composite",
             );
         }
 
@@ -295,7 +294,7 @@ mod tests_openssl {
         for _ in 0..100 {
             p_bn.generate_prime(128, false, None, None).unwrap();
             let p = from_openssl(&p_bn);
-            assert!(is_prime(&p), "we report {} as composite", p);
+            assert!(is_prime(&p), "we report {p} as composite");
         }
 
         // Generate random numbers, check if our test agrees with OpenSSL
@@ -306,8 +305,7 @@ mod tests_openssl {
             let expected = openssl_is_prime(&p_bn, &mut ctx);
             assert_eq!(
                 actual, expected,
-                "difference between OpenSSL and us: OpenSSL reports {}, we report {}",
-                expected, actual
+                "difference between OpenSSL and us: OpenSSL reports {expected}, we report {actual}",
             );
         }
     }
@@ -344,7 +342,7 @@ mod tests_gmp {
         for _ in 0..100 {
             let p: U128 = prime(128);
             let p_bn = to_gmp(&p);
-            assert!(gmp_is_prime(&p_bn), "GMP reports {} as composite", p);
+            assert!(gmp_is_prime(&p_bn), "GMP reports {p} as composite");
         }
 
         // Generate primes with GMP, check them
@@ -353,7 +351,7 @@ mod tests_gmp {
             let start_bn = to_gmp(&start);
             let p_bn = start_bn.next_prime();
             let p = from_gmp(&p_bn);
-            assert!(is_prime(&p), "we report {} as composite", p);
+            assert!(is_prime(&p), "we report {p} as composite");
         }
 
         // Generate random numbers, check if our test agrees with GMP
@@ -364,8 +362,7 @@ mod tests_gmp {
             let expected = gmp_is_prime(&p_bn);
             assert_eq!(
                 actual, expected,
-                "difference between GMP and us: GMP reports {}, we report {}",
-                expected, actual
+                "difference between GMP and us: GMP reports {expected}, we report {actual}",
             );
         }
     }

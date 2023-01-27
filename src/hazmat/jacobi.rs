@@ -186,11 +186,7 @@ mod tests {
                 let p_long = U128::from(p);
                 let j_ref = jacobi_symbol_ref(a, &p_long);
                 let j = jacobi_symbol(a, &p_long);
-                assert_eq!(
-                    j, j_ref,
-                    "({}/{}): ref = {:?}, actual = {:?}",
-                    a, p, j_ref, j
-                );
+                assert_eq!(j, j_ref, "({a}/{p}): ref = {j_ref:?}, actual = {j:?}");
             }
         }
     }
