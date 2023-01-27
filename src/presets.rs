@@ -116,7 +116,7 @@ pub fn is_prime_with_rng<const L: usize>(
     _is_prime_with_rng(rng, num)
 }
 
-/// Checks probabilistically if the given number is prime using the provided RNG.
+/// Checks probabilistically if the given number is a safe prime using the provided RNG.
 ///
 /// See [`is_prime_with_rng`] for details about the performed checks.
 pub fn is_safe_prime_with_rng<const L: usize>(
