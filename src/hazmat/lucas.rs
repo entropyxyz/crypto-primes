@@ -575,9 +575,7 @@ mod tests {
             assert_eq!(
                 lucas_test(&Uint::<1>::from(*num), BruteForceBase, check).is_probably_prime(),
                 actual_expected_result,
-                "Brute force base, n = {}, almost_extra = {}",
-                num,
-                almost_extra,
+                "Brute force base, n = {num}, almost_extra = {almost_extra}",
             );
             assert_eq!(
                 lucas_test(&Uint::<2>::from(*num), BruteForceBase, check).is_probably_prime(),
@@ -728,8 +726,7 @@ mod tests {
             let expected = aeslpsp || res_ref;
             assert_eq!(
                 res, expected,
-                "Brute force base, almost extra strong: n={}, expected={}, actual={}",
-                num, expected, res,
+                "Brute force base, almost extra strong: n={num}, expected={expected}, actual={res}",
             );
 
             let res = lucas_test(
@@ -741,8 +738,7 @@ mod tests {
             let expected = eslpsp || res_ref;
             assert_eq!(
                 res, expected,
-                "Brute force base: n={}, expected={}, actual={}",
-                num, expected, res,
+                "Brute force base: n={num}, expected={expected}, actual={res}",
             );
 
             let res = lucas_test(&Uint::<1>::from(num), SelfridgeBase, LucasCheck::Strong)
@@ -750,8 +746,7 @@ mod tests {
             let expected = slpsp || res_ref;
             assert_eq!(
                 res, expected,
-                "Selfridge base: n={}, expected={}, actual={}",
-                num, expected, res,
+                "Selfridge base: n={num}, expected={expected}, actual={res}",
             );
 
             let res = lucas_test(&Uint::<1>::from(num), AStarBase, LucasCheck::LucasV)
@@ -760,8 +755,7 @@ mod tests {
 
             assert_eq!(
                 res, expected,
-                "A* base, Lucas-V: n={}, expected={}, actual={}",
-                num, expected, res,
+                "A* base, Lucas-V: n={num}, expected={expected}, actual={res}",
             );
         }
     }

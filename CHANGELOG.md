@@ -6,12 +6,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `RandomPrimeWithRng` trait for use in generic code. (#[12])
+
+
 ### Fixed
 
 - Added a `gcd(Q, n) == 1` check to the Lucas test. (#[11])
 
 
 [#11]: https://github.com/nucypher/rust-umbral/pull/11
+[#12]: https://github.com/nucypher/rust-umbral/pull/12
 
 
 ## [0.1.0] - 2023-01-20
