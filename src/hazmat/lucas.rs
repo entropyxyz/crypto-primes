@@ -1,7 +1,7 @@
 //! Lucas primality test.
 use crypto_bigint::{
     modular::runtime_mod::{DynResidue, DynResidueParams},
-    Integer, Invert, Limb, Square, Uint, Word,
+    Integer, Invert, Limb, Uint, Word,
 };
 
 use super::{

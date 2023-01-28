@@ -1,5 +1,5 @@
 use crypto_bigint::{Integer, Uint};
-use rand_core::{CryptoRng, RngCore};
+use rand_core::CryptoRngCore;
 
 #[cfg(feature = "default-rng")]
 use rand_core::OsRng;
@@ -46,12 +46,9 @@ pub fn is_safe_prime<const L: usize>(num: &Uint<L>) -> bool {
 /// Returns a random prime of size `bit_length` using the provided RNG.
 ///
 /// See [`is_prime_with_rng`] for details about the performed checks.
-pub fn prime_with_rng<const L: usize>(
-    rng: &mut (impl CryptoRng + RngCore),
-    bit_length: usize,
-) -> Uint<L> {
+pub fn prime_with_rng<const L: usize>(rng: &mut impl CryptoRngCore, bit_length: usize) -> Uint<L> {
     loop {
-        let start = random_odd_uint::<L, _>(rng, bit_length);
+        let start: Uint<L> = random_odd_uint(rng, bit_length);
         let sieve = Sieve::new(&start, bit_length);
         for num in sieve {
             if _is_prime_with_rng(rng, &num) {
@@ -66,11 +63,11 @@ pub fn prime_with_rng<const L: usize>(
 ///
 /// See [`is_prime_with_rng`] for details about the performed checks.
 pub fn safe_prime_with_rng<const L: usize>(
-    rng: &mut (impl CryptoRng + RngCore),
+    rng: &mut impl CryptoRngCore,
     bit_length: usize,
 ) -> Uint<L> {
     loop {
-        let start = random_odd_uint::<L, _>(rng, bit_length);
+        let start: Uint<L> = random_odd_uint(rng, bit_length);
         let sieve = Sieve::new(&start, bit_length);
         for num in sieve {
             if _is_safe_prime_with_rng(rng, &num) {
@@ -106,10 +103,7 @@ pub fn safe_prime_with_rng<const L: usize>(
 ///       "Strengthening the Baillie-PSW primality test",
 ///       Math. Comp. 90 1931-1955 (2021),
 ///       DOI: [10.1090/mcom/3616](https://doi.org/10.1090/mcom/3616)
-pub fn is_prime_with_rng<const L: usize>(
-    rng: &mut (impl CryptoRng + RngCore),
-    num: &Uint<L>,
-) -> bool {
+pub fn is_prime_with_rng<const L: usize>(rng: &mut impl CryptoRngCore, num: &Uint<L>) -> bool {
     if let Some(primality) = sieve_once(num) {
         return primality.is_probably_prime();
     }
@@ -119,10 +113,7 @@ pub fn is_prime_with_rng<const L: usize>(
 /// Checks probabilistically if the given number is a safe prime using the provided RNG.
 ///
 /// See [`is_prime_with_rng`] for details about the performed checks.
-pub fn is_safe_prime_with_rng<const L: usize>(
-    rng: &mut (impl CryptoRng + RngCore),
-    num: &Uint<L>,
-) -> bool {
+pub fn is_safe_prime_with_rng<const L: usize>(rng: &mut impl CryptoRngCore, num: &Uint<L>) -> bool {
     if let Some(primality) = sieve_once(num) {
         return primality.is_probably_prime();
     }
@@ -130,10 +121,7 @@ pub fn is_safe_prime_with_rng<const L: usize>(
 }
 
 /// Checks for safe prime assuming that `num` was already pre-sieved.
-fn _is_safe_prime_with_rng<const L: usize>(
-    rng: &mut (impl CryptoRng + RngCore),
-    num: &Uint<L>,
-) -> bool {
+fn _is_safe_prime_with_rng<const L: usize>(rng: &mut impl CryptoRngCore, num: &Uint<L>) -> bool {
     debug_assert!(bool::from(num.is_odd()));
     if !_is_prime_with_rng(rng, num) {
         return false;
@@ -145,7 +133,7 @@ fn _is_safe_prime_with_rng<const L: usize>(
 }
 
 /// Checks for primality assuming that `num` was already pre-sieved.
-fn _is_prime_with_rng<const L: usize>(rng: &mut (impl CryptoRng + RngCore), num: &Uint<L>) -> bool {
+fn _is_prime_with_rng<const L: usize>(rng: &mut impl CryptoRngCore, num: &Uint<L>) -> bool {
     debug_assert!(bool::from(num.is_odd()));
     let mr = MillerRabin::new(num);
     if !mr.test_base_two().is_probably_prime() {
