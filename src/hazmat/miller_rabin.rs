@@ -1,10 +1,10 @@
 //! Miller-Rabin primality test.
 
-use rand_core::{CryptoRng, RngCore};
+use rand_core::CryptoRngCore;
 
 use crypto_bigint::{
     modular::runtime_mod::{DynResidue, DynResidueParams},
-    Integer, NonZero, RandomMod, Square, Uint,
+    Integer, NonZero, RandomMod, Uint,
 };
 
 use super::Primality;
@@ -74,7 +74,7 @@ impl<const L: usize> MillerRabin<L> {
     }
 
     /// Perform a Miller-Rabin check with a random base drawn using the provided RNG.
-    pub fn test_random_base<R: CryptoRng + RngCore>(&self, rng: &mut R) -> Primality {
+    pub fn test_random_base(&self, rng: &mut impl CryptoRngCore) -> Primality {
         // We sample a random base from the range `[3, candidate-2]`:
         // - we have a separate method for base 2;
         // - the test holds trivially for bases 1 or `candidate-1`.
@@ -103,7 +103,7 @@ fn decompose<const L: usize>(n: &Uint<L>) -> (u32, Uint<L>) {
 mod tests {
     use crypto_bigint::{Uint, U1024, U128, U1536, U64};
     use rand_chacha::ChaCha8Rng;
-    use rand_core::{CryptoRng, RngCore, SeedableRng};
+    use rand_core::{CryptoRngCore, SeedableRng};
 
     #[cfg(feature = "tests-exhaustive")]
     use num_prime::nt_funcs::is_prime64;
@@ -116,7 +116,7 @@ mod tests {
     }
 
     fn random_checks<const L: usize>(
-        rng: &mut (impl CryptoRng + RngCore),
+        rng: &mut impl CryptoRngCore,
         mr: &MillerRabin<L>,
         count: usize,
     ) -> usize {

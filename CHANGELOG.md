@@ -6,6 +6,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Bumped `crypto-bigint` to 0.5.0-pre.2 with the corresponding changes in the API. (#[13])
+
+
 ### Added
 
 - `RandomPrimeWithRng` trait for use in generic code. (#[12])
@@ -18,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 [#11]: https://github.com/nucypher/rust-umbral/pull/11
 [#12]: https://github.com/nucypher/rust-umbral/pull/12
+[#13]: https://github.com/nucypher/rust-umbral/pull/13
 
 
 ## [0.1.0] - 2023-01-20
