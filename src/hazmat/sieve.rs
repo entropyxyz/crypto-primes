@@ -111,12 +111,17 @@ impl<const L: usize> Sieve<L> {
         // Only calculate residues by primes up to and not including `base`,
         // because when we only have the resiude,
         // we cannot distinguish between a prime itself and a multiple of that prime.
-        let residues_len = SMALL_PRIMES
-            .iter()
-            .enumerate()
-            .find(|(_i, p)| Uint::<L>::from(**p) >= base)
-            .map(|(i, _p)| i)
-            .unwrap_or(SMALL_PRIMES.len());
+        let residues_len = if Uint::<L>::from(SMALL_PRIMES[SMALL_PRIMES.len() - 1]) >= base {
+            SMALL_PRIMES
+                .iter()
+                .enumerate()
+                .find(|(_i, p)| Uint::<L>::from(**p) >= base)
+                .map(|(i, _p)| i)
+                .unwrap_or(SMALL_PRIMES.len())
+        } else {
+            // This will be the majority of use cases
+            SMALL_PRIMES.len()
+        };
 
         Self {
             base,
