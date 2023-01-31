@@ -4,7 +4,7 @@ use rand_core::CryptoRngCore;
 
 use crypto_bigint::{
     modular::runtime_mod::{DynResidue, DynResidueParams},
-    Integer, NonZero, RandomMod, Uint,
+    Integer, NonZero, RandomMod, Uint, Zero,
 };
 
 use super::Primality;
@@ -91,6 +91,11 @@ fn decompose<const L: usize>(n: &Uint<L>) -> (u32, Uint<L>) {
     let mut d = n.wrapping_sub(&Uint::<L>::ONE);
     let mut s = 0;
 
+    // Corner case, exit early to prevent being stuck in the loop.
+    if d.is_zero().into() {
+        return (0, Uint::<L>::ZERO);
+    }
+
     while d.is_even().into() {
         d >>= 1;
         s += 1;
@@ -156,7 +161,7 @@ mod tests {
     fn trivial() {
         let mut rng = ChaCha8Rng::from_seed(*b"01234567890123456789012345678901");
         let start: U1024 = random_odd_uint(&mut rng, 1024);
-        for num in Sieve::new(&start, 1024).take(10) {
+        for num in Sieve::new(&start, 1024, false).take(10) {
             let mr = MillerRabin::new(&num);
 
             // Trivial tests, must always be true.
