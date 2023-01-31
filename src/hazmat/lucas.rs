@@ -43,7 +43,7 @@ pub trait LucasBase {
 ///   Math. Comp. 35 1391-1417 (1980),
 ///   DOI: [10.2307/2006406](https://dx.doi.org/10.2307/2006406),
 ///   <http://mpqs.free.fr/LucasPseudoprimes.pdf>
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct SelfridgeBase;
 
 impl LucasBase for SelfridgeBase {
@@ -103,7 +103,7 @@ impl LucasBase for SelfridgeBase {
 ///   Math. Comp. 35 1391-1417 (1980),
 ///   DOI: [10.2307/2006406](https://dx.doi.org/10.2307/2006406),
 ///   <http://mpqs.free.fr/LucasPseudoprimes.pdf>
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct AStarBase;
 
 impl LucasBase for AStarBase {
@@ -122,7 +122,7 @@ impl LucasBase for AStarBase {
 /// [^Baillie]:
 ///   R. Baillie, Mathematica code for extra strong Lucas pseudoprimes,
 ///   <https://oeis.org/A217719/a217719.txt>
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct BruteForceBase;
 
 impl LucasBase for BruteForceBase {
@@ -474,13 +474,81 @@ pub fn lucas_test<const L: usize>(
 
 #[cfg(test)]
 mod tests {
-    use crypto_bigint::{Uint, U128};
+
+    use alloc::format;
+
+    use crypto_bigint::{Uint, U128, U64};
 
     #[cfg(feature = "tests-exhaustive")]
     use num_prime::nt_funcs::is_prime64;
 
-    use super::{decompose, lucas_test, AStarBase, BruteForceBase, LucasCheck, SelfridgeBase};
-    use crate::hazmat::{primes, pseudoprimes};
+    use super::{
+        decompose, lucas_test, AStarBase, BruteForceBase, LucasBase, LucasCheck, SelfridgeBase,
+    };
+    use crate::hazmat::{primes, pseudoprimes, Primality};
+
+    #[test]
+    fn bases_derived_traits() {
+        assert_eq!(format!("{SelfridgeBase:?}"), "SelfridgeBase");
+        assert_eq!(SelfridgeBase.clone(), SelfridgeBase);
+        assert_eq!(format!("{AStarBase:?}"), "AStarBase");
+        assert_eq!(AStarBase.clone(), AStarBase);
+        assert_eq!(format!("{BruteForceBase:?}"), "BruteForceBase");
+        assert_eq!(BruteForceBase.clone(), BruteForceBase);
+
+        assert_eq!(format!("{:?}", LucasCheck::Strong), "Strong");
+        assert_eq!(LucasCheck::Strong.clone(), LucasCheck::Strong);
+    }
+
+    #[test]
+    fn base_for_square() {
+        // We can't find a base with Jacobi symbol = -1 for a square,
+        // check that it is handled properly.
+        let num = U64::from(131u32).square();
+        assert_eq!(SelfridgeBase.generate(&num), Err(Primality::Composite));
+        assert_eq!(AStarBase.generate(&num), Err(Primality::Composite));
+        assert_eq!(BruteForceBase.generate(&num), Err(Primality::Composite));
+    }
+
+    #[test]
+    fn base_early_quit() {
+        // 5 is flagged as prime at the base generation stage
+        assert_eq!(
+            BruteForceBase.generate(&U64::from(5u32)),
+            Err(Primality::Prime)
+        )
+    }
+
+    #[test]
+    fn lucas_early_quit() {
+        // If the number is even, no need to run the test.
+        assert_eq!(
+            lucas_test(&U64::from(6u32), SelfridgeBase, LucasCheck::Strong),
+            Primality::Composite
+        );
+    }
+
+    #[test]
+    fn gcd_check() {
+        // Test that `gcd(2QD, n) == 1` is checked after the base is found.
+        // All the bases already produce D such that `gcd(D, n) == 1`.
+        // We need a special test base generator to test the situation where
+        // `gcd(n, Q) != 1` and `n > Q`, because it just doesn't seem to happen normally
+        // for "production" bases.
+
+        struct TestBase;
+
+        impl LucasBase for TestBase {
+            fn generate<const L: usize>(&self, _n: &Uint<L>) -> Result<(u32, i32), Primality> {
+                Ok((5, 5))
+            }
+        }
+
+        assert_eq!(
+            lucas_test(&U64::from(15u32), TestBase, LucasCheck::Strong),
+            Primality::Composite
+        );
+    }
 
     #[test]
     fn decomposition() {

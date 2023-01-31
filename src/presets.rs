@@ -45,11 +45,16 @@ pub fn is_safe_prime<const L: usize>(num: &Uint<L>) -> bool {
 
 /// Returns a random prime of size `bit_length` using the provided RNG.
 ///
+/// Panics if `bit_length` is less than 2, or greater than the bit size of the target `Uint`.
+///
 /// See [`is_prime_with_rng`] for details about the performed checks.
 pub fn prime_with_rng<const L: usize>(rng: &mut impl CryptoRngCore, bit_length: usize) -> Uint<L> {
+    if bit_length < 2 {
+        panic!("`bit_length` must be 2 or greater.");
+    }
     loop {
         let start: Uint<L> = random_odd_uint(rng, bit_length);
-        let sieve = Sieve::new(&start, bit_length);
+        let sieve = Sieve::new(&start, bit_length, false);
         for num in sieve {
             if _is_prime_with_rng(rng, &num) {
                 return num;
@@ -61,18 +66,27 @@ pub fn prime_with_rng<const L: usize>(rng: &mut impl CryptoRngCore, bit_length: 
 /// Returns a random safe prime (that is, such that `(n - 1) / 2` is also prime)
 /// of size `bit_length` using the provided RNG.
 ///
+/// Panics if `bit_length` is less than 3, or is greater than the bit size of the target `Uint`.
+///
 /// See [`is_prime_with_rng`] for details about the performed checks.
 pub fn safe_prime_with_rng<const L: usize>(
     rng: &mut impl CryptoRngCore,
     bit_length: usize,
 ) -> Uint<L> {
+    if bit_length < 3 {
+        panic!("`bit_length` must be 3 or greater.");
+    }
     loop {
         let start: Uint<L> = random_odd_uint(rng, bit_length);
-        let sieve = Sieve::new(&start, bit_length);
+        let sieve = Sieve::new(&start, bit_length, true);
         for num in sieve {
-            if _is_safe_prime_with_rng(rng, &num) {
-                return num;
+            if !_is_prime_with_rng(rng, &num) {
+                continue;
             }
+            if !is_prime_with_rng(rng, &(num >> 1)) {
+                continue;
+            }
+            return num;
         }
     }
 }
@@ -114,21 +128,32 @@ pub fn is_prime_with_rng<const L: usize>(rng: &mut impl CryptoRngCore, num: &Uin
 ///
 /// See [`is_prime_with_rng`] for details about the performed checks.
 pub fn is_safe_prime_with_rng<const L: usize>(rng: &mut impl CryptoRngCore, num: &Uint<L>) -> bool {
-    if let Some(primality) = sieve_once(num) {
-        return primality.is_probably_prime();
+    // Since, by the definition of safe prime, `(num - 1) / 2` must also be prime,
+    // and therefore odd, `num` has to be equal to 3 modulo 4.
+    // 5 is the only exception, so we check for it.
+    if num == &Uint::<L>::from(5u32) {
+        return true;
     }
-    _is_safe_prime_with_rng(rng, num)
-}
-
-/// Checks for safe prime assuming that `num` was already pre-sieved.
-fn _is_safe_prime_with_rng<const L: usize>(rng: &mut impl CryptoRngCore, num: &Uint<L>) -> bool {
-    debug_assert!(bool::from(num.is_odd()));
-    if !_is_prime_with_rng(rng, num) {
+    if num.as_words()[0] & 3 != 3 {
         return false;
     }
+
+    if let Some(primality) = sieve_once(num) {
+        // If sieving returns a definite conclusion about `num`, use it.
+        if !primality.is_probably_prime() {
+            return false;
+        }
+    } else {
+        // Otherwise run the rest of the checks.
+        if !_is_prime_with_rng(rng, num) {
+            return false;
+        }
+    };
+
     if !is_prime_with_rng(rng, &(num >> 1)) {
         return false;
     }
+
     true
 }
 
@@ -150,9 +175,11 @@ fn _is_prime_with_rng<const L: usize>(rng: &mut impl CryptoRngCore, num: &Uint<L
 
 #[cfg(test)]
 mod tests {
-    use crypto_bigint::{CheckedAdd, Uint, U128, U64};
+    use crypto_bigint::{CheckedAdd, Uint, Word, U128, U64};
+    use num_prime::nt_funcs::is_prime64;
+    use rand_core::OsRng;
 
-    use super::{is_prime, is_safe_prime, prime, safe_prime};
+    use super::{is_prime, is_safe_prime, prime, prime_with_rng, safe_prime, safe_prime_with_rng};
     use crate::hazmat::{primes, pseudoprimes};
 
     fn test_large_primes<const L: usize>(nums: &[Uint<L>]) {
@@ -235,6 +262,80 @@ mod tests {
             let p: U128 = safe_prime(bit_length);
             assert!(p.bits_vartime() == bit_length);
             assert!(is_safe_prime(&p));
+        }
+    }
+
+    #[test]
+    fn corner_cases_is_prime() {
+        for num in 0u64..30 {
+            let is_prime_ref = is_prime64(num);
+            let is_safe_prime_ref = is_prime_ref && is_prime64(num / 2);
+
+            let num_uint = U64::from(num);
+            let is_prime_test = is_prime(&num_uint);
+            let is_safe_prime_test = is_safe_prime(&num_uint);
+
+            assert_eq!(is_prime_ref, is_prime_test);
+            assert_eq!(is_safe_prime_ref, is_safe_prime_test);
+        }
+    }
+
+    #[test]
+    fn inconclusive_sieving_result() {
+        // Coverage test.
+        // This number is a product of two primes larger than the maximum prime in `SMALL_PRIMES`,
+        // so the initial sieving cannot tell if it is prime or not,
+        // and a full primality test is run.
+        assert!(!is_safe_prime(&U64::from(17881u32 * 17891u32)));
+    }
+
+    #[test]
+    #[should_panic(expected = "`bit_length` must be 2 or greater")]
+    fn generate_prime_too_few_bits() {
+        let _p: U64 = prime_with_rng(&mut OsRng, 1);
+    }
+
+    #[test]
+    #[should_panic(expected = "`bit_length` must be 3 or greater")]
+    fn generate_safe_prime_too_few_bits() {
+        let _p: U64 = safe_prime_with_rng(&mut OsRng, 2);
+    }
+
+    #[test]
+    #[should_panic(expected = "The requested bit length (65) is larger than the chosen Uint size")]
+    fn generate_prime_too_many_bits() {
+        let _p: U64 = prime_with_rng(&mut OsRng, 65);
+    }
+
+    #[test]
+    #[should_panic(expected = "The requested bit length (65) is larger than the chosen Uint size")]
+    fn generate_safe_prime_too_many_bits() {
+        let _p: U64 = safe_prime_with_rng(&mut OsRng, 65);
+    }
+
+    fn is_prime_ref(num: Word) -> bool {
+        num_prime::nt_funcs::is_prime(&num, None).probably()
+    }
+
+    #[test]
+    fn corner_cases_generate_prime() {
+        for bits in 2usize..5 {
+            for _ in 0..100 {
+                let p: U64 = prime(bits);
+                let p_word = p.as_words()[0];
+                assert!(is_prime_ref(p_word));
+            }
+        }
+    }
+
+    #[test]
+    fn corner_cases_generate_safe_prime() {
+        for bits in 3usize..5 {
+            for _ in 0..100 {
+                let p: U64 = safe_prime(bits);
+                let p_word = p.as_words()[0];
+                assert!(is_prime_ref(p_word) && is_prime_ref(p_word / 2));
+            }
         }
     }
 }

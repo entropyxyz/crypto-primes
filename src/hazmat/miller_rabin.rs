@@ -4,7 +4,7 @@ use rand_core::CryptoRngCore;
 
 use crypto_bigint::{
     modular::runtime_mod::{DynResidue, DynResidueParams},
-    Integer, NonZero, RandomMod, Uint,
+    Integer, NonZero, RandomMod, Uint, Zero,
 };
 
 use super::Primality;
@@ -17,7 +17,7 @@ use super::Primality;
 ///   C. Pomerance, J. L. Selfridge, S. S. Wagstaff "The Pseudoprimes to 25*10^9",
 ///   Math. Comp. 35 1003-1026 (1980),
 ///   DOI: [10.2307/2006210](https://dx.doi.org/10.2307/2006210)
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct MillerRabin<const L: usize> {
     candidate: Uint<L>,
     montgomery_params: DynResidueParams<L>,
@@ -91,6 +91,11 @@ fn decompose<const L: usize>(n: &Uint<L>) -> (u32, Uint<L>) {
     let mut d = n.wrapping_sub(&Uint::<L>::ONE);
     let mut s = 0;
 
+    // Corner case, exit early to prevent being stuck in the loop.
+    if d.is_zero().into() {
+        return (0, Uint::<L>::ZERO);
+    }
+
     while d.is_even().into() {
         d >>= 1;
         s += 1;
@@ -101,6 +106,9 @@ fn decompose<const L: usize>(n: &Uint<L>) -> (u32, Uint<L>) {
 
 #[cfg(test)]
 mod tests {
+
+    use alloc::format;
+
     use crypto_bigint::{Uint, U1024, U128, U1536, U64};
     use rand_chacha::ChaCha8Rng;
     use rand_core::{CryptoRngCore, SeedableRng};
@@ -110,6 +118,13 @@ mod tests {
 
     use super::MillerRabin;
     use crate::hazmat::{primes, pseudoprimes, random_odd_uint, Sieve};
+
+    #[test]
+    fn miller_rabin_derived_traits() {
+        let mr = MillerRabin::new(&U64::ONE);
+        assert!(format!("{mr:?}").starts_with("MillerRabin"));
+        assert_eq!(mr.clone(), mr);
+    }
 
     fn is_spsp(num: u32) -> bool {
         pseudoprimes::STRONG_BASE_2.iter().any(|x| *x == num)
@@ -156,7 +171,7 @@ mod tests {
     fn trivial() {
         let mut rng = ChaCha8Rng::from_seed(*b"01234567890123456789012345678901");
         let start: U1024 = random_odd_uint(&mut rng, 1024);
-        for num in Sieve::new(&start, 1024).take(10) {
+        for num in Sieve::new(&start, 1024, false).take(10) {
             let mr = MillerRabin::new(&num);
 
             // Trivial tests, must always be true.
