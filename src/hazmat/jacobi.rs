@@ -75,11 +75,11 @@ fn swap<T: SmallMod, V: SmallMod>(j: JacobiSymbol, a: T, p: V) -> (JacobiSymbol,
 /// Returns the Jacobi symbol `(a/p)` given an odd `p`. Panics on even `p`.
 pub(crate) fn jacobi_symbol<const L: usize>(a: i32, p_long: &Uint<L>) -> JacobiSymbol {
     if p_long.is_even().into() {
-        panic!("p must be an odd integer, but got {}", p_long);
+        panic!("`p_long` must be an odd integer, but got {}", p_long);
     }
     if a == i32::MIN {
         // Otherwise it will cause an overflow when taking its absolute value.
-        panic!("a must be greater than `i32::MIN`");
+        panic!("`a` must be greater than `i32::MIN`");
     }
 
     let result = JacobiSymbol::One; // Keep track of all the sign flips here.
@@ -153,6 +153,8 @@ pub(crate) fn jacobi_symbol<const L: usize>(a: i32, p_long: &Uint<L>) -> JacobiS
 #[cfg(test)]
 mod tests {
 
+    use alloc::format;
+
     use crypto_bigint::{Encoding, U128};
     use num_bigint::{BigInt, Sign};
     use num_modular::ModularSymbols;
@@ -160,21 +162,46 @@ mod tests {
 
     use super::{jacobi_symbol, JacobiSymbol};
 
-    prop_compose! {
-        fn odd_uint()(bytes in any::<[u8; 16]>()) -> U128 {
-            U128::from_le_slice(&bytes) | U128::ONE
-        }
+    #[test]
+    fn jacobi_symbol_derived_traits() {
+        assert_eq!(format!("{:?}", JacobiSymbol::One), "One");
+        assert_eq!(JacobiSymbol::One, JacobiSymbol::One);
+        assert!(JacobiSymbol::One != JacobiSymbol::MinusOne);
+        assert_eq!(JacobiSymbol::One.clone(), JacobiSymbol::One);
+    }
+
+    #[test]
+    fn jacobi_symbol_neg_zero() {
+        // This does not happen during normal operation, since we return zero as soon as we get it.
+        // So just covering it for the completness' sake.
+        assert_eq!(-JacobiSymbol::Zero, JacobiSymbol::Zero);
+    }
+
+    #[test]
+    #[should_panic(
+        expected = "`p_long` must be an odd integer, but got 00000000000000000000000000000004"
+    )]
+    fn jacobi_symbol_p_is_even() {
+        let _j = jacobi_symbol(1, &U128::from(4u32));
+    }
+
+    #[test]
+    #[should_panic(expected = "`a` must be greater than `i32::MIN`")]
+    fn jacobi_symbol_a_is_too_small() {
+        let _j = jacobi_symbol(i32::MIN, &U128::from(5u32));
     }
 
     // Reference from `num-modular` - supports long `p`, but only positive `a`.
     fn jacobi_symbol_ref(a: i32, p: &U128) -> JacobiSymbol {
         let a_bi = BigInt::from(a);
         let p_bi = BigInt::from_bytes_be(Sign::Plus, p.to_be_bytes().as_ref());
-        match a_bi.jacobi(&p_bi) {
-            1 => JacobiSymbol::One,
-            -1 => JacobiSymbol::MinusOne,
-            0 => JacobiSymbol::Zero,
-            _ => unreachable!(),
+        let j = a_bi.jacobi(&p_bi);
+        if j == 1 {
+            JacobiSymbol::One
+        } else if j == -1 {
+            JacobiSymbol::MinusOne
+        } else {
+            JacobiSymbol::Zero
         }
     }
 
@@ -186,7 +213,7 @@ mod tests {
                 let p_long = U128::from(p);
                 let j_ref = jacobi_symbol_ref(a, &p_long);
                 let j = jacobi_symbol(a, &p_long);
-                assert_eq!(j, j_ref, "({a}/{p}): ref = {j_ref:?}, actual = {j:?}");
+                assert_eq!(j, j_ref);
             }
         }
     }
@@ -202,6 +229,12 @@ mod tests {
         let a = 659456i32; // Obtained from x = 2^70
         let p = U128::from_be_hex("ffffffffffffffffffffffffffffff5f"); // 2^128 - 161 - not a prime
         assert_eq!(jacobi_symbol(a, &p), JacobiSymbol::One);
+    }
+
+    prop_compose! {
+        fn odd_uint()(bytes in any::<[u8; 16]>()) -> U128 {
+            U128::from_le_slice(&bytes) | U128::ONE
+        }
     }
 
     proptest! {

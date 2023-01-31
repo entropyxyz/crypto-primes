@@ -17,7 +17,7 @@ use super::Primality;
 ///   C. Pomerance, J. L. Selfridge, S. S. Wagstaff "The Pseudoprimes to 25*10^9",
 ///   Math. Comp. 35 1003-1026 (1980),
 ///   DOI: [10.2307/2006210](https://dx.doi.org/10.2307/2006210)
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct MillerRabin<const L: usize> {
     candidate: Uint<L>,
     montgomery_params: DynResidueParams<L>,
@@ -106,6 +106,9 @@ fn decompose<const L: usize>(n: &Uint<L>) -> (u32, Uint<L>) {
 
 #[cfg(test)]
 mod tests {
+
+    use alloc::format;
+
     use crypto_bigint::{Uint, U1024, U128, U1536, U64};
     use rand_chacha::ChaCha8Rng;
     use rand_core::{CryptoRngCore, SeedableRng};
@@ -115,6 +118,13 @@ mod tests {
 
     use super::MillerRabin;
     use crate::hazmat::{primes, pseudoprimes, random_odd_uint, Sieve};
+
+    #[test]
+    fn miller_rabin_derived_traits() {
+        let mr = MillerRabin::new(&U64::ONE);
+        assert!(format!("{mr:?}").starts_with("MillerRabin"));
+        assert_eq!(mr.clone(), mr);
+    }
 
     fn is_spsp(num: u32) -> bool {
         pseudoprimes::STRONG_BASE_2.iter().any(|x| *x == num)

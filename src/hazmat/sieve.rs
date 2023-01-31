@@ -44,7 +44,7 @@ pub fn random_odd_uint<const L: usize>(rng: &mut impl CryptoRngCore, bit_length:
 
 /// An iterator returning numbers with up to and including given bit length,
 /// starting from a given number, that are not multiples of the first 2048 small primes.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Sieve<const L: usize> {
     // Instead of dividing `Uint` by small primes every time (which is slow),
     // we keep a "base" and a small increment separately,
@@ -258,6 +258,7 @@ pub fn sieve_once<const L: usize>(num: &Uint<L>) -> Option<Primality> {
 #[cfg(test)]
 mod tests {
 
+    use alloc::format;
     use alloc::vec::Vec;
 
     use crypto_bigint::U64;
@@ -351,5 +352,12 @@ mod tests {
     #[should_panic(expected = "The requested bit length (65) is larger than the chosen Uint size")]
     fn random_odd_uint_too_many_bits() {
         let _p: U64 = random_odd_uint(&mut OsRng, 65);
+    }
+
+    #[test]
+    fn sieve_derived_traits() {
+        let s = Sieve::new(&U64::ONE, 10, false);
+        assert!(format!("{s:?}").starts_with("Sieve"));
+        assert_eq!(s.clone(), s);
     }
 }

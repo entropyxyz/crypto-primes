@@ -24,12 +24,12 @@ pub trait RandomPrimeWithRng {
     /// Checks probabilistically if the given number is prime using the provided RNG.
     ///
     /// See [`is_prime_with_rng`] for details about the performed checks.
-    fn is_prime_with_rng(rng: &mut impl CryptoRngCore, num: &Self) -> bool;
+    fn is_prime_with_rng(&self, rng: &mut impl CryptoRngCore) -> bool;
 
     /// Checks probabilistically if the given number is a safe prime using the provided RNG.
     ///
     /// See [`is_prime_with_rng`] for details about the performed checks.
-    fn is_safe_prime_with_rng(rng: &mut impl CryptoRngCore, num: &Self) -> bool;
+    fn is_safe_prime_with_rng(&self, rng: &mut impl CryptoRngCore) -> bool;
 }
 
 impl<const L: usize> RandomPrimeWithRng for Uint<L> {
@@ -39,10 +39,30 @@ impl<const L: usize> RandomPrimeWithRng for Uint<L> {
     fn safe_prime_with_rng(rng: &mut impl CryptoRngCore, bit_length: usize) -> Self {
         safe_prime_with_rng(rng, bit_length)
     }
-    fn is_prime_with_rng(rng: &mut impl CryptoRngCore, num: &Self) -> bool {
-        is_prime_with_rng(rng, num)
+    fn is_prime_with_rng(&self, rng: &mut impl CryptoRngCore) -> bool {
+        is_prime_with_rng(rng, self)
     }
-    fn is_safe_prime_with_rng(rng: &mut impl CryptoRngCore, num: &Self) -> bool {
-        is_safe_prime_with_rng(rng, num)
+    fn is_safe_prime_with_rng(&self, rng: &mut impl CryptoRngCore) -> bool {
+        is_safe_prime_with_rng(rng, self)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crypto_bigint::U64;
+    use rand_core::OsRng;
+
+    use super::RandomPrimeWithRng;
+
+    #[test]
+    fn uint_impl() {
+        assert!(!U64::from(15u32).is_prime_with_rng(&mut OsRng));
+        assert!(U64::from(19u32).is_prime_with_rng(&mut OsRng));
+
+        assert!(!U64::from(13u32).is_safe_prime_with_rng(&mut OsRng));
+        assert!(U64::from(11u32).is_safe_prime_with_rng(&mut OsRng));
+
+        assert!(U64::prime_with_rng(&mut OsRng, 10).is_prime_with_rng(&mut OsRng));
+        assert!(U64::safe_prime_with_rng(&mut OsRng, 10).is_safe_prime_with_rng(&mut OsRng));
     }
 }

@@ -281,6 +281,15 @@ mod tests {
     }
 
     #[test]
+    fn inconclusive_sieving_result() {
+        // Coverage test.
+        // This number is a product of two primes larger than the maximum prime in `SMALL_PRIMES`,
+        // so the initial sieving cannot tell if it is prime or not,
+        // and a full primality test is run.
+        assert!(!is_safe_prime(&U64::from(17881u32 * 17891u32)));
+    }
+
+    #[test]
     #[should_panic(expected = "`bit_length` must be 2 or greater")]
     fn generate_prime_too_few_bits() {
         let _p: U64 = prime_with_rng(&mut OsRng, 1);
