@@ -3,16 +3,19 @@ use rand_core::OsRng;
 use criterion::{
     criterion_group, criterion_main, measurement::Measurement, BenchmarkGroup, Criterion,
 };
-use crypto_bigint::U1024;
+use crypto_bigint::{U1024, U128};
 
-use crypto_primes::hazmat::{
-    lucas_test, random_odd_uint, BruteForceBase, LucasCheck, MillerRabin, SelfridgeBase, Sieve,
+use crypto_primes::{
+    hazmat::{
+        lucas_test, random_odd_uint, BruteForceBase, LucasCheck, MillerRabin, SelfridgeBase, Sieve,
+    },
+    safe_prime_with_rng,
 };
 
 fn bench_sieve<'a, M: Measurement>(group: &mut BenchmarkGroup<'a, M>) {
     let start: U1024 = random_odd_uint(&mut OsRng, 1024);
     group.bench_function("(U1024) Sieve, 1000 samples", |b| {
-        b.iter(|| Sieve::new(&start, 1024).take(1000).for_each(drop))
+        b.iter(|| Sieve::new(&start, 1024, false).take(1000).for_each(drop))
     });
 }
 
@@ -25,7 +28,7 @@ fn bench_miller_rabin<'a, M: Measurement>(group: &mut BenchmarkGroup<'a, M>) {
     });
 
     let start: U1024 = random_odd_uint(&mut OsRng, 1024);
-    let mut sieve = Sieve::new(&start, 1024);
+    let mut sieve = Sieve::new(&start, 1024, false);
     group.bench_function(
         "(U1024) Sieve + Miller-Rabin creation + random base check",
         |b| {
@@ -39,7 +42,7 @@ fn bench_miller_rabin<'a, M: Measurement>(group: &mut BenchmarkGroup<'a, M>) {
 
 fn bench_lucas<'a, M: Measurement>(group: &mut BenchmarkGroup<'a, M>) {
     let start: U1024 = random_odd_uint(&mut OsRng, 1024);
-    let mut sieve = Sieve::new(&start, 1024);
+    let mut sieve = Sieve::new(&start, 1024, false);
     group.bench_function("(U1024) Sieve + Lucas test (Selfridge base)", |b| {
         b.iter(|| {
             lucas_test(&sieve.next().unwrap(), SelfridgeBase, LucasCheck::Strong);
@@ -99,5 +102,20 @@ fn bench_primality_tests(c: &mut Criterion) {
     group.finish();
 }
 
-criterion_group!(benches, bench_primality_tests);
+fn bench_presets<'a, M: Measurement>(group: &mut BenchmarkGroup<'a, M>) {
+    group.bench_function("(U128) Random safe prime", |b| {
+        b.iter(|| {
+            let p: U128 = safe_prime_with_rng(&mut OsRng, 128);
+            p
+        })
+    });
+}
+
+fn bench_prime_generation(c: &mut Criterion) {
+    let mut group = c.benchmark_group("prime numbers generation");
+    bench_presets(&mut group);
+    group.finish();
+}
+
+criterion_group!(benches, bench_primality_tests, bench_prime_generation);
 criterion_main!(benches);
