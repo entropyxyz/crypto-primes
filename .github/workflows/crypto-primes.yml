@@ -2,7 +2,6 @@ name: crypto-primes
 on:
   workflow_dispatch:
   pull_request:
-    types: [opened, synchronize, reopened]
     paths-ignore: [ README.md ]
   push:
     branches: master
@@ -84,13 +83,13 @@ jobs:
         include:
           # 32-bit Linux
           - target: i686-unknown-linux-gnu
-           rust: stable
-           deps: sudo apt update && sudo apt install gcc-multilib libssl-dev
+            rust: stable
+            deps: sudo apt update && sudo apt install gcc-multilib
 
           # 64-bit Linux
           - target: x86_64-unknown-linux-gnu
             rust: stable
-            deps: sudo apt update && sudo apt install gcc-multilib libssl-dev
+            deps: sudo apt update && sudo apt install gcc-multilib
     steps:
       - uses: actions/checkout@v3
       - uses: actions-rs/toolchain@v1
