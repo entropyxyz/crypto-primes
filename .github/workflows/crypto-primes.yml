@@ -1,13 +1,12 @@
 name: crypto-primes
-
 on:
+  workflow_dispatch:
   pull_request:
-    paths-ignore:
-      - README.md
+    types: [opened, synchronize, reopened]
+    paths-ignore: [ README.md ]
   push:
     branches: master
-    paths-ignore:
-      - README.md
+    paths-ignore: [ README.md ]
 
 env:
   CARGO_INCREMENTAL: 0
