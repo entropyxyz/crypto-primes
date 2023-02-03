@@ -12,7 +12,7 @@ categories = ["cryptography", "no-std"]
 crypto-bigint = { version = "0.5.0-pre.2", default-features = false, features = ["rand_core"] }
 rand_core = { version = "0.6", default-features = false }
 getrandom = { version = "0.2", optional = true, default-features = false, features = ["js"] }
-openssl = { version = "0.10", optional = true }
+openssl = { version = "0.10", optional = true, features = ["vendored"] }
 rug = { version = "1.18", default-features = false, features = ["integer"], optional = true }
 
 [dev-dependencies]
