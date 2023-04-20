@@ -197,7 +197,10 @@ fn decompose<const L: usize>(n: &Uint<L>) -> (u32, Uint<L>) {
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum LucasCheck {
     /// Introduced by Baillie & Wagstaff[^Baillie1980].
-    /// If any of `V(d*2^r) == 0` for `0 <= r < s`, and `U(d) == 0`, report the number as prime.
+    /// If either of the following is true:
+    /// - any of `V(d*2^r) == 0` for `0 <= r < s`,
+    /// - `U(d) == 0`,
+    /// report the number as prime.
     ///
     /// If the base is [`SelfridgeBase`], known false positives constitute OEIS:A217255[^A217255].
     ///
@@ -210,8 +213,14 @@ pub enum LucasCheck {
     /// [^A217255]: <https://oeis.org/A217255>
     Strong,
 
-    /// If any of `V(d*2^r) == 0` for `0 <= r < s`, and `V(d) == ±2` report the number as prime.
-    /// The second condition is only checked if `Q == 1`, otherwise it is considered to be true.
+    /// A [`LucasCheck::ExtraStrong`] without checking for `U(d)`.
+    /// That is, if either of the following is true:
+    /// - any of `V(d*2^r) == 0` for `0 <= r < s`,
+    /// - `V(d) == ±2`,
+    /// report the number as prime.
+    ///
+    /// Note: the second condition is only checked if `Q == 1`,
+    /// otherwise it is considered to be true.
     ///
     /// If the base is [`BruteForceBase`], some known false positives
     /// are listed by Jacobsen[^Jacobsen].
@@ -225,7 +234,9 @@ pub enum LucasCheck {
     AlmostExtraStrong,
 
     /// Introduced by Mo[^Mo1993], and also described by Grantham[^Grantham2001].
-    /// If [`LucasCheck::Strong`] check passes, and `V(d) == ±2`,
+    /// If either of the following is true:
+    /// - any of `V(d*2^r) == 0` for `0 <= r < s`,
+    /// - `U(d) == 0` and `V(d) == ±2`,
     /// report the number as prime.
     ///
     /// Note that this check only differs from [`LucasCheck::Strong`] if `Q == 1`.
@@ -359,7 +370,7 @@ pub fn lucas_test<const L: usize>(
     let d_m = if discriminant < 0 { -abs_d } else { abs_d };
 
     for i in (0..d.bits_vartime()).rev() {
-        // k = k * 2
+        // k' = k * 2
 
         let u_2k = uk * vk;
         let v_2k = vk.square() - (qk + qk);
@@ -370,7 +381,7 @@ pub fn lucas_test<const L: usize>(
         qk = q_2k;
 
         if d.bit_vartime(i) {
-            // k = k + 1
+            // k' = k + 1
 
             let (p_uk, p_vk) = if p_is_one { (uk, vk) } else { (p * uk, p * vk) };
 
@@ -384,34 +395,39 @@ pub fn lucas_test<const L: usize>(
         }
     }
 
-    // Now k=d, so vk = V_d, vk_1 = V_{d+1}.
+    // Now k=d, so vk = V_d and uk = U_d.
 
-    // Extra strong check (from [^Mo1993]): `V_d == ±2 mod n`.
-    // Do it first since it is cheap.
-    //
-    // Note that it only applies if Q = 1, since it is a consequence
-    // of a property of Lucas series: V_k^2 - 4 Q^k = D U_k^2 mod n.
-    // If Q = 1 we can easily decompose the left side of the equation leading to the check above.
-    let vk_equals_two = if q_is_one {
-        vk == two || vk == minus_two
-    } else {
-        true
-    };
+    // Check for the first sufficient condition in various strong checks.
 
-    if vk_equals_two {
-        if check == LucasCheck::Strong || check == LucasCheck::ExtraStrong {
-            // Strong check:`U_d == 0 mod n`.
-            if uk == zero {
-                return Primality::ProbablyPrime;
-            }
-        } else {
-            // This is "almost extra strong check": we only checked for `V_d` earlier,
-            // and the check for `U_d` is skipped.
-            if check == LucasCheck::AlmostExtraStrong {
-                return Primality::ProbablyPrime;
-            }
+    if check == LucasCheck::Strong && uk == zero {
+        // Strong check: `U_d == 0 mod n`.
+        return Primality::ProbablyPrime;
+    } else if check == LucasCheck::ExtraStrong || check == LucasCheck::AlmostExtraStrong {
+        // Extra strong check (from [^Mo1993]): `V_d == ±2 mod n` and `U_d == 0 mod n`.
+        //
+        // Note that the first identity only applies if `Q = 1`, since it is a consequence
+        // of a property of Lucas series: `V_k^2 - 4 Q^k = D U_k^2 mod n`.
+        // If `Q = 1` we can easily decompose the left side of the equation
+        // leading to the check above.
+        //
+        // If `Q != 1` we just consider it passed (we don't have a corresponding
+        // pseudoprime list anyway).
+
+        let vk_equals_two = !q_is_one || (vk == two || vk == minus_two);
+
+        if check == LucasCheck::ExtraStrong && uk == zero && vk_equals_two {
+            return Primality::ProbablyPrime;
+        }
+
+        // "Almost extra strong" check skips the `U_d` check.
+        // Since we have `U_d` anyway, it does not improve performance,
+        // so it is only here for testing purposes, since we have a corresponding pseudoprime list.
+        if check == LucasCheck::AlmostExtraStrong && vk_equals_two {
+            return Primality::ProbablyPrime;
         }
     }
+
+    // Second sufficient condition requires further propagating `V_k` up to `V_{n+1}`.
 
     // Check if V_{2^t d} == 0 mod n for some 0 <= t < s.
     // (unless we're in Lucas-V mode, then we just propagate V_k)
@@ -428,7 +444,7 @@ pub fn lucas_test<const L: usize>(
         }
 
         // k' = 2k
-        // V(k') = V(2k) = V(k)² - 2 * Q^k
+        // V_{k'} = V_k^2 - 2 Q^k
         vk = vk * vk - qk - qk;
 
         if check != LucasCheck::LucasV && vk == zero {
