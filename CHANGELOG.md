@@ -4,6 +4,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [Unreleased]
+
+### Added
+
+- An alternative propagation method for Lucas sequences improving the performance of `lucas_test()`. ([#20])
+
+
+### Fixed
+
+- Some mistakes in the description of Lucas checks (the logic itself was fine). ([#20])
+
+
+[#20]: https://github.com/nucypher/rust-umbral/pull/20
+
+
 ## [0.2.0] - 2023-03-06
 
 ### Changed
