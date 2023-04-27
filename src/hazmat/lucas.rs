@@ -1,7 +1,7 @@
 //! Lucas primality test.
 use crypto_bigint::{
     modular::runtime_mod::{DynResidue, DynResidueParams},
-    Integer, Invert, Limb, Uint, Word,
+    Integer, Limb, Uint, Word,
 };
 
 use super::{
@@ -335,57 +335,52 @@ pub fn lucas_test<const L: usize>(
         DynResidue::<L>::new(&Uint::<L>::from(p), params)
     };
 
-    // Compute d-th element of Lucas sequence V_d(P, Q), where:
+    // Compute d-th element of Lucas sequence (U_d(P, Q), V_d(P, Q)), where:
     //
-    //  V_0 = 2
-    //  V_1 = P
-    //  V_k = P V_{k-1} - Q V_{k-2}.
+    // V_0 = 2
+    // U_0 = 1
     //
-    // In general V(k) = α^k + β^k, where α and β are roots of x^2 - Px + Q.
-    // [^Crandall2005], eq. (3.14) observe that for 0 <= j <= k,
+    // U_{2k} = U_k V_k
+    // V_{2k} = V_k^2 - 2 Q^k
     //
-    //  V_{j+k} = V_j V_k - Q^j * V_{k-j}.
+    // U_{k+1} = (P U_k + V_k) / 2
+    // V_{k+1} = (D U_k + P V_k) / 2
     //
-    // So in particular, to quickly double the subscript:
-    //
-    //  V_{2k} = V_k^2 - 2 * Q^k
-    //  V_{2k+1} = V_k V_{k+1} - Q^k
-    //
+    // (The propagation method is due to [^Baillie2021], Eqs. 13, 14, 16, 17)
     // We can therefore start with k=0 and build up to k=d in log2(d) steps.
 
+    // Starting with k = 0
     let mut vk = two; // keeps V_k
-    let mut vk1 = p; // keeps V_{k+1}
+    let mut uk = DynResidue::<L>::zero(params); // keeps U_k
     let mut qk = one; // keeps Q^k
-    let mut qk_times_p = if p_is_one { one } else { p }; // keeps P Q^{k}
+
+    // D in Montgomery representation - note that it can be negative.
+    let abs_d = DynResidue::<L>::new(&Uint::<L>::from(discriminant.abs_diff(0)), params);
+    let d_m = if discriminant < 0 { -abs_d } else { abs_d };
 
     for i in (0..d.bits_vartime()).rev() {
+        // k = k * 2
+
+        let u_2k = uk * vk;
+        let v_2k = vk.square() - (qk + qk);
+        let q_2k = qk.square();
+
+        uk = u_2k;
+        vk = v_2k;
+        qk = q_2k;
+
         if d.bit_vartime(i) {
-            // k' = 2k+1
+            // k = k + 1
 
-            // V_k' = V_{2k+1} = V_k V_{k+1} - P Q^k
-            vk = vk * vk1 - qk_times_p;
+            let (p_uk, p_vk) = if p_is_one { (uk, vk) } else { (p * uk, p * vk) };
 
-            // V_{k'+1} = V_{2k+2} = V_{k+1}^2 - 2 Q^{k+1}
-            let qk1 = qk * q; // Q^{k+1}
-            let two_qk1 = if q_is_one { two } else { qk1 + qk1 }; // 2 Q^{k+1}
-            vk1 = vk1.square() - two_qk1;
-            qk *= qk1;
-        } else {
-            // k' = 2k
+            let u_k1 = (p_uk + vk).div_by_2();
+            let v_k1 = (d_m * uk + p_vk).div_by_2();
+            let q_k1 = qk * q;
 
-            // V_{k'+1} = V_{2k+1} = V_k V_{k+1} - P Q^k
-            vk1 = vk * vk1 - qk_times_p;
-
-            // V_k' = V_{2k} = V_k^2 - 2 Q^k
-            let two_qk = if q_is_one { two } else { qk + qk }; // 2 Q^k
-            vk = vk.square() - two_qk;
-            qk = qk.square();
-        }
-
-        if p_is_one {
-            qk_times_p = qk;
-        } else {
-            qk_times_p = qk * p;
+            uk = u_k1;
+            vk = v_k1;
+            qk = q_k1;
         }
     }
 
@@ -404,27 +399,14 @@ pub fn lucas_test<const L: usize>(
     };
 
     if vk_equals_two {
-        // Strong check:`U_d == 0 mod n`.
-        // As suggested by [^Jacobsen], apply Eq. (3.13) from [^Crandall2005]:
-        //
-        //  U_k = D^{-1} (2 V_{k+1} - P V_k)
-        //
-        // Some implementations just test for 2 V_{k+1} == P V_{k},
-        // but we don't have any reference pseudoprime lists for this, so we are not doing it.
         if check == LucasCheck::Strong || check == LucasCheck::ExtraStrong {
-            let abs_d = DynResidue::<L>::new(&Uint::<L>::from(discriminant.abs_diff(0)), params);
-            let d_m = if discriminant < 0 { -abs_d } else { abs_d };
-            // `d` is guaranteed non-zero by construction, so we can safely unwrap
-            let inv_d = <DynResidue<L> as Invert>::invert(&d_m).unwrap();
-
-            let vk_times_p = if p_is_one { vk } else { vk * p };
-            let uk = inv_d * (vk1 + vk1 - vk_times_p);
-
+            // Strong check:`U_d == 0 mod n`.
             if uk == zero {
                 return Primality::ProbablyPrime;
             }
         } else {
-            // This is "almost extra strong check": we only checked for `V_d` earlier.
+            // This is "almost extra strong check": we only checked for `V_d` earlier,
+            // and the check for `U_d` is skipped.
             if check == LucasCheck::AlmostExtraStrong {
                 return Primality::ProbablyPrime;
             }
