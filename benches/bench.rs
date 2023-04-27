@@ -13,14 +13,14 @@ use crypto_primes::{
     safe_prime_with_rng,
 };
 
-fn bench_sieve<'a, M: Measurement>(group: &mut BenchmarkGroup<'a, M>) {
+fn bench_sieve<M: Measurement>(group: &mut BenchmarkGroup<'_, M>) {
     let start: U1024 = random_odd_uint(&mut OsRng, 1024);
     group.bench_function("(U1024) Sieve, 1000 samples", |b| {
         b.iter(|| Sieve::new(&start, 1024, false).take(1000).for_each(drop))
     });
 }
 
-fn bench_miller_rabin<'a, M: Measurement>(group: &mut BenchmarkGroup<'a, M>) {
+fn bench_miller_rabin<M: Measurement>(group: &mut BenchmarkGroup<'_, M>) {
     let start: U1024 = random_odd_uint(&mut OsRng, 1024);
     group.bench_function("(U1024) Miller-Rabin creation", |b| {
         b.iter(|| {
@@ -41,7 +41,7 @@ fn bench_miller_rabin<'a, M: Measurement>(group: &mut BenchmarkGroup<'a, M>) {
     );
 }
 
-fn bench_lucas<'a, M: Measurement>(group: &mut BenchmarkGroup<'a, M>) {
+fn bench_lucas<M: Measurement>(group: &mut BenchmarkGroup<'_, M>) {
     let mut rng = ChaCha8Rng::from_seed(*b"01234567890123456789012345678901");
 
     let start: U1024 = random_odd_uint(&mut rng, 1024);
@@ -117,7 +117,7 @@ fn bench_primality_tests(c: &mut Criterion) {
     group.finish();
 }
 
-fn bench_presets<'a, M: Measurement>(group: &mut BenchmarkGroup<'a, M>) {
+fn bench_presets<M: Measurement>(group: &mut BenchmarkGroup<'_, M>) {
     group.bench_function("(U128) Random safe prime", |b| {
         b.iter(|| {
             let p: U128 = safe_prime_with_rng(&mut OsRng, 128);
