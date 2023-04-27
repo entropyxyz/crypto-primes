@@ -111,7 +111,7 @@ jobs:
           components: clippy
           override: true
           profile: minimal
-      - run: cargo clippy --all --all-features --tests -- -D warnings
+      - run: cargo clippy --all --all-features --tests --benches -- -D warnings
 
   rustfmt:
     runs-on: ubuntu-latest
