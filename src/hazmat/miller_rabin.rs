@@ -4,7 +4,7 @@ use rand_core::CryptoRngCore;
 
 use crypto_bigint::{
     modular::runtime_mod::{DynResidue, DynResidueParams},
-    Integer, NonZero, RandomMod, Uint, Zero,
+    Integer, NonZero, RandomMod, Uint,
 };
 
 use super::Primality;
@@ -23,7 +23,7 @@ pub struct MillerRabin<const L: usize> {
     montgomery_params: DynResidueParams<L>,
     one: DynResidue<L>,
     minus_one: DynResidue<L>,
-    s: u32,
+    s: usize,
     d: Uint<L>,
 }
 
@@ -35,7 +35,12 @@ impl<const L: usize> MillerRabin<L> {
         let params = DynResidueParams::<L>::new(candidate);
         let one = DynResidue::<L>::one(params);
         let minus_one = -one;
-        let (s, d) = decompose(candidate);
+
+        // Find `s` and odd `d` such that `candidate - 1 == 2^s * d`.
+        let candidate_minus_one = candidate.wrapping_sub(&Uint::<L>::ONE);
+        let s = candidate_minus_one.trailing_zeros();
+        let d = candidate_minus_one >> s;
+
         Self {
             candidate: *candidate,
             montgomery_params: params,
@@ -84,24 +89,6 @@ impl<const L: usize> MillerRabin<L> {
             Uint::<L>::random_mod(rng, &range_nonzero).wrapping_add(&Uint::<L>::from(3u32));
         self.check(&random)
     }
-}
-
-/// For the given odd `n`, finds `s` and odd `d` such that `n - 1 == 2^s * d`.
-fn decompose<const L: usize>(n: &Uint<L>) -> (u32, Uint<L>) {
-    let mut d = n.wrapping_sub(&Uint::<L>::ONE);
-    let mut s = 0;
-
-    // Corner case, exit early to prevent being stuck in the loop.
-    if d.is_zero().into() {
-        return (0, Uint::<L>::ZERO);
-    }
-
-    while d.is_even().into() {
-        d >>= 1;
-        s += 1;
-    }
-
-    (s, d)
 }
 
 #[cfg(test)]
