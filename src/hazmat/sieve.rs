@@ -7,7 +7,7 @@ use crypto_bigint::{Integer, Limb, NonZero, Random, Uint, Zero};
 use rand_core::CryptoRngCore;
 
 use crate::hazmat::{
-    precomputed::{SmallPrime, SMALL_PRIMES},
+    precomputed::{SmallPrime, RECIPROCALS, SMALL_PRIMES},
     Primality,
 };
 
@@ -151,10 +151,8 @@ impl<const L: usize> Sieve<L> {
         self.incr = 0;
 
         // Re-calculate residues.
-        for (i, small_prime) in SMALL_PRIMES.iter().enumerate().take(self.residues.len()) {
-            let (_quo, rem) = self
-                .base
-                .div_rem_limb(NonZero::new(Limb::from(*small_prime)).unwrap());
+        for (i, rec) in RECIPROCALS.iter().enumerate().take(self.residues.len()) {
+            let (_quo, rem) = self.base.ct_div_rem_limb_with_reciprocal(rec);
             self.residues[i] = rem.0 as SmallPrime;
         }
 
