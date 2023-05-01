@@ -29,9 +29,13 @@ pub struct MillerRabin<const L: usize> {
 
 impl<const L: usize> MillerRabin<L> {
     /// Initializes a Miller-Rabin test for `candidate`.
-    /// `candidate` must be odd.
+    ///
+    /// Panics if `candidate` is even.
     pub fn new(candidate: &Uint<L>) -> Self {
-        debug_assert!(bool::from(candidate.is_odd()));
+        if candidate.is_even().into() {
+            panic!("`candidate` must be odd.");
+        }
+
         let params = DynResidueParams::<L>::new(candidate);
         let one = DynResidue::<L>::one(params);
         let minus_one = -one;
@@ -78,11 +82,18 @@ impl<const L: usize> MillerRabin<L> {
         self.check(&Uint::<L>::from(2u32))
     }
 
-    /// Perform a Miller-Rabin check with a random base drawn using the provided RNG.
+    /// Perform a Miller-Rabin check with a random base (in the range `[3, candidate-2]`)
+    /// drawn using the provided RNG.
+    ///
+    /// Note: panics if `candidate == 3` (so the range above is empty).
     pub fn test_random_base(&self, rng: &mut impl CryptoRngCore) -> Primality {
         // We sample a random base from the range `[3, candidate-2]`:
         // - we have a separate method for base 2;
         // - the test holds trivially for bases 1 or `candidate-1`.
+        if self.candidate.bits() < 3 {
+            panic!("No suitable random base possible when `candidate == 3`; use the base 2 test.")
+        }
+
         let range = self.candidate.wrapping_sub(&Uint::<L>::from(4u32));
         let range_nonzero = NonZero::new(range).unwrap();
         let random =

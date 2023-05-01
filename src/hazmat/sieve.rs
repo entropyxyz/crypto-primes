@@ -3,13 +3,10 @@
 
 use alloc::{vec, vec::Vec};
 
-use crypto_bigint::{Integer, Limb, NonZero, Random, Uint, Zero};
+use crypto_bigint::{Random, Uint};
 use rand_core::CryptoRngCore;
 
-use crate::hazmat::{
-    precomputed::{SmallPrime, RECIPROCALS, SMALL_PRIMES},
-    Primality,
-};
+use crate::hazmat::precomputed::{SmallPrime, RECIPROCALS, SMALL_PRIMES};
 
 /// Returns a random odd integer with given bit length
 /// (that is, with both `0` and `bit_length-1` bits set).
@@ -42,6 +39,14 @@ pub fn random_odd_uint<const L: usize>(rng: &mut impl CryptoRngCore, bit_length:
     random
 }
 
+// The type we use to calculate incremental residues.
+// Should be >= `SmallPrime` in size.
+type Residue = u32;
+
+// The maximum increment that won't overflow the type we use to calculate residues of increments:
+// we need `(max_prime - 1) + max_incr <= Type::MAX`.
+const INCR_LIMIT: Residue = Residue::MAX - SMALL_PRIMES[SMALL_PRIMES.len() - 1] as Residue + 1;
+
 /// An iterator returning numbers with up to and including given bit length,
 /// starting from a given number, that are not multiples of the first 2048 small primes.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -60,52 +65,49 @@ pub struct Sieve<const L: usize> {
     last_round: bool,
 }
 
-// The type we use to calculate incremental residues.
-// Should be >= `SmallPrime` in size.
-type Residue = u32;
-
-// The maximum increment that won't overflow the type we use to calculate residues of increments:
-// we need `(max_prime - 1) + max_incr <= Type::MAX`.
-const INCR_LIMIT: Residue = Residue::MAX - SMALL_PRIMES[SMALL_PRIMES.len() - 1] as Residue + 1;
-
 impl<const L: usize> Sieve<L> {
     /// Creates a new sieve, iterating from `start` and
     /// until the last number with `max_bit_length` bits,
     /// producing numbers that are not non-trivial multiples
-    /// of a list of small primes in the range `[2, start)`.
+    /// of a list of small primes in the range `[2, start)` (`safe_primes = false`)
+    /// or `[2, start/2)` (`safe_primes = true`).
     ///
-    /// Note that `start` is adjusted to `2`, or the next `1 mod 2` number (`safe_prime = false`);
-    /// and `5`, or `3 mod 4` number (`safe_prime = true`).
+    /// Note that `start` is adjusted to `2`, or the next `1 mod 2` number (`safe_primes = false`);
+    /// and `5`, or `3 mod 4` number (`safe_primes = true`).
     ///
-    /// If `safe_primes` is `true`, it only produces the candidates
-    /// that can possibly be safe primes (that is, 5, and those equal to 3 modulo 4).
+    /// Panics if `max_bit_length` is greater than the size of the target `Uint`.
+    ///
+    /// If `safe_primes` is `true`, both the returned `n` and `n/2` are sieved.
     pub fn new(start: &Uint<L>, max_bit_length: usize, safe_primes: bool) -> Self {
-        let mut base = *start;
+        if max_bit_length > Uint::<L>::BITS {
+            panic!(
+                "The requested bit length ({}) is larger than the chosen Uint size",
+                max_bit_length
+            );
+        }
+
+        // If we are targeting safe primes, iterate over the corresponding
+        // possible Germain primes (`n/2`), reducing the task to that with `safe_primes = false`.
+        let (max_bit_length, base) = if safe_primes {
+            (max_bit_length - 1, start >> 1)
+        } else {
+            (max_bit_length, *start)
+        };
+
+        let mut base = base;
 
         // This is easier than making all the methods generic enough to handle these corner cases.
-        let produces_nothing = max_bit_length < base.bits()
-            || (!safe_primes && max_bit_length < 2)
-            || (safe_primes && max_bit_length < 3);
+        let produces_nothing = max_bit_length < base.bits() || max_bit_length < 2;
 
-        // Add exceptions to the produced candidates - the only ones that don't fit
-        // the general pattern of incrementing the base by 2 or by 4.
+        // Add the exception to the produced candidates - the only one that doesn't fit
+        // the general pattern of incrementing the base by 2.
         let mut starts_from_exception = false;
-        if !safe_primes {
-            if base <= Uint::<L>::from(2u32) {
-                starts_from_exception = true;
-                base = Uint::<L>::from(3u32);
-            } else {
-                // Adjust the base so that we hit correct numbers when incrementing it by 2.
-                base |= Uint::<L>::ONE;
-            }
-        } else if base <= Uint::<L>::from(5u32) {
+        if base <= Uint::<L>::from(2u32) {
             starts_from_exception = true;
-            base = Uint::<L>::from(7u32);
+            base = Uint::<L>::from(3u32);
         } else {
-            // Adjust the base so that we hit correct numbers when incrementing it by 4.
-            // If we are looking for safe primes, we are only interested
-            // in the numbers == 3 mod 4.
-            base |= Uint::<L>::from(3u32);
+            // Adjust the base so that we hit odd numbers when incrementing it by 2.
+            base |= Uint::<L>::ONE;
         }
 
         // Only calculate residues by primes up to and not including `base`,
@@ -157,8 +159,6 @@ impl<const L: usize> Sieve<L> {
         }
 
         // Find the increment limit.
-        // Note that the max value is the same regardless of the value of `self.safe_prime`,
-        // since `(2^n - 1) = 3 mod 4` (for n > 1).
         let max_value = (Uint::<L>::ONE << self.max_bit_length).wrapping_sub(&Uint::<L>::ONE);
         let incr_limit = max_value.wrapping_sub(&self.base);
         self.incr_limit = if incr_limit > INCR_LIMIT.into() {
@@ -179,11 +179,24 @@ impl<const L: usize> Sieve<L> {
     // Returns `true` if the current `base + incr` is divisible by any of the small primes.
     fn current_is_composite(&self) -> bool {
         for (i, m) in self.residues.iter().enumerate() {
-            let r = (*m as Residue + self.incr) % (SMALL_PRIMES[i] as Residue);
+            let d = SMALL_PRIMES[i] as Residue;
+            let r = (*m as Residue + self.incr) % d;
+
             if r == 0 {
                 return true;
             }
+
+            // A trick from "Safe Prime Generation with a Combined Sieve" by Michael J. Wiener
+            // (https://eprint.iacr.org/2003/186).
+            // Remember that the check above was for the `(n - 1)/2`;
+            // If `(n - 1)/2 mod d == (d - 1)/2`, it means that `n mod d == 0`.
+            // In other words, we are checking the remainder of `n mod d`
+            // for virtually no additional cost.
+            if self.safe_primes && r == (d - 1) >> 1 {
+                return true;
+            }
         }
+
         false
     }
 
@@ -193,11 +206,14 @@ impl<const L: usize> Sieve<L> {
         let result = if self.current_is_composite() {
             None
         } else {
-            Some(self.base.wrapping_add(&self.incr.into()))
+            let mut num = self.base.wrapping_add(&self.incr.into());
+            if self.safe_primes {
+                num = (num << 1) | Uint::<L>::ONE;
+            }
+            Some(num)
         };
 
-        // If we are looking for safe primes, we are only interested in the numbers == 3 mod 4.
-        self.incr += if self.safe_primes { 4 } else { 2 };
+        self.incr += 2;
         result
     }
 
@@ -229,33 +245,8 @@ impl<const L: usize> Iterator for Sieve<L> {
     type Item = Uint<L>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        Sieve::<L>::next(self)
+        Self::next(self)
     }
-}
-
-/// Performs trial division of the given number by a list of small primes starting from 2.
-/// Returns `Some(primality)` if there was a definitive conclusion about `num`'s primality,
-/// and `None` otherwise.
-pub fn sieve_once<const L: usize>(num: &Uint<L>) -> Option<Primality> {
-    // Our reciprocals start from 3, so we check for 2 separately
-    if num == &Uint::<L>::from(2u32) {
-        return Some(Primality::Prime);
-    }
-    if num.is_even().into() {
-        return Some(Primality::Composite);
-    }
-    for small_prime in SMALL_PRIMES.iter() {
-        let (quo, rem) = num.div_rem_limb(NonZero::new(Limb::from(*small_prime)).unwrap());
-        if rem.is_zero().into() {
-            let primality = if quo == Uint::<L>::ONE {
-                Primality::Prime
-            } else {
-                Primality::Composite
-            };
-            return Some(primality);
-        }
-    }
-    None
 }
 
 #[cfg(test)]
@@ -328,13 +319,24 @@ mod tests {
         check_sieve(5, 3, true, &[5, 7]);
         check_sieve(7, 3, true, &[7]);
 
-        // start is adjusted to 5 here, so multiples of 3 can be excluded
-        check_sieve(1, 4, true, &[5, 7, 11]);
+        // In the following three cases, the "half-start" would be set to 3,
+        // and since every small divisor equal or greater than the start is not tested
+        // (because we can't distinguish between the remainder being 0
+        // and the number being actually equal to the divisor),
+        // no divisors will actually be tested at all, so 15 (a composite)
+        // is included in the output.
+        check_sieve(1, 4, true, &[5, 7, 11, 15]);
+        check_sieve(5, 4, true, &[5, 7, 11, 15]);
+        check_sieve(7, 4, true, &[7, 11, 15]);
 
-        check_sieve(5, 4, true, &[5, 7, 11]);
-        check_sieve(7, 4, true, &[7, 11]);
         check_sieve(9, 4, true, &[11]);
         check_sieve(13, 4, true, &[]);
+    }
+
+    #[test]
+    #[should_panic(expected = "The requested bit length (65) is larger than the chosen Uint size")]
+    fn sieve_too_many_bits() {
+        let _sieve = Sieve::new(&U64::ONE, 65, false);
     }
 
     #[test]
