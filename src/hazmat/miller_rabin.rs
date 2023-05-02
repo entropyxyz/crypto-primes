@@ -4,7 +4,7 @@ use rand_core::CryptoRngCore;
 
 use crypto_bigint::{
     modular::runtime_mod::{DynResidue, DynResidueParams},
-    Integer, NonZero, RandomMod, Uint, Zero,
+    Integer, NonZero, RandomMod, Uint,
 };
 
 use super::Primality;
@@ -23,19 +23,28 @@ pub struct MillerRabin<const L: usize> {
     montgomery_params: DynResidueParams<L>,
     one: DynResidue<L>,
     minus_one: DynResidue<L>,
-    s: u32,
+    s: usize,
     d: Uint<L>,
 }
 
 impl<const L: usize> MillerRabin<L> {
     /// Initializes a Miller-Rabin test for `candidate`.
-    /// `candidate` must be odd.
+    ///
+    /// Panics if `candidate` is even.
     pub fn new(candidate: &Uint<L>) -> Self {
-        debug_assert!(bool::from(candidate.is_odd()));
+        if candidate.is_even().into() {
+            panic!("`candidate` must be odd.");
+        }
+
         let params = DynResidueParams::<L>::new(candidate);
         let one = DynResidue::<L>::one(params);
         let minus_one = -one;
-        let (s, d) = decompose(candidate);
+
+        // Find `s` and odd `d` such that `candidate - 1 == 2^s * d`.
+        let candidate_minus_one = candidate.wrapping_sub(&Uint::<L>::ONE);
+        let s = candidate_minus_one.trailing_zeros();
+        let d = candidate_minus_one >> s;
+
         Self {
             candidate: *candidate,
             montgomery_params: params,
@@ -47,7 +56,7 @@ impl<const L: usize> MillerRabin<L> {
     }
 
     /// Perform a Miller-Rabin check with a given base.
-    pub fn check(&self, base: &Uint<L>) -> Primality {
+    pub fn test(&self, base: &Uint<L>) -> Primality {
         // TODO: it may be faster to first check that gcd(base, candidate) == 1,
         // otherwise we can return `Composite` right away.
 
@@ -70,38 +79,27 @@ impl<const L: usize> MillerRabin<L> {
 
     /// Perform a Miller-Rabin check with base 2.
     pub fn test_base_two(&self) -> Primality {
-        self.check(&Uint::<L>::from(2u32))
+        self.test(&Uint::<L>::from(2u32))
     }
 
-    /// Perform a Miller-Rabin check with a random base drawn using the provided RNG.
+    /// Perform a Miller-Rabin check with a random base (in the range `[3, candidate-2]`)
+    /// drawn using the provided RNG.
+    ///
+    /// Note: panics if `candidate == 3` (so the range above is empty).
     pub fn test_random_base(&self, rng: &mut impl CryptoRngCore) -> Primality {
         // We sample a random base from the range `[3, candidate-2]`:
         // - we have a separate method for base 2;
         // - the test holds trivially for bases 1 or `candidate-1`.
+        if self.candidate.bits() < 3 {
+            panic!("No suitable random base possible when `candidate == 3`; use the base 2 test.")
+        }
+
         let range = self.candidate.wrapping_sub(&Uint::<L>::from(4u32));
         let range_nonzero = NonZero::new(range).unwrap();
         let random =
             Uint::<L>::random_mod(rng, &range_nonzero).wrapping_add(&Uint::<L>::from(3u32));
-        self.check(&random)
+        self.test(&random)
     }
-}
-
-/// For the given odd `n`, finds `s` and odd `d` such that `n - 1 == 2^s * d`.
-fn decompose<const L: usize>(n: &Uint<L>) -> (u32, Uint<L>) {
-    let mut d = n.wrapping_sub(&Uint::<L>::ONE);
-    let mut s = 0;
-
-    // Corner case, exit early to prevent being stuck in the loop.
-    if d.is_zero().into() {
-        return (0, Uint::<L>::ZERO);
-    }
-
-    while d.is_even().into() {
-        d >>= 1;
-        s += 1;
-    }
-
-    (s, d)
 }
 
 #[cfg(test)]
@@ -111,7 +109,7 @@ mod tests {
 
     use crypto_bigint::{Uint, U1024, U128, U1536, U64};
     use rand_chacha::ChaCha8Rng;
-    use rand_core::{CryptoRngCore, SeedableRng};
+    use rand_core::{CryptoRngCore, OsRng, SeedableRng};
 
     #[cfg(feature = "tests-exhaustive")]
     use num_prime::nt_funcs::is_prime64;
@@ -124,6 +122,21 @@ mod tests {
         let mr = MillerRabin::new(&U64::ONE);
         assert!(format!("{mr:?}").starts_with("MillerRabin"));
         assert_eq!(mr.clone(), mr);
+    }
+
+    #[test]
+    #[should_panic(expected = "`candidate` must be odd.")]
+    fn parity_check() {
+        let _mr = MillerRabin::new(&U64::from(10u32));
+    }
+
+    #[test]
+    #[should_panic(
+        expected = "No suitable random base possible when `candidate == 3`; use the base 2 test."
+    )]
+    fn random_base_range_check() {
+        let mr = MillerRabin::new(&U64::from(3u32));
+        mr.test_random_base(&mut OsRng);
     }
 
     fn is_spsp(num: u32) -> bool {
@@ -175,10 +188,8 @@ mod tests {
             let mr = MillerRabin::new(&num);
 
             // Trivial tests, must always be true.
-            assert!(mr.check(&1u32.into()).is_probably_prime());
-            assert!(mr
-                .check(&num.wrapping_sub(&1u32.into()))
-                .is_probably_prime());
+            assert!(mr.test(&1u32.into()).is_probably_prime());
+            assert!(mr.test(&num.wrapping_sub(&1u32.into())).is_probably_prime());
         }
     }
 
@@ -233,10 +244,10 @@ mod tests {
 
         // It is known to pass MR tests for all prime bases <307
         assert!(mr.test_base_two().is_probably_prime());
-        assert!(mr.check(&U1536::from(293u64)).is_probably_prime());
+        assert!(mr.test(&U1536::from(293u64)).is_probably_prime());
 
         // A test with base 307 correctly reports the number as composite.
-        assert!(!mr.check(&U1536::from(307u64)).is_probably_prime());
+        assert!(!mr.test(&U1536::from(307u64)).is_probably_prime());
     }
 
     fn test_large_primes<const L: usize>(nums: &[Uint<L>]) {

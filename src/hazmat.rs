@@ -14,7 +14,7 @@ mod sieve;
 
 pub use lucas::{lucas_test, AStarBase, BruteForceBase, LucasBase, LucasCheck, SelfridgeBase};
 pub use miller_rabin::MillerRabin;
-pub use sieve::{random_odd_uint, sieve_once, Sieve};
+pub use sieve::{random_odd_uint, Sieve};
 
 /// Possible results of various primality tests.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -51,5 +51,12 @@ mod tests {
         assert_eq!(Primality::Prime, Primality::Prime);
         assert!(Primality::Prime != Primality::ProbablyPrime);
         assert_eq!(Primality::Prime.clone(), Primality::Prime);
+    }
+
+    #[test]
+    fn primality_to_bool() {
+        assert!(Primality::Prime.is_probably_prime());
+        assert!(Primality::ProbablyPrime.is_probably_prime());
+        assert!(!Primality::Composite.is_probably_prime());
     }
 }

@@ -5,7 +5,7 @@ use rand_core::CryptoRngCore;
 use rand_core::OsRng;
 
 use crate::hazmat::{
-    lucas_test, random_odd_uint, sieve_once, LucasCheck, MillerRabin, SelfridgeBase, Sieve,
+    lucas_test, random_odd_uint, LucasCheck, MillerRabin, Primality, SelfridgeBase, Sieve,
 };
 
 /// Returns a random prime of size `bit_length` using [`OsRng`] as the RNG.
@@ -56,7 +56,7 @@ pub fn prime_with_rng<const L: usize>(rng: &mut impl CryptoRngCore, bit_length: 
         let start: Uint<L> = random_odd_uint(rng, bit_length);
         let sieve = Sieve::new(&start, bit_length, false);
         for num in sieve {
-            if _is_prime_with_rng(rng, &num) {
+            if is_prime_with_rng(rng, &num) {
                 return num;
             }
         }
@@ -80,13 +80,9 @@ pub fn safe_prime_with_rng<const L: usize>(
         let start: Uint<L> = random_odd_uint(rng, bit_length);
         let sieve = Sieve::new(&start, bit_length, true);
         for num in sieve {
-            if !_is_prime_with_rng(rng, &num) {
-                continue;
+            if is_safe_prime_with_rng(rng, &num) {
+                return num;
             }
-            if !is_prime_with_rng(rng, &(num >> 1)) {
-                continue;
-            }
-            return num;
         }
     }
 }
@@ -94,14 +90,13 @@ pub fn safe_prime_with_rng<const L: usize>(
 /// Checks probabilistically if the given number is prime using the provided RNG.
 ///
 /// Performed checks:
-/// - Trial division by a number of small primes;
 /// - Miller-Rabin check with base 2;
 /// - Strong Lucas check with Selfridge base (a.k.a. Baillie method A);
 /// - Miller-Rabin check with a random base.
 ///
 /// See [`MillerRabin`] and [`lucas_test`] for more details about the checks.
 ///
-/// The second and the third checks constitute the Baillie-PSW primality test[^Baillie1980];
+/// The first two checks constitute the Baillie-PSW primality test[^Baillie1980];
 /// the third one is a precaution that follows the approach of GMP (as of v6.2.1).
 /// At the moment of the writing there are no known composites passing
 /// the Baillie-PSW test[^Baillie2021];
@@ -118,9 +113,13 @@ pub fn safe_prime_with_rng<const L: usize>(
 ///       Math. Comp. 90 1931-1955 (2021),
 ///       DOI: [10.1090/mcom/3616](https://doi.org/10.1090/mcom/3616)
 pub fn is_prime_with_rng<const L: usize>(rng: &mut impl CryptoRngCore, num: &Uint<L>) -> bool {
-    if let Some(primality) = sieve_once(num) {
-        return primality.is_probably_prime();
+    if num == &Uint::<L>::from(2u32) {
+        return true;
     }
+    if num.is_even().into() {
+        return false;
+    }
+
     _is_prime_with_rng(rng, num)
 }
 
@@ -138,38 +137,29 @@ pub fn is_safe_prime_with_rng<const L: usize>(rng: &mut impl CryptoRngCore, num:
         return false;
     }
 
-    if let Some(primality) = sieve_once(num) {
-        // If sieving returns a definite conclusion about `num`, use it.
-        if !primality.is_probably_prime() {
-            return false;
-        }
-    } else {
-        // Otherwise run the rest of the checks.
-        if !_is_prime_with_rng(rng, num) {
-            return false;
-        }
-    };
-
-    if !is_prime_with_rng(rng, &(num >> 1)) {
-        return false;
-    }
-
-    true
+    _is_prime_with_rng(rng, num) && _is_prime_with_rng(rng, &(num >> 1))
 }
 
-/// Checks for primality assuming that `num` was already pre-sieved.
+/// Checks for primality assuming that `num` is odd.
 fn _is_prime_with_rng<const L: usize>(rng: &mut impl CryptoRngCore, num: &Uint<L>) -> bool {
     debug_assert!(bool::from(num.is_odd()));
     let mr = MillerRabin::new(num);
+
     if !mr.test_base_two().is_probably_prime() {
         return false;
     }
-    if !lucas_test(num, SelfridgeBase, LucasCheck::Strong).is_probably_prime() {
+
+    match lucas_test(num, SelfridgeBase, LucasCheck::Strong) {
+        Primality::Composite => return false,
+        Primality::Prime => return true,
+        _ => {}
+    }
+
+    // The random base test only makes sense when `num > 3`.
+    if num.bits() > 2 && !mr.test_random_base(rng).is_probably_prime() {
         return false;
     }
-    if !mr.test_random_base(rng).is_probably_prime() {
-        return false;
-    }
+
     true
 }
 
