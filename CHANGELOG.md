@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `sieve_once()` was removed ([#22]).
 - `MillerRabin::new()` and `test_random_base()` will panic if the input is invalid. ([#22])
+- `MillerRabin::check()` renamed to `test()`. ([#22])
 
 
 ### Added

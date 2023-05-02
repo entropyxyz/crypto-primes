@@ -56,7 +56,7 @@ impl<const L: usize> MillerRabin<L> {
     }
 
     /// Perform a Miller-Rabin check with a given base.
-    pub fn check(&self, base: &Uint<L>) -> Primality {
+    pub fn test(&self, base: &Uint<L>) -> Primality {
         // TODO: it may be faster to first check that gcd(base, candidate) == 1,
         // otherwise we can return `Composite` right away.
 
@@ -79,7 +79,7 @@ impl<const L: usize> MillerRabin<L> {
 
     /// Perform a Miller-Rabin check with base 2.
     pub fn test_base_two(&self) -> Primality {
-        self.check(&Uint::<L>::from(2u32))
+        self.test(&Uint::<L>::from(2u32))
     }
 
     /// Perform a Miller-Rabin check with a random base (in the range `[3, candidate-2]`)
@@ -98,7 +98,7 @@ impl<const L: usize> MillerRabin<L> {
         let range_nonzero = NonZero::new(range).unwrap();
         let random =
             Uint::<L>::random_mod(rng, &range_nonzero).wrapping_add(&Uint::<L>::from(3u32));
-        self.check(&random)
+        self.test(&random)
     }
 }
 
@@ -188,10 +188,8 @@ mod tests {
             let mr = MillerRabin::new(&num);
 
             // Trivial tests, must always be true.
-            assert!(mr.check(&1u32.into()).is_probably_prime());
-            assert!(mr
-                .check(&num.wrapping_sub(&1u32.into()))
-                .is_probably_prime());
+            assert!(mr.test(&1u32.into()).is_probably_prime());
+            assert!(mr.test(&num.wrapping_sub(&1u32.into())).is_probably_prime());
         }
     }
 
@@ -246,10 +244,10 @@ mod tests {
 
         // It is known to pass MR tests for all prime bases <307
         assert!(mr.test_base_two().is_probably_prime());
-        assert!(mr.check(&U1536::from(293u64)).is_probably_prime());
+        assert!(mr.test(&U1536::from(293u64)).is_probably_prime());
 
         // A test with base 307 correctly reports the number as composite.
-        assert!(!mr.check(&U1536::from(307u64)).is_probably_prime());
+        assert!(!mr.test(&U1536::from(307u64)).is_probably_prime());
     }
 
     fn test_large_primes<const L: usize>(nums: &[Uint<L>]) {
