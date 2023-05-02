@@ -145,10 +145,8 @@ fn _is_prime_with_rng<const L: usize>(rng: &mut impl CryptoRngCore, num: &Uint<L
     debug_assert!(bool::from(num.is_odd()));
     let mr = MillerRabin::new(num);
 
-    match mr.test_base_two() {
-        Primality::Composite => return false,
-        Primality::Prime => return true,
-        _ => {}
+    if !mr.test_base_two().is_probably_prime() {
+        return false;
     }
 
     match lucas_test(num, SelfridgeBase, LucasCheck::Strong) {
@@ -158,12 +156,8 @@ fn _is_prime_with_rng<const L: usize>(rng: &mut impl CryptoRngCore, num: &Uint<L
     }
 
     // The random base test only makes sense when `num > 3`.
-    if num.bits() > 2 {
-        match mr.test_random_base(rng) {
-            Primality::Composite => return false,
-            Primality::Prime => return true,
-            _ => {}
-        }
+    if num.bits() > 2 && !mr.test_random_base(rng).is_probably_prime() {
+        return false;
     }
 
     true

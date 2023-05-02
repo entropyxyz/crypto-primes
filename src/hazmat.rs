@@ -52,4 +52,11 @@ mod tests {
         assert!(Primality::Prime != Primality::ProbablyPrime);
         assert_eq!(Primality::Prime.clone(), Primality::Prime);
     }
+
+    #[test]
+    fn primality_to_bool() {
+        assert!(Primality::Prime.is_probably_prime());
+        assert!(Primality::ProbablyPrime.is_probably_prime());
+        assert!(!Primality::Composite.is_probably_prime());
+    }
 }

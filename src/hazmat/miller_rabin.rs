@@ -109,7 +109,7 @@ mod tests {
 
     use crypto_bigint::{Uint, U1024, U128, U1536, U64};
     use rand_chacha::ChaCha8Rng;
-    use rand_core::{CryptoRngCore, SeedableRng};
+    use rand_core::{CryptoRngCore, OsRng, SeedableRng};
 
     #[cfg(feature = "tests-exhaustive")]
     use num_prime::nt_funcs::is_prime64;
@@ -122,6 +122,21 @@ mod tests {
         let mr = MillerRabin::new(&U64::ONE);
         assert!(format!("{mr:?}").starts_with("MillerRabin"));
         assert_eq!(mr.clone(), mr);
+    }
+
+    #[test]
+    #[should_panic(expected = "`candidate` must be odd.")]
+    fn parity_check() {
+        let _mr = MillerRabin::new(&U64::from(10u32));
+    }
+
+    #[test]
+    #[should_panic(
+        expected = "No suitable random base possible when `candidate == 3`; use the base 2 test."
+    )]
+    fn random_base_range_check() {
+        let mr = MillerRabin::new(&U64::from(3u32));
+        mr.test_random_base(&mut OsRng);
     }
 
     fn is_spsp(num: u32) -> bool {
