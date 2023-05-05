@@ -7,19 +7,21 @@ use crate::{is_prime_with_rng, is_safe_prime_with_rng, prime_with_rng, safe_prim
 /// and primality checking, wrapping the standalone functions ([`is_prime_with_rng`] etc).
 pub trait RandomPrimeWithRng {
     /// Returns a random prime of size `bit_length` using the provided RNG.
+    /// If `bit_length` is `None`, the full size of `Uint<L>` is used.
     ///
     /// Panics if `bit_length` is less than 2, or greater than the bit size of the target `Uint`.
     ///
     /// See [`is_prime_with_rng`] for details about the performed checks.
-    fn prime_with_rng(rng: &mut impl CryptoRngCore, bit_length: usize) -> Self;
+    fn prime_with_rng(rng: &mut impl CryptoRngCore, bit_length: Option<usize>) -> Self;
 
     /// Returns a random safe prime (that is, such that `(n - 1) / 2` is also prime)
     /// of size `bit_length` using the provided RNG.
+    /// If `bit_length` is `None`, the full size of `Uint<L>` is used.
     ///
     /// Panics if `bit_length` is less than 3, or greater than the bit size of the target `Uint`.
     ///
     /// See [`is_prime_with_rng`] for details about the performed checks.
-    fn safe_prime_with_rng(rng: &mut impl CryptoRngCore, bit_length: usize) -> Self;
+    fn safe_prime_with_rng(rng: &mut impl CryptoRngCore, bit_length: Option<usize>) -> Self;
 
     /// Checks probabilistically if the given number is prime using the provided RNG.
     ///
@@ -33,10 +35,10 @@ pub trait RandomPrimeWithRng {
 }
 
 impl<const L: usize> RandomPrimeWithRng for Uint<L> {
-    fn prime_with_rng(rng: &mut impl CryptoRngCore, bit_length: usize) -> Self {
+    fn prime_with_rng(rng: &mut impl CryptoRngCore, bit_length: Option<usize>) -> Self {
         prime_with_rng(rng, bit_length)
     }
-    fn safe_prime_with_rng(rng: &mut impl CryptoRngCore, bit_length: usize) -> Self {
+    fn safe_prime_with_rng(rng: &mut impl CryptoRngCore, bit_length: Option<usize>) -> Self {
         safe_prime_with_rng(rng, bit_length)
     }
     fn is_prime_with_rng(&self, rng: &mut impl CryptoRngCore) -> bool {
@@ -62,7 +64,7 @@ mod tests {
         assert!(!U64::from(13u32).is_safe_prime_with_rng(&mut OsRng));
         assert!(U64::from(11u32).is_safe_prime_with_rng(&mut OsRng));
 
-        assert!(U64::prime_with_rng(&mut OsRng, 10).is_prime_with_rng(&mut OsRng));
-        assert!(U64::safe_prime_with_rng(&mut OsRng, 10).is_safe_prime_with_rng(&mut OsRng));
+        assert!(U64::prime_with_rng(&mut OsRng, Some(10)).is_prime_with_rng(&mut OsRng));
+        assert!(U64::safe_prime_with_rng(&mut OsRng, Some(10)).is_safe_prime_with_rng(&mut OsRng));
     }
 }

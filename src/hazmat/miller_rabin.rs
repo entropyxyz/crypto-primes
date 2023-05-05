@@ -20,6 +20,7 @@ use super::Primality;
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct MillerRabin<const L: usize> {
     candidate: Uint<L>,
+    bit_length: usize,
     montgomery_params: DynResidueParams<L>,
     one: DynResidue<L>,
     minus_one: DynResidue<L>,
@@ -47,6 +48,7 @@ impl<const L: usize> MillerRabin<L> {
 
         Self {
             candidate: *candidate,
+            bit_length: candidate.bits_vartime(),
             montgomery_params: params,
             one,
             minus_one,
@@ -61,7 +63,13 @@ impl<const L: usize> MillerRabin<L> {
         // otherwise we can return `Composite` right away.
 
         let base = DynResidue::<L>::new(base, self.montgomery_params);
-        let mut test = base.pow(&self.d);
+
+        // Implementation detail: bounded exp gets faster every time we decrease the bound
+        // by the window length it uses, which is currently 4 bits.
+        // So even when the bound isn't low enough that the number can fit
+        // in a smaller number of limbs, there is still a performance gain
+        // from specifying the bound.
+        let mut test = base.pow_bounded_exp(&self.d, self.bit_length);
 
         if test == self.one || test == self.minus_one {
             return Primality::ProbablyPrime;

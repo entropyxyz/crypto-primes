@@ -9,19 +9,21 @@ use crate::hazmat::{
 };
 
 /// Returns a random prime of size `bit_length` using [`OsRng`] as the RNG.
+/// If `bit_length` is `None`, the full size of `Uint<L>` is used.
 ///
 /// See [`is_prime_with_rng`] for details about the performed checks.
 #[cfg(feature = "default-rng")]
-pub fn prime<const L: usize>(bit_length: usize) -> Uint<L> {
+pub fn prime<const L: usize>(bit_length: Option<usize>) -> Uint<L> {
     prime_with_rng(&mut OsRng, bit_length)
 }
 
 /// Returns a random safe prime (that is, such that `(n - 1) / 2` is also prime)
 /// of size `bit_length` using [`OsRng`] as the RNG.
+/// If `bit_length` is `None`, the full size of `Uint<L>` is used.
 ///
 /// See [`is_prime_with_rng`] for details about the performed checks.
 #[cfg(feature = "default-rng")]
-pub fn safe_prime<const L: usize>(bit_length: usize) -> Uint<L> {
+pub fn safe_prime<const L: usize>(bit_length: Option<usize>) -> Uint<L> {
     safe_prime_with_rng(&mut OsRng, bit_length)
 }
 
@@ -44,11 +46,16 @@ pub fn is_safe_prime<const L: usize>(num: &Uint<L>) -> bool {
 }
 
 /// Returns a random prime of size `bit_length` using the provided RNG.
+/// If `bit_length` is `None`, the full size of `Uint<L>` is used.
 ///
 /// Panics if `bit_length` is less than 2, or greater than the bit size of the target `Uint`.
 ///
 /// See [`is_prime_with_rng`] for details about the performed checks.
-pub fn prime_with_rng<const L: usize>(rng: &mut impl CryptoRngCore, bit_length: usize) -> Uint<L> {
+pub fn prime_with_rng<const L: usize>(
+    rng: &mut impl CryptoRngCore,
+    bit_length: Option<usize>,
+) -> Uint<L> {
+    let bit_length = bit_length.unwrap_or(Uint::<L>::BITS);
     if bit_length < 2 {
         panic!("`bit_length` must be 2 or greater.");
     }
@@ -65,14 +72,16 @@ pub fn prime_with_rng<const L: usize>(rng: &mut impl CryptoRngCore, bit_length: 
 
 /// Returns a random safe prime (that is, such that `(n - 1) / 2` is also prime)
 /// of size `bit_length` using the provided RNG.
+/// If `bit_length` is `None`, the full size of `Uint<L>` is used.
 ///
 /// Panics if `bit_length` is less than 3, or is greater than the bit size of the target `Uint`.
 ///
 /// See [`is_prime_with_rng`] for details about the performed checks.
 pub fn safe_prime_with_rng<const L: usize>(
     rng: &mut impl CryptoRngCore,
-    bit_length: usize,
+    bit_length: Option<usize>,
 ) -> Uint<L> {
+    let bit_length = bit_length.unwrap_or(Uint::<L>::BITS);
     if bit_length < 3 {
         panic!("`bit_length` must be 3 or greater.");
     }
@@ -240,7 +249,7 @@ mod tests {
     #[test]
     fn generate_prime() {
         for bit_length in (28..=128).step_by(10) {
-            let p: U128 = prime(bit_length);
+            let p: U128 = prime(Some(bit_length));
             assert!(p.bits_vartime() == bit_length);
             assert!(is_prime(&p));
         }
@@ -249,7 +258,7 @@ mod tests {
     #[test]
     fn generate_safe_prime() {
         for bit_length in (28..=128).step_by(10) {
-            let p: U128 = safe_prime(bit_length);
+            let p: U128 = safe_prime(Some(bit_length));
             assert!(p.bits_vartime() == bit_length);
             assert!(is_safe_prime(&p));
         }
@@ -282,25 +291,25 @@ mod tests {
     #[test]
     #[should_panic(expected = "`bit_length` must be 2 or greater")]
     fn generate_prime_too_few_bits() {
-        let _p: U64 = prime_with_rng(&mut OsRng, 1);
+        let _p: U64 = prime_with_rng(&mut OsRng, Some(1));
     }
 
     #[test]
     #[should_panic(expected = "`bit_length` must be 3 or greater")]
     fn generate_safe_prime_too_few_bits() {
-        let _p: U64 = safe_prime_with_rng(&mut OsRng, 2);
+        let _p: U64 = safe_prime_with_rng(&mut OsRng, Some(2));
     }
 
     #[test]
     #[should_panic(expected = "The requested bit length (65) is larger than the chosen Uint size")]
     fn generate_prime_too_many_bits() {
-        let _p: U64 = prime_with_rng(&mut OsRng, 65);
+        let _p: U64 = prime_with_rng(&mut OsRng, Some(65));
     }
 
     #[test]
     #[should_panic(expected = "The requested bit length (65) is larger than the chosen Uint size")]
     fn generate_safe_prime_too_many_bits() {
-        let _p: U64 = safe_prime_with_rng(&mut OsRng, 65);
+        let _p: U64 = safe_prime_with_rng(&mut OsRng, Some(65));
     }
 
     fn is_prime_ref(num: Word) -> bool {
@@ -311,7 +320,7 @@ mod tests {
     fn corner_cases_generate_prime() {
         for bits in 2usize..5 {
             for _ in 0..100 {
-                let p: U64 = prime(bits);
+                let p: U64 = prime(Some(bits));
                 let p_word = p.as_words()[0];
                 assert!(is_prime_ref(p_word));
             }
@@ -322,7 +331,7 @@ mod tests {
     fn corner_cases_generate_safe_prime() {
         for bits in 3usize..5 {
             for _ in 0..100 {
-                let p: U64 = safe_prime(bits);
+                let p: U64 = safe_prime(Some(bits));
                 let p_word = p.as_words()[0];
                 assert!(is_prime_ref(p_word) && is_prime_ref(p_word / 2));
             }
@@ -360,7 +369,7 @@ mod tests_openssl {
 
         // Generate primes, let OpenSSL check them
         for _ in 0..100 {
-            let p: U128 = prime(128);
+            let p: U128 = prime(Some(128));
             let p_bn = to_openssl(&p);
             assert!(
                 openssl_is_prime(&p_bn, &mut ctx),
@@ -419,7 +428,7 @@ mod tests_gmp {
     fn gmp_cross_check() {
         // Generate primes, let GMP check them
         for _ in 0..100 {
-            let p: U128 = prime(128);
+            let p: U128 = prime(Some(128));
             let p_bn = to_gmp(&p);
             assert!(gmp_is_prime(&p_bn), "GMP reports {p} as composite");
         }
