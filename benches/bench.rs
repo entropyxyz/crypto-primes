@@ -10,11 +10,12 @@ use rug::{integer::Order, Integer};
 use openssl::bn::BigNum;
 
 use crypto_primes::{
+    generate_prime_with_rng, generate_safe_prime_with_rng,
     hazmat::{
         lucas_test, random_odd_uint, AStarBase, BruteForceBase, LucasCheck, MillerRabin,
         SelfridgeBase, Sieve,
     },
-    is_prime_with_rng, is_safe_prime_with_rng, prime_with_rng, safe_prime_with_rng,
+    is_prime_with_rng, is_safe_prime_with_rng,
 };
 
 fn make_rng() -> ChaCha8Rng {
@@ -207,23 +208,23 @@ fn bench_presets(c: &mut Criterion) {
 
     let mut rng = make_rng();
     group.bench_function("(U128) Random prime", |b| {
-        b.iter(|| prime_with_rng::<{ nlimbs!(128) }>(&mut rng, None))
+        b.iter(|| generate_prime_with_rng::<{ nlimbs!(128) }>(&mut rng, None))
     });
 
     let mut rng = make_rng();
     group.bench_function("(U1024) Random prime", |b| {
-        b.iter(|| prime_with_rng::<{ nlimbs!(1024) }>(&mut rng, None))
+        b.iter(|| generate_prime_with_rng::<{ nlimbs!(1024) }>(&mut rng, None))
     });
 
     let mut rng = make_rng();
     group.bench_function("(U128) Random safe prime", |b| {
-        b.iter(|| safe_prime_with_rng::<{ nlimbs!(128) }>(&mut rng, None))
+        b.iter(|| generate_safe_prime_with_rng::<{ nlimbs!(128) }>(&mut rng, None))
     });
 
     group.sample_size(20);
     let mut rng = make_rng();
     group.bench_function("(U1024) Random safe prime", |b| {
-        b.iter(|| safe_prime_with_rng::<{ nlimbs!(1024) }>(&mut rng, None))
+        b.iter(|| generate_safe_prime_with_rng::<{ nlimbs!(1024) }>(&mut rng, None))
     });
 
     group.finish();
@@ -233,19 +234,19 @@ fn bench_presets(c: &mut Criterion) {
 
     let mut rng = make_rng();
     group.bench_function("(U128) Random safe prime", |b| {
-        b.iter(|| safe_prime_with_rng::<{ nlimbs!(128) }>(&mut rng, None))
+        b.iter(|| generate_safe_prime_with_rng::<{ nlimbs!(128) }>(&mut rng, None))
     });
 
     // The performance should scale with the prime size, not with the Uint size.
     // So we should strive for this test's result to be as close as possible
     // to that of the previous one and as far away as possible from the next one.
     group.bench_function("(U256) Random 128 bit safe prime", |b| {
-        b.iter(|| safe_prime_with_rng::<{ nlimbs!(256) }>(&mut rng, Some(128)))
+        b.iter(|| generate_safe_prime_with_rng::<{ nlimbs!(256) }>(&mut rng, Some(128)))
     });
 
     // The upper bound for the previous test.
     group.bench_function("(U256) Random 256 bit safe prime", |b| {
-        b.iter(|| safe_prime_with_rng::<{ nlimbs!(256) }>(&mut rng, None))
+        b.iter(|| generate_safe_prime_with_rng::<{ nlimbs!(256) }>(&mut rng, None))
     });
 
     group.finish();

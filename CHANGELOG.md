@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `MillerRabin::new()` and `test_random_base()` will panic if the input is invalid. ([#22])
 - `MillerRabin::check()` renamed to `test()`. ([#22])
 - Prime-generating function take `Option<usize>` instead of `usize`, where `None` means the full size of the `Uint`. ([#19])
+- Renamed `prime()` to `generate_prime()`, `safe_prime()` to `generate_safe_prime()`, `prime_with_rng()` to `generate_prime_with_rng()`, `safe_prime_with_rng()` to `generate_safe_prime_with_rng()`. ([#24])
 
 
 ### Added
@@ -29,6 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [#19]: https://github.com/nucypher/rust-umbral/pull/19
 [#20]: https://github.com/nucypher/rust-umbral/pull/20
 [#22]: https://github.com/nucypher/rust-umbral/pull/22
+[#24]: https://github.com/nucypher/rust-umbral/pull/24
 
 
 ## [0.2.0] - 2023-03-06
