@@ -13,8 +13,8 @@ use crate::hazmat::{
 ///
 /// See [`is_prime_with_rng`] for details about the performed checks.
 #[cfg(feature = "default-rng")]
-pub fn prime<const L: usize>(bit_length: Option<usize>) -> Uint<L> {
-    prime_with_rng(&mut OsRng, bit_length)
+pub fn generate_prime<const L: usize>(bit_length: Option<usize>) -> Uint<L> {
+    generate_prime_with_rng(&mut OsRng, bit_length)
 }
 
 /// Returns a random safe prime (that is, such that `(n - 1) / 2` is also prime)
@@ -23,8 +23,8 @@ pub fn prime<const L: usize>(bit_length: Option<usize>) -> Uint<L> {
 ///
 /// See [`is_prime_with_rng`] for details about the performed checks.
 #[cfg(feature = "default-rng")]
-pub fn safe_prime<const L: usize>(bit_length: Option<usize>) -> Uint<L> {
-    safe_prime_with_rng(&mut OsRng, bit_length)
+pub fn generate_safe_prime<const L: usize>(bit_length: Option<usize>) -> Uint<L> {
+    generate_safe_prime_with_rng(&mut OsRng, bit_length)
 }
 
 /// Checks probabilistically if the given number is prime using [`OsRng`] as the RNG.
@@ -51,7 +51,7 @@ pub fn is_safe_prime<const L: usize>(num: &Uint<L>) -> bool {
 /// Panics if `bit_length` is less than 2, or greater than the bit size of the target `Uint`.
 ///
 /// See [`is_prime_with_rng`] for details about the performed checks.
-pub fn prime_with_rng<const L: usize>(
+pub fn generate_prime_with_rng<const L: usize>(
     rng: &mut impl CryptoRngCore,
     bit_length: Option<usize>,
 ) -> Uint<L> {
@@ -77,7 +77,7 @@ pub fn prime_with_rng<const L: usize>(
 /// Panics if `bit_length` is less than 3, or is greater than the bit size of the target `Uint`.
 ///
 /// See [`is_prime_with_rng`] for details about the performed checks.
-pub fn safe_prime_with_rng<const L: usize>(
+pub fn generate_safe_prime_with_rng<const L: usize>(
     rng: &mut impl CryptoRngCore,
     bit_length: Option<usize>,
 ) -> Uint<L> {
@@ -178,7 +178,10 @@ mod tests {
     use num_prime::nt_funcs::is_prime64;
     use rand_core::OsRng;
 
-    use super::{is_prime, is_safe_prime, prime, prime_with_rng, safe_prime, safe_prime_with_rng};
+    use super::{
+        generate_prime, generate_prime_with_rng, generate_safe_prime, generate_safe_prime_with_rng,
+        is_prime, is_safe_prime,
+    };
     use crate::hazmat::{primes, pseudoprimes};
 
     fn test_large_primes<const L: usize>(nums: &[Uint<L>]) {
@@ -247,18 +250,18 @@ mod tests {
     }
 
     #[test]
-    fn generate_prime() {
+    fn prime_generation() {
         for bit_length in (28..=128).step_by(10) {
-            let p: U128 = prime(Some(bit_length));
+            let p: U128 = generate_prime(Some(bit_length));
             assert!(p.bits_vartime() == bit_length);
             assert!(is_prime(&p));
         }
     }
 
     #[test]
-    fn generate_safe_prime() {
+    fn safe_prime_generation() {
         for bit_length in (28..=128).step_by(10) {
-            let p: U128 = safe_prime(Some(bit_length));
+            let p: U128 = generate_safe_prime(Some(bit_length));
             assert!(p.bits_vartime() == bit_length);
             assert!(is_safe_prime(&p));
         }
@@ -291,25 +294,25 @@ mod tests {
     #[test]
     #[should_panic(expected = "`bit_length` must be 2 or greater")]
     fn generate_prime_too_few_bits() {
-        let _p: U64 = prime_with_rng(&mut OsRng, Some(1));
+        let _p: U64 = generate_prime_with_rng(&mut OsRng, Some(1));
     }
 
     #[test]
     #[should_panic(expected = "`bit_length` must be 3 or greater")]
     fn generate_safe_prime_too_few_bits() {
-        let _p: U64 = safe_prime_with_rng(&mut OsRng, Some(2));
+        let _p: U64 = generate_safe_prime_with_rng(&mut OsRng, Some(2));
     }
 
     #[test]
     #[should_panic(expected = "The requested bit length (65) is larger than the chosen Uint size")]
     fn generate_prime_too_many_bits() {
-        let _p: U64 = prime_with_rng(&mut OsRng, Some(65));
+        let _p: U64 = generate_prime_with_rng(&mut OsRng, Some(65));
     }
 
     #[test]
     #[should_panic(expected = "The requested bit length (65) is larger than the chosen Uint size")]
     fn generate_safe_prime_too_many_bits() {
-        let _p: U64 = safe_prime_with_rng(&mut OsRng, Some(65));
+        let _p: U64 = generate_safe_prime_with_rng(&mut OsRng, Some(65));
     }
 
     fn is_prime_ref(num: Word) -> bool {
@@ -320,7 +323,7 @@ mod tests {
     fn corner_cases_generate_prime() {
         for bits in 2usize..5 {
             for _ in 0..100 {
-                let p: U64 = prime(Some(bits));
+                let p: U64 = generate_prime(Some(bits));
                 let p_word = p.as_words()[0];
                 assert!(is_prime_ref(p_word));
             }
@@ -331,7 +334,7 @@ mod tests {
     fn corner_cases_generate_safe_prime() {
         for bits in 3usize..5 {
             for _ in 0..100 {
-                let p: U64 = safe_prime(Some(bits));
+                let p: U64 = generate_safe_prime(Some(bits));
                 let p_word = p.as_words()[0];
                 assert!(is_prime_ref(p_word) && is_prime_ref(p_word / 2));
             }
@@ -348,7 +351,7 @@ mod tests_openssl {
     use openssl::bn::{BigNum, BigNumContext};
     use rand_core::OsRng;
 
-    use super::{is_prime, prime};
+    use super::{generate_prime, is_prime};
     use crate::hazmat::random_odd_uint;
 
     fn openssl_is_prime(num: &BigNum, ctx: &mut BigNumContext) -> bool {
@@ -369,7 +372,7 @@ mod tests_openssl {
 
         // Generate primes, let OpenSSL check them
         for _ in 0..100 {
-            let p: U128 = prime(Some(128));
+            let p: U128 = generate_prime(Some(128));
             let p_bn = to_openssl(&p);
             assert!(
                 openssl_is_prime(&p_bn, &mut ctx),
@@ -409,7 +412,7 @@ mod tests_gmp {
         Integer,
     };
 
-    use super::{is_prime, prime};
+    use super::{generate_prime, is_prime};
     use crate::hazmat::random_odd_uint;
 
     fn gmp_is_prime(num: &Integer) -> bool {
@@ -428,7 +431,7 @@ mod tests_gmp {
     fn gmp_cross_check() {
         // Generate primes, let GMP check them
         for _ in 0..100 {
-            let p: U128 = prime(Some(128));
+            let p: U128 = generate_prime(Some(128));
             let p_bn = to_gmp(&p);
             assert!(gmp_is_prime(&p_bn), "GMP reports {p} as composite");
         }
