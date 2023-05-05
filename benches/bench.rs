@@ -227,6 +227,28 @@ fn bench_presets(c: &mut Criterion) {
     });
 
     group.finish();
+
+    // A separate group for bounded tests, to make it easier to run them separately.
+    let mut group = c.benchmark_group("Presets (bounded)");
+
+    let mut rng = make_rng();
+    group.bench_function("(U128) Random safe prime", |b| {
+        b.iter(|| safe_prime_with_rng::<{ nlimbs!(128) }>(&mut rng, 128))
+    });
+
+    // The performance should scale with the prime size, not with the Uint size.
+    // So we should strive for this test's result to be as close as possible
+    // to that of the previous one and as far away as possible from the next one.
+    group.bench_function("(U256) Random 128 bit safe prime", |b| {
+        b.iter(|| safe_prime_with_rng::<{ nlimbs!(256) }>(&mut rng, 128))
+    });
+
+    // The upper bound for the previous test.
+    group.bench_function("(U256) Random 256 bit safe prime", |b| {
+        b.iter(|| safe_prime_with_rng::<{ nlimbs!(256) }>(&mut rng, 256))
+    });
+
+    group.finish();
 }
 
 #[cfg(feature = "tests-gmp")]
