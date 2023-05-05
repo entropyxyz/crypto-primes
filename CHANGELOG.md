@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `sieve_once()` was removed ([#22]).
 - `MillerRabin::new()` and `test_random_base()` will panic if the input is invalid. ([#22])
 - `MillerRabin::check()` renamed to `test()`. ([#22])
+- Prime-generating function take `Option<usize>` instead of `usize`, where `None` means the full size of the `Uint`. ([#19])
 
 
 ### Added
@@ -22,8 +23,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Some mistakes in the description of Lucas checks (the logic itself was fine). ([#20])
 - Major performance increase across the board due to better sieving (especially for random safe prime finding). ([#22])
+- Performance increase for the cases when the bit size of the generated prime is smaller than that of the containing `Uint`. ([#19])
 
 
+[#19]: https://github.com/nucypher/rust-umbral/pull/19
 [#20]: https://github.com/nucypher/rust-umbral/pull/20
 [#22]: https://github.com/nucypher/rust-umbral/pull/22
 
