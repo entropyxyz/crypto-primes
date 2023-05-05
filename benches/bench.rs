@@ -207,23 +207,23 @@ fn bench_presets(c: &mut Criterion) {
 
     let mut rng = make_rng();
     group.bench_function("(U128) Random prime", |b| {
-        b.iter(|| prime_with_rng::<{ nlimbs!(128) }>(&mut rng, 128))
+        b.iter(|| prime_with_rng::<{ nlimbs!(128) }>(&mut rng, None))
     });
 
     let mut rng = make_rng();
     group.bench_function("(U1024) Random prime", |b| {
-        b.iter(|| prime_with_rng::<{ nlimbs!(1024) }>(&mut rng, 1024))
+        b.iter(|| prime_with_rng::<{ nlimbs!(1024) }>(&mut rng, None))
     });
 
     let mut rng = make_rng();
     group.bench_function("(U128) Random safe prime", |b| {
-        b.iter(|| safe_prime_with_rng::<{ nlimbs!(128) }>(&mut rng, 128))
+        b.iter(|| safe_prime_with_rng::<{ nlimbs!(128) }>(&mut rng, None))
     });
 
     group.sample_size(20);
     let mut rng = make_rng();
     group.bench_function("(U1024) Random safe prime", |b| {
-        b.iter(|| safe_prime_with_rng::<{ nlimbs!(1024) }>(&mut rng, 1024))
+        b.iter(|| safe_prime_with_rng::<{ nlimbs!(1024) }>(&mut rng, None))
     });
 
     group.finish();
@@ -233,19 +233,19 @@ fn bench_presets(c: &mut Criterion) {
 
     let mut rng = make_rng();
     group.bench_function("(U128) Random safe prime", |b| {
-        b.iter(|| safe_prime_with_rng::<{ nlimbs!(128) }>(&mut rng, 128))
+        b.iter(|| safe_prime_with_rng::<{ nlimbs!(128) }>(&mut rng, None))
     });
 
     // The performance should scale with the prime size, not with the Uint size.
     // So we should strive for this test's result to be as close as possible
     // to that of the previous one and as far away as possible from the next one.
     group.bench_function("(U256) Random 128 bit safe prime", |b| {
-        b.iter(|| safe_prime_with_rng::<{ nlimbs!(256) }>(&mut rng, 128))
+        b.iter(|| safe_prime_with_rng::<{ nlimbs!(256) }>(&mut rng, Some(128)))
     });
 
     // The upper bound for the previous test.
     group.bench_function("(U256) Random 256 bit safe prime", |b| {
-        b.iter(|| safe_prime_with_rng::<{ nlimbs!(256) }>(&mut rng, 256))
+        b.iter(|| safe_prime_with_rng::<{ nlimbs!(256) }>(&mut rng, None))
     });
 
     group.finish();
