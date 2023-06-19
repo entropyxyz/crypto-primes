@@ -21,7 +21,8 @@ const MAX_ATTEMPTS: u32 = 10000;
 // (~30x for 1024-bit numbers, ~100x for 2048 bit).
 // On the other hand, if `n` is a non-square we expect to find a `D`
 // in just a few attempts on average (an estimate for the Selfridge method
-// can be found in [^1], section 7; for the brute force method it seems to be about the same).
+// can be found in [^Baillie1980], section 7; for the brute force method
+// it seems to be about the same).
 const ATTEMPTS_BEFORE_SQRT: u32 = 30;
 
 /// A method for selecting the base `(P, Q)` for the Lucas primality test.
