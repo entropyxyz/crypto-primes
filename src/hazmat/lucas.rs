@@ -349,7 +349,7 @@ pub fn lucas_test<const L: usize>(
     // Compute d-th element of Lucas sequence (U_d(P, Q), V_d(P, Q)), where:
     //
     // V_0 = 2
-    // U_0 = 1
+    // U_0 = 0
     //
     // U_{2k} = U_k V_k
     // V_{2k} = V_k^2 - 2 Q^k
