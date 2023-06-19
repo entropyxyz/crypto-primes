@@ -1,7 +1,7 @@
 //! Lucas primality test.
 use crypto_bigint::{
     modular::runtime_mod::{DynResidue, DynResidueParams},
-    Integer, Limb, Uint, Word,
+    CheckedAdd, Integer, Limb, Uint, Word,
 };
 
 use super::{
@@ -187,7 +187,7 @@ fn decompose<const L: usize>(n: &Uint<L>) -> (u32, Uint<L>) {
     }
 
     // This won't overflow since the original `n` was odd, so we right-shifted at least once.
-    (s, n.wrapping_add(&Uint::<L>::ONE))
+    (s, n.checked_add(&Uint::<L>::ONE).expect("Integer overflow"))
 }
 
 /// The checks to perform in the Lucas test.
