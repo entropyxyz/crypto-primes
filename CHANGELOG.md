@@ -4,6 +4,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.3.1] - Unreleased
+
+### Fixed
+
+- `Sieve::new()` now panics when `max_bit_length == 0` (which would lead to incorrect results anyway, so it is not considered a breaking change). ([#26])
+
+
+[#26]: https://github.com/nucypher/rust-umbral/pull/26
+
+
 ## [0.3.0] - 2023-05-05
 
 ### Changed
