@@ -4,7 +4,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
-## [0.3.1] - Unreleased
+## [0.4.0] - Unreleased
+
+### Changed
+
+- `getrandom` is not an explicit dependency anymore. This may break builds with the `wasm32-unknown-unknown` target which relied on `crypto-primes` enabling the `getrandom/js` feature. These builds are advised to do it themselves. ([#28])
+
 
 ### Fixed
 
@@ -13,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 [#26]: https://github.com/nucypher/rust-umbral/pull/26
+[#28]: https://github.com/nucypher/rust-umbral/pull/28
 
 
 ## [0.3.0] - 2023-05-05

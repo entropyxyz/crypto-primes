@@ -12,7 +12,7 @@ env:
   RUSTFLAGS: "-Dwarnings"
 
 jobs:
-  build:
+  build-wasm:
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -30,7 +30,6 @@ jobs:
           target: ${{ matrix.target }}
           override: true
       - run: cargo build --target ${{ matrix.target }} --release --no-default-features
-      - run: cargo build --target ${{ matrix.target }} --release --no-default-features --features default-rng
 
   codecov:
     runs-on: ubuntu-latest
