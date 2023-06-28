@@ -4,7 +4,7 @@ use rand_core::CryptoRngCore;
 
 use crypto_bigint::{
     modular::runtime_mod::{DynResidue, DynResidueParams},
-    Integer, NonZero, RandomMod, Uint,
+    CheckedAdd, Integer, NonZero, RandomMod, Uint,
 };
 
 use super::Primality;
@@ -104,8 +104,11 @@ impl<const L: usize> MillerRabin<L> {
 
         let range = self.candidate.wrapping_sub(&Uint::<L>::from(4u32));
         let range_nonzero = NonZero::new(range).unwrap();
-        let random =
-            Uint::<L>::random_mod(rng, &range_nonzero).wrapping_add(&Uint::<L>::from(3u32));
+        // This should not overflow as long as `random_mod()` behaves according to the contract
+        // (that is, returns a number within the given range).
+        let random = Uint::<L>::random_mod(rng, &range_nonzero)
+            .checked_add(&Uint::<L>::from(3u32))
+            .expect("Integer overflow");
         self.test(&random)
     }
 }

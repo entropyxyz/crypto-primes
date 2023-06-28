@@ -3,7 +3,7 @@
 
 use alloc::{vec, vec::Vec};
 
-use crypto_bigint::{Random, Uint};
+use crypto_bigint::{CheckedAdd, Random, Uint};
 use rand_core::CryptoRngCore;
 
 use crate::hazmat::precomputed::{SmallPrime, RECIPROCALS, SMALL_PRIMES};
@@ -75,10 +75,14 @@ impl<const L: usize> Sieve<L> {
     /// Note that `start` is adjusted to `2`, or the next `1 mod 2` number (`safe_primes = false`);
     /// and `5`, or `3 mod 4` number (`safe_primes = true`).
     ///
-    /// Panics if `max_bit_length` is greater than the size of the target `Uint`.
+    /// Panics if `max_bit_length` is zero or greater than the size of the target `Uint`.
     ///
     /// If `safe_primes` is `true`, both the returned `n` and `n/2` are sieved.
     pub fn new(start: &Uint<L>, max_bit_length: usize, safe_primes: bool) -> Self {
+        if max_bit_length == 0 {
+            panic!("The requested bit length cannot be zero");
+        }
+
         if max_bit_length > Uint::<L>::BITS {
             panic!(
                 "The requested bit length ({}) is larger than the chosen Uint size",
@@ -148,7 +152,13 @@ impl<const L: usize> Sieve<L> {
         }
 
         // Set the new base.
-        self.base = self.base.wrapping_add(&self.incr.into());
+        // Should not overflow since `incr` is never greater than `incr_limit`,
+        // and the latter is chosen such that it doesn't overflow when added to `base`
+        // (see the rest of this method).
+        self.base = self
+            .base
+            .checked_add(&self.incr.into())
+            .expect("Integer overflow");
 
         self.incr = 0;
 
@@ -206,7 +216,13 @@ impl<const L: usize> Sieve<L> {
         let result = if self.current_is_composite() {
             None
         } else {
-            let mut num = self.base.wrapping_add(&self.incr.into());
+            // The overflow should never happen here since `incr`
+            // is never greater than `incr_limit`, and the latter is chosen such that
+            // it does not overflow when added to `base` (see `update_residues()`).
+            let mut num = self
+                .base
+                .checked_add(&self.incr.into())
+                .expect("Integer overflow");
             if self.safe_primes {
                 num = (num << 1) | Uint::<L>::ONE;
             }
@@ -331,6 +347,12 @@ mod tests {
 
         check_sieve(9, 4, true, &[11]);
         check_sieve(13, 4, true, &[]);
+    }
+
+    #[test]
+    #[should_panic(expected = "The requested bit length cannot be zero")]
+    fn sieve_zero_bits() {
+        let _sieve = Sieve::new(&U64::ONE, 0, false);
     }
 
     #[test]

@@ -10,7 +10,7 @@ This library implements prime number generation and primality checking for [`cry
 In particular:
 
 - Generating random primes and safe primes of given bit size;
-- Sieving iterator and one-time trial division by small integers;
+- Sieving iterator;
 - Miller-Rabin test;
 - Strong and extra strong Lucas tests, and Lucas-V test.
 
