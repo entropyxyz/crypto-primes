@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- The crate is relicensed as Apache-2.0 or MIT, instead of AGPL-v3. ([#29])
 - `getrandom` is not an explicit dependency anymore. This may break builds with the `wasm32-unknown-unknown` target which relied on `crypto-primes` enabling the `getrandom/js` feature. These builds are advised to do it themselves. ([#28])
 
 
@@ -19,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 [#26]: https://github.com/nucypher/rust-umbral/pull/26
 [#28]: https://github.com/nucypher/rust-umbral/pull/28
+[#29]: https://github.com/nucypher/rust-umbral/pull/29
 
 
 ## [0.3.0] - 2023-05-05
