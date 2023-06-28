@@ -2,7 +2,7 @@
 name = "crypto-primes"
 version = "0.3.0"
 edition = "2021"
-license = "AGPL-3.0-only"
+license = "Apache-2.0 OR MIT"
 description = "Random prime number generation and primality checking library"
 repository = "https://github.com/entropyxyz/crypto-primes"
 readme = "README.md"
