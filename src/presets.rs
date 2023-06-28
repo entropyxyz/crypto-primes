@@ -5,7 +5,7 @@ use rand_core::CryptoRngCore;
 use rand_core::OsRng;
 
 use crate::hazmat::{
-    lucas_test, random_odd_uint, LucasCheck, MillerRabin, Primality, SelfridgeBase, Sieve,
+    lucas_test, random_odd_uint, AStarBase, LucasCheck, MillerRabin, Primality, Sieve,
 };
 
 /// Returns a random prime of size `bit_length` using [`OsRng`] as the RNG.
@@ -100,7 +100,7 @@ pub fn generate_safe_prime_with_rng<const L: usize>(
 ///
 /// Performed checks:
 /// - Miller-Rabin check with base 2;
-/// - Strong Lucas check with Selfridge base (a.k.a. Baillie method A);
+/// - Strong Lucas check with A* base (see [`AStarBase`] for details);
 /// - Miller-Rabin check with a random base.
 ///
 /// See [`MillerRabin`] and [`lucas_test`] for more details about the checks.
@@ -158,7 +158,7 @@ fn _is_prime_with_rng<const L: usize>(rng: &mut impl CryptoRngCore, num: &Uint<L
         return false;
     }
 
-    match lucas_test(num, SelfridgeBase, LucasCheck::Strong) {
+    match lucas_test(num, AStarBase, LucasCheck::Strong) {
         Primality::Composite => return false,
         Primality::Prime => return true,
         _ => {}

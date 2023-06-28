@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - `Sieve::new()` now panics when `max_bit_length == 0` (which would lead to incorrect results anyway, so it is not considered a breaking change). ([#26])
+- Default preset now uses A* instead of A base selection method for the Lucas test. This does not change the outcomes, but is implemented as a security recommendation. ([#26])
 
 
 [#26]: https://github.com/nucypher/rust-umbral/pull/26
