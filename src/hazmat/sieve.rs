@@ -155,10 +155,8 @@ impl<const L: usize> Sieve<L> {
         // Should not overflow since `incr` is never greater than `incr_limit`,
         // and the latter is chosen such that it doesn't overflow when added to `base`
         // (see the rest of this method).
-        self.base = self
-            .base
-            .checked_add(&self.incr.into())
-            .expect("Integer overflow");
+        self.base =
+            Option::from(self.base.checked_add(&self.incr.into())).expect("Integer overflow");
 
         self.incr = 0;
 
@@ -219,10 +217,8 @@ impl<const L: usize> Sieve<L> {
             // The overflow should never happen here since `incr`
             // is never greater than `incr_limit`, and the latter is chosen such that
             // it does not overflow when added to `base` (see `update_residues()`).
-            let mut num = self
-                .base
-                .checked_add(&self.incr.into())
-                .expect("Integer overflow");
+            let mut num =
+                Option::from(self.base.checked_add(&self.incr.into())).expect("Integer overflow");
             if self.safe_primes {
                 num = (num << 1) | Uint::<L>::ONE;
             }
