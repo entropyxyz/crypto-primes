@@ -106,9 +106,10 @@ impl<const L: usize> MillerRabin<L> {
         let range_nonzero = NonZero::new(range).unwrap();
         // This should not overflow as long as `random_mod()` behaves according to the contract
         // (that is, returns a number within the given range).
-        let random = Uint::<L>::random_mod(rng, &range_nonzero)
-            .checked_add(&Uint::<L>::from(3u32))
-            .expect("Integer overflow");
+        let random = Option::from(
+            Uint::<L>::random_mod(rng, &range_nonzero).checked_add(&Uint::<L>::from(3u32)),
+        )
+        .expect("Integer overflow");
         self.test(&random)
     }
 }
