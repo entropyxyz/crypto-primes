@@ -7,11 +7,12 @@ description = "Random prime number generation and primality checking library"
 repository = "https://github.com/entropyxyz/crypto-primes"
 readme = "README.md"
 categories = ["cryptography", "no-std"]
+rust-version = "1.65"
 
 [dependencies]
 crypto-bigint = { version = "0.5.2", default-features = false, features = ["rand_core"] }
-rand_core = { version = "0.6", default-features = false }
-openssl = { version = "0.10", optional = true, features = ["vendored"] }
+rand_core = { version = "0.6.4", default-features = false }
+openssl = { version = "0.10.39", optional = true, features = ["vendored"] }
 rug = { version = "1.18", default-features = false, features = ["integer"], optional = true }
 
 [dev-dependencies]
