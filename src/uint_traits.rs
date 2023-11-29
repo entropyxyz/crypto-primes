@@ -3,7 +3,7 @@ use core::ops::{Add, BitOr, BitOrAssign, Mul, Neg, Sub};
 use crypto_bigint::{
     modular::{DynResidue, DynResidueParams},
     subtle::{Choice, CtOption},
-    CheckedAdd, Integer, Limb, Reciprocal, Uint, Zero,
+    CheckedAdd, Integer, Limb, PowBoundedExp, RandomMod, Reciprocal, Uint, Zero,
 };
 use rand_core::CryptoRngCore;
 
@@ -18,6 +18,7 @@ pub trait UintLike:
     + Zero
     + BitOr<Output = Self>
     + BitOrAssign
+    + RandomMod
 {
     type Modular: UintModLike<Raw = Self>;
 
@@ -25,8 +26,10 @@ pub trait UintLike:
     // on the performance.
     fn jacobi_symbol_small(lhs: i32, rhs: &Self) -> JacobiSymbol;
     fn gcd_small(&self, rhs: u32) -> u32;
+    fn bits(&self) -> usize;
     fn bits_vartime(&self) -> usize;
     fn bit_vartime(&self, index: usize) -> bool;
+    fn trailing_zeros(&self) -> usize;
     fn trailing_ones(&self) -> usize;
     fn wrapping_sub(&self, rhs: &Self) -> Self;
     fn wrapping_mul(&self, rhs: &Self) -> Self;
@@ -44,16 +47,18 @@ pub trait UintLike:
 }
 
 pub trait UintModLike:
-    Clone
+    core::fmt::Debug
+    + Clone
     + Eq
     + Sized
     + for<'a> Add<&'a Self, Output = Self>
     + for<'a> Sub<&'a Self, Output = Self>
     + for<'a> Mul<&'a Self, Output = Self>
     + Neg<Output = Self>
+    + PowBoundedExp<Self::Raw>
 {
     type Raw: UintLike<Modular = Self>;
-    type Params;
+    type Params: Clone + Eq + core::fmt::Debug;
 
     fn new_params(modulus: &Self::Raw) -> CtOption<Self::Params>;
     fn new(raw: &Self::Raw, params: &Self::Params) -> Self;
@@ -95,6 +100,10 @@ impl<const L: usize> UintLike for Uint<L> {
         unimplemented!()
     }
 
+    fn trailing_zeros(&self) -> usize {
+        Self::trailing_zeros(self)
+    }
+
     fn trailing_ones(&self) -> usize {
         Self::trailing_ones(self)
     }
@@ -105,6 +114,10 @@ impl<const L: usize> UintLike for Uint<L> {
 
     fn wrapping_mul(&self, rhs: &Self) -> Self {
         Self::wrapping_mul(self, rhs)
+    }
+
+    fn bits(&self) -> usize {
+        Self::bits(self)
     }
 
     fn bits_vartime(&self) -> usize {

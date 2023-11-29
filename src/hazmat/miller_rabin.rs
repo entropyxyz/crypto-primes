@@ -1,13 +1,10 @@
 //! Miller-Rabin primality test.
 
+use crypto_bigint::{NonZero, PowBoundedExp};
 use rand_core::CryptoRngCore;
 
-use crypto_bigint::{
-    modular::runtime_mod::{DynResidue, DynResidueParams},
-    CheckedAdd, Integer, NonZero, RandomMod, Uint,
-};
-
 use super::Primality;
+use crate::{UintLike, UintModLike};
 
 /// Precomputed data used to perform Miller-Rabin primality test[^Pomerance1980].
 /// The numbers that pass it are commonly called "strong probable primes"
@@ -17,37 +14,39 @@ use super::Primality;
 ///   C. Pomerance, J. L. Selfridge, S. S. Wagstaff "The Pseudoprimes to 25*10^9",
 ///   Math. Comp. 35 1003-1026 (1980),
 ///   DOI: [10.2307/2006210](https://dx.doi.org/10.2307/2006210)
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct MillerRabin<const L: usize> {
-    candidate: Uint<L>,
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct MillerRabin<T: UintLike> {
+    candidate: T,
     bit_length: usize,
-    montgomery_params: DynResidueParams<L>,
-    one: DynResidue<L>,
-    minus_one: DynResidue<L>,
+    montgomery_params: <T::Modular as UintModLike>::Params,
+    one: T::Modular,
+    minus_one: T::Modular,
     s: usize,
-    d: Uint<L>,
+    d: T,
 }
 
-impl<const L: usize> MillerRabin<L> {
+impl<T: UintLike> MillerRabin<T> {
     /// Initializes a Miller-Rabin test for `candidate`.
     ///
     /// Panics if `candidate` is even.
-    pub fn new(candidate: &Uint<L>) -> Self {
+    pub fn new(candidate: &T) -> Self {
         if candidate.is_even().into() {
             panic!("`candidate` must be odd.");
         }
 
-        let params = DynResidueParams::<L>::new(candidate);
-        let one = DynResidue::<L>::one(params);
-        let minus_one = -one;
+        // Can unwrap here since we already checked that `candidate` is odd
+        let params = <T::Modular as UintModLike>::new_params(candidate)
+            .expect("Montgomery modulus must be odd");
+        let one = <T::Modular as UintModLike>::one(&params);
+        let minus_one = -one.clone();
 
         // Find `s` and odd `d` such that `candidate - 1 == 2^s * d`.
-        let candidate_minus_one = candidate.wrapping_sub(&Uint::<L>::ONE);
+        let candidate_minus_one = candidate.wrapping_sub(&T::one());
         let s = candidate_minus_one.trailing_zeros();
-        let d = candidate_minus_one >> s;
+        let d = candidate_minus_one.shr(s);
 
         Self {
-            candidate: *candidate,
+            candidate: candidate.clone(),
             bit_length: candidate.bits_vartime(),
             montgomery_params: params,
             one,
@@ -58,11 +57,11 @@ impl<const L: usize> MillerRabin<L> {
     }
 
     /// Perform a Miller-Rabin check with a given base.
-    pub fn test(&self, base: &Uint<L>) -> Primality {
+    pub fn test(&self, base: &T) -> Primality {
         // TODO: it may be faster to first check that gcd(base, candidate) == 1,
         // otherwise we can return `Composite` right away.
 
-        let base = DynResidue::<L>::new(base, self.montgomery_params);
+        let base = <T::Modular as UintModLike>::new(base, &self.montgomery_params);
 
         // Implementation detail: bounded exp gets faster every time we decrease the bound
         // by the window length it uses, which is currently 4 bits.
@@ -87,7 +86,7 @@ impl<const L: usize> MillerRabin<L> {
 
     /// Perform a Miller-Rabin check with base 2.
     pub fn test_base_two(&self) -> Primality {
-        self.test(&Uint::<L>::from(2u32))
+        self.test(&T::from(2u32))
     }
 
     /// Perform a Miller-Rabin check with a random base (in the range `[3, candidate-2]`)
@@ -102,14 +101,12 @@ impl<const L: usize> MillerRabin<L> {
             panic!("No suitable random base possible when `candidate == 3`; use the base 2 test.")
         }
 
-        let range = self.candidate.wrapping_sub(&Uint::<L>::from(4u32));
+        let range = self.candidate.wrapping_sub(&T::from(4u32));
         let range_nonzero = NonZero::new(range).unwrap();
         // This should not overflow as long as `random_mod()` behaves according to the contract
         // (that is, returns a number within the given range).
-        let random = Option::from(
-            Uint::<L>::random_mod(rng, &range_nonzero).checked_add(&Uint::<L>::from(3u32)),
-        )
-        .expect("Integer overflow");
+        let random = Option::from(T::random_mod(rng, &range_nonzero).checked_add(&T::from(3u32)))
+            .expect("Integer overflow");
         self.test(&random)
     }
 }
@@ -127,7 +124,10 @@ mod tests {
     use num_prime::nt_funcs::is_prime64;
 
     use super::MillerRabin;
-    use crate::hazmat::{primes, pseudoprimes, random_odd_uint, Sieve};
+    use crate::{
+        hazmat::{primes, pseudoprimes, random_odd_uint, Sieve},
+        UintLike,
+    };
 
     #[test]
     fn miller_rabin_derived_traits() {
@@ -155,9 +155,9 @@ mod tests {
         pseudoprimes::STRONG_BASE_2.iter().any(|x| *x == num)
     }
 
-    fn random_checks<const L: usize>(
+    fn random_checks<T: UintLike>(
         rng: &mut impl CryptoRngCore,
-        mr: &MillerRabin<L>,
+        mr: &MillerRabin<T>,
         count: usize,
     ) -> usize {
         (0..count)
