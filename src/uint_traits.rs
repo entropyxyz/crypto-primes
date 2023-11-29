@@ -1,13 +1,23 @@
-use core::ops::{Add, Mul, Neg, Sub};
+use core::ops::{Add, BitOr, BitOrAssign, Mul, Neg, Sub};
 
 use crypto_bigint::{
     modular::{DynResidue, DynResidueParams},
     subtle::{Choice, CtOption},
-    CheckedAdd, Integer, Uint, Zero,
+    CheckedAdd, Integer, Limb, Reciprocal, Uint, Zero,
 };
+use rand_core::CryptoRngCore;
 
 pub trait UintLike:
-    Clone + core::fmt::Debug + Eq + From<u32> + Ord + for<'a> CheckedAdd<&'a Self> + Zero
+    Clone
+    + core::fmt::Debug
+    + Eq
+    + From<u32>
+    + From<u16>
+    + Ord
+    + for<'a> CheckedAdd<&'a Self>
+    + Zero
+    + BitOr<Output = Self>
+    + BitOrAssign
 {
     type Modular: UintModLike<Raw = Self>;
 
@@ -18,12 +28,19 @@ pub trait UintLike:
     fn bits_vartime(&self) -> usize;
     fn bit_vartime(&self, index: usize) -> bool;
     fn trailing_ones(&self) -> usize;
+    fn wrapping_sub(&self, rhs: &Self) -> Self;
     fn wrapping_mul(&self, rhs: &Self) -> Self;
     fn sqrt_vartime(&self) -> Self;
     fn is_even(&self) -> Choice;
     fn is_odd(&self) -> Choice;
     fn shr(&self, shift: usize) -> Self;
+    fn shr_vartime(&self, shift: usize) -> Self;
+    fn shl(&self, shift: usize) -> Self;
+    fn shl_vartime(&self, shift: usize) -> Self;
     fn one() -> Self;
+    fn random_bits(rng: &mut impl CryptoRngCore, bit_length: usize) -> Self;
+    fn ct_div_rem_limb_with_reciprocal(&self, reciprocal: &Reciprocal) -> (Self, Limb);
+    fn try_into_u32(&self) -> Option<u32>; // Will have to be implemented at Uint<L> level if we want to use TryFrom trait
 }
 
 pub trait UintModLike:
@@ -82,6 +99,10 @@ impl<const L: usize> UintLike for Uint<L> {
         Self::trailing_ones(self)
     }
 
+    fn wrapping_sub(&self, rhs: &Self) -> Self {
+        Self::wrapping_sub(self, rhs)
+    }
+
     fn wrapping_mul(&self, rhs: &Self) -> Self {
         Self::wrapping_mul(self, rhs)
     }
@@ -110,8 +131,32 @@ impl<const L: usize> UintLike for Uint<L> {
         Self::shr(self, shift)
     }
 
+    fn shr_vartime(&self, shift: usize) -> Self {
+        Self::shr_vartime(self, shift)
+    }
+
+    fn shl(&self, shift: usize) -> Self {
+        Self::shl(self, shift)
+    }
+
+    fn shl_vartime(&self, shift: usize) -> Self {
+        Self::shl_vartime(self, shift)
+    }
+
     fn one() -> Self {
         Self::ONE
+    }
+
+    fn random_bits(rng: &mut impl CryptoRngCore, bit_length: usize) -> Self {
+        unimplemented!()
+    }
+
+    fn ct_div_rem_limb_with_reciprocal(&self, reciprocal: &Reciprocal) -> (Self, Limb) {
+        Self::ct_div_rem_limb_with_reciprocal(self, reciprocal)
+    }
+
+    fn try_into_u32(&self) -> Option<u32> {
+        self.as_words()[0].try_into().ok()
     }
 }
 

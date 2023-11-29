@@ -5,12 +5,12 @@
 //mod jacobi;
 mod lucas;
 //mod miller_rabin;
-//mod precomputed;
+mod precomputed;
 #[cfg(test)]
 pub(crate) mod primes;
 #[cfg(test)]
 pub(crate) mod pseudoprimes;
-//mod sieve;
+mod sieve;
 
 pub use lucas::{lucas_test, AStarBase, BruteForceBase, LucasBase, LucasCheck, SelfridgeBase};
 //pub use miller_rabin::MillerRabin;

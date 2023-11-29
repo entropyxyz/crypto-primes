@@ -3,38 +3,39 @@
 
 use alloc::{vec, vec::Vec};
 
-use crypto_bigint::{CheckedAdd, Random, Uint};
 use rand_core::CryptoRngCore;
 
-use crate::hazmat::precomputed::{SmallPrime, RECIPROCALS, SMALL_PRIMES};
+use crate::{
+    hazmat::precomputed::{SmallPrime, RECIPROCALS, SMALL_PRIMES},
+    UintLike,
+};
 
 /// Returns a random odd integer with given bit length
 /// (that is, with both `0` and `bit_length-1` bits set).
 ///
 /// Panics if `bit_length` is 0 or is greater than the bit size of the target `Uint`.
-pub fn random_odd_uint<const L: usize>(rng: &mut impl CryptoRngCore, bit_length: usize) -> Uint<L> {
+pub fn random_odd_uint<T: UintLike>(rng: &mut impl CryptoRngCore, bit_length: usize) -> T {
     if bit_length == 0 {
         panic!("Bit length must be non-zero");
     }
 
-    if bit_length > Uint::<L>::BITS {
+    // TODO: what do we do here if `bit_length` is greater than Uint<L>::BITS?
+    // assume that the user knows what he's doing since it is a hazmat function?
+    /*if bit_length > Uint::<L>::BITS {
         panic!(
             "The requested bit length ({}) is larger than the chosen Uint size",
             bit_length
         );
-    }
+    }*/
 
     // TODO: not particularly efficient, can be improved by zeroing high bits instead of shifting
-    let mut random = Uint::<L>::random(rng);
-    if bit_length != Uint::<L>::BITS {
-        random >>= Uint::<L>::BITS - bit_length;
-    }
+    let random = T::random_bits(rng, bit_length);
 
     // Make it odd
-    random |= Uint::<L>::ONE;
+    let random = random | T::one();
 
     // Make sure it's the correct bit size
-    random |= Uint::<L>::ONE << (bit_length - 1);
+    let random = random | T::one().shr(bit_length - 1);
 
     random
 }
@@ -50,11 +51,11 @@ const INCR_LIMIT: Residue = Residue::MAX - SMALL_PRIMES[SMALL_PRIMES.len() - 1] 
 /// An iterator returning numbers with up to and including given bit length,
 /// starting from a given number, that are not multiples of the first 2048 small primes.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Sieve<const L: usize> {
-    // Instead of dividing `Uint` by small primes every time (which is slow),
+pub struct Sieve<T: UintLike> {
+    // Instead of dividing a big integer by small primes every time (which is slow),
     // we keep a "base" and a small increment separately,
     // so that we can only calculate the residues of the increment.
-    base: Uint<L>,
+    base: T,
     incr: Residue,
     incr_limit: Residue,
     safe_primes: bool,
@@ -65,7 +66,7 @@ pub struct Sieve<const L: usize> {
     last_round: bool,
 }
 
-impl<const L: usize> Sieve<L> {
+impl<T: UintLike> Sieve<T> {
     /// Creates a new sieve, iterating from `start` and
     /// until the last number with `max_bit_length` bits,
     /// producing numbers that are not non-trivial multiples
@@ -78,50 +79,52 @@ impl<const L: usize> Sieve<L> {
     /// Panics if `max_bit_length` is zero or greater than the size of the target `Uint`.
     ///
     /// If `safe_primes` is `true`, both the returned `n` and `n/2` are sieved.
-    pub fn new(start: &Uint<L>, max_bit_length: usize, safe_primes: bool) -> Self {
+    pub fn new(start: &T, max_bit_length: usize, safe_primes: bool) -> Self {
         if max_bit_length == 0 {
             panic!("The requested bit length cannot be zero");
         }
 
-        if max_bit_length > Uint::<L>::BITS {
+        // TODO: what do we do here if `bit_length` is greater than Uint<L>::BITS?
+        // assume that the user knows what he's doing since it is a hazmat function?
+        /*if max_bit_length > Uint::<L>::BITS {
             panic!(
                 "The requested bit length ({}) is larger than the chosen Uint size",
                 max_bit_length
             );
-        }
+        }*/
 
         // If we are targeting safe primes, iterate over the corresponding
         // possible Germain primes (`n/2`), reducing the task to that with `safe_primes = false`.
         let (max_bit_length, base) = if safe_primes {
-            (max_bit_length - 1, start >> 1)
+            (max_bit_length - 1, start.shr_vartime(1))
         } else {
-            (max_bit_length, *start)
+            (max_bit_length, start.clone())
         };
 
         let mut base = base;
 
         // This is easier than making all the methods generic enough to handle these corner cases.
-        let produces_nothing = max_bit_length < base.bits() || max_bit_length < 2;
+        let produces_nothing = max_bit_length < base.bits_vartime() || max_bit_length < 2;
 
         // Add the exception to the produced candidates - the only one that doesn't fit
         // the general pattern of incrementing the base by 2.
         let mut starts_from_exception = false;
-        if base <= Uint::<L>::from(2u32) {
+        if base <= T::from(2u32) {
             starts_from_exception = true;
-            base = Uint::<L>::from(3u32);
+            base = T::from(3u32);
         } else {
             // Adjust the base so that we hit odd numbers when incrementing it by 2.
-            base |= Uint::<L>::ONE;
+            base |= T::one();
         }
 
         // Only calculate residues by primes up to and not including `base`,
         // because when we only have the resiude,
         // we cannot distinguish between a prime itself and a multiple of that prime.
-        let residues_len = if Uint::<L>::from(SMALL_PRIMES[SMALL_PRIMES.len() - 1]) >= base {
+        let residues_len = if T::from(SMALL_PRIMES[SMALL_PRIMES.len() - 1]) >= base {
             SMALL_PRIMES
                 .iter()
                 .enumerate()
-                .find(|(_i, p)| Uint::<L>::from(**p) >= base)
+                .find(|(_i, p)| T::from(**p) >= base)
                 .map(|(i, _p)| i)
                 .unwrap_or(SMALL_PRIMES.len())
         } else {
@@ -167,7 +170,9 @@ impl<const L: usize> Sieve<L> {
         }
 
         // Find the increment limit.
-        let max_value = (Uint::<L>::ONE << self.max_bit_length).wrapping_sub(&Uint::<L>::ONE);
+        let max_value = T::one()
+            .shl_vartime(self.max_bit_length)
+            .wrapping_sub(&T::one());
         let incr_limit = max_value.wrapping_sub(&self.base);
         self.incr_limit = if incr_limit > INCR_LIMIT.into() {
             INCR_LIMIT
@@ -177,7 +182,7 @@ impl<const L: usize> Sieve<L> {
             self.last_round = true;
             // Can unwrap here since we just checked above that `incr_limit <= INCR_LIMIT`,
             // and `INCR_LIMIT` fits into `Residue`.
-            let incr_limit_small: Residue = incr_limit.as_words()[0].try_into().unwrap();
+            let incr_limit_small: Residue = incr_limit.try_into_u32().unwrap();
             incr_limit_small
         };
 
@@ -210,17 +215,17 @@ impl<const L: usize> Sieve<L> {
 
     // Returns the restored `base + incr` if it is not composite (wrt the small primes),
     // and bumps the increment unconditionally.
-    fn maybe_next(&mut self) -> Option<Uint<L>> {
+    fn maybe_next(&mut self) -> Option<T> {
         let result = if self.current_is_composite() {
             None
         } else {
             // The overflow should never happen here since `incr`
             // is never greater than `incr_limit`, and the latter is chosen such that
             // it does not overflow when added to `base` (see `update_residues()`).
-            let mut num =
+            let mut num: T =
                 Option::from(self.base.checked_add(&self.incr.into())).expect("Integer overflow");
             if self.safe_primes {
-                num = (num << 1) | Uint::<L>::ONE;
+                num = num.shl_vartime(1) | T::one();
             }
             Some(num)
         };
@@ -229,7 +234,7 @@ impl<const L: usize> Sieve<L> {
         result
     }
 
-    fn next(&mut self) -> Option<Uint<L>> {
+    fn next(&mut self) -> Option<T> {
         // Corner cases handled here
 
         if self.produces_nothing {
@@ -238,7 +243,7 @@ impl<const L: usize> Sieve<L> {
 
         if self.starts_from_exception {
             self.starts_from_exception = false;
-            return Some(Uint::<L>::from(if self.safe_primes { 5u32 } else { 2u32 }));
+            return Some(T::from(if self.safe_primes { 5u32 } else { 2u32 }));
         }
 
         // Main loop
@@ -253,8 +258,8 @@ impl<const L: usize> Sieve<L> {
     }
 }
 
-impl<const L: usize> Iterator for Sieve<L> {
-    type Item = Uint<L>;
+impl<T: UintLike> Iterator for Sieve<T> {
+    type Item = T;
 
     fn next(&mut self) -> Option<Self::Item> {
         Self::next(self)
