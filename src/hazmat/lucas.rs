@@ -60,7 +60,7 @@ impl LucasBase for SelfridgeBase {
             }
 
             if attempts >= ATTEMPTS_BEFORE_SQRT {
-                let sqrt_n = n.sqrt();
+                let sqrt_n = n.sqrt_vartime();
                 if &sqrt_n.wrapping_mul(&sqrt_n) == n {
                     return Err(Primality::Composite);
                 }
@@ -137,7 +137,7 @@ impl LucasBase for BruteForceBase {
             }
 
             if attempts >= ATTEMPTS_BEFORE_SQRT {
-                let sqrt_n = n.sqrt();
+                let sqrt_n = n.sqrt_vartime();
                 if &sqrt_n.wrapping_mul(&sqrt_n) == n {
                     return Err(Primality::Composite);
                 }
@@ -172,25 +172,17 @@ impl LucasBase for BruteForceBase {
 }
 
 /// For the given odd `n`, finds `s` and odd `d` such that `n + 1 == 2^s * d`.
-fn decompose<const L: usize>(n: &Uint<L>) -> (u32, Uint<L>) {
+fn decompose<const L: usize>(n: &Uint<L>) -> (usize, Uint<L>) {
     debug_assert!(bool::from(n.is_odd()));
 
     // Need to be careful here since `n + 1` can overflow.
     // Instead of adding 1 and counting trailing 0s, we count trailing ones on the original `n`.
 
-    let mut n = *n;
-    let mut s = 0;
-
-    while n.is_odd().into() {
-        n >>= 1;
-        s += 1;
-    }
-
+    let s = n.trailing_ones();
     // This won't overflow since the original `n` was odd, so we right-shifted at least once.
-    (
-        s,
-        Option::from(n.checked_add(&Uint::<L>::ONE)).expect("Integer overflow"),
-    )
+    let d = Option::from((n >> s).checked_add(&Uint::<L>::ONE)).expect("Integer overflow");
+
+    (s, d)
 }
 
 /// The checks to perform in the Lucas test.
@@ -317,7 +309,8 @@ pub fn lucas_test<const L: usize>(
         return Primality::Composite;
     }
 
-    // Find d and s, such that d is odd and d * 2^s = (n - (D/n)).
+    // Find `d` and `s`, such that `d` is odd and `d * 2^s = n - (D/n)`.
+    // Since `(D/n) == -1` by construction, we're looking for `d * 2^s = n + 1`.
     let (s, d) = decompose(candidate);
 
     // Some constants in Montgomery form
