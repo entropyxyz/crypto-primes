@@ -16,7 +16,7 @@
 extern crate alloc;
 
 pub mod hazmat;
-//mod presets;
+mod presets;
 //mod traits;
 mod uint_traits;
 

@@ -1,4 +1,3 @@
-use crypto_bigint::{Integer, Uint};
 use rand_core::CryptoRngCore;
 
 #[cfg(feature = "default-rng")]
@@ -7,13 +6,14 @@ use rand_core::OsRng;
 use crate::hazmat::{
     lucas_test, random_odd_uint, AStarBase, LucasCheck, MillerRabin, Primality, Sieve,
 };
+use crate::UintLike;
 
 /// Returns a random prime of size `bit_length` using [`OsRng`] as the RNG.
 /// If `bit_length` is `None`, the full size of `Uint<L>` is used.
 ///
 /// See [`is_prime_with_rng`] for details about the performed checks.
 #[cfg(feature = "default-rng")]
-pub fn generate_prime<const L: usize>(bit_length: Option<usize>) -> Uint<L> {
+pub fn generate_prime<T: UintLike>(bit_length: usize) -> T {
     generate_prime_with_rng(&mut OsRng, bit_length)
 }
 
@@ -23,7 +23,7 @@ pub fn generate_prime<const L: usize>(bit_length: Option<usize>) -> Uint<L> {
 ///
 /// See [`is_prime_with_rng`] for details about the performed checks.
 #[cfg(feature = "default-rng")]
-pub fn generate_safe_prime<const L: usize>(bit_length: Option<usize>) -> Uint<L> {
+pub fn generate_safe_prime<T: UintLike>(bit_length: usize) -> T {
     generate_safe_prime_with_rng(&mut OsRng, bit_length)
 }
 
@@ -31,7 +31,7 @@ pub fn generate_safe_prime<const L: usize>(bit_length: Option<usize>) -> Uint<L>
 ///
 /// See [`is_prime_with_rng`] for details about the performed checks.
 #[cfg(feature = "default-rng")]
-pub fn is_prime<const L: usize>(num: &Uint<L>) -> bool {
+pub fn is_prime<T: UintLike>(num: &T) -> bool {
     is_prime_with_rng(&mut OsRng, num)
 }
 
@@ -41,7 +41,7 @@ pub fn is_prime<const L: usize>(num: &Uint<L>) -> bool {
 ///
 /// See [`is_prime_with_rng`] for details about the performed checks.
 #[cfg(feature = "default-rng")]
-pub fn is_safe_prime<const L: usize>(num: &Uint<L>) -> bool {
+pub fn is_safe_prime<T: UintLike>(num: &T) -> bool {
     is_safe_prime_with_rng(&mut OsRng, num)
 }
 
@@ -51,16 +51,12 @@ pub fn is_safe_prime<const L: usize>(num: &Uint<L>) -> bool {
 /// Panics if `bit_length` is less than 2, or greater than the bit size of the target `Uint`.
 ///
 /// See [`is_prime_with_rng`] for details about the performed checks.
-pub fn generate_prime_with_rng<const L: usize>(
-    rng: &mut impl CryptoRngCore,
-    bit_length: Option<usize>,
-) -> Uint<L> {
-    let bit_length = bit_length.unwrap_or(Uint::<L>::BITS);
+pub fn generate_prime_with_rng<T: UintLike>(rng: &mut impl CryptoRngCore, bit_length: usize) -> T {
     if bit_length < 2 {
         panic!("`bit_length` must be 2 or greater.");
     }
     loop {
-        let start: Uint<L> = random_odd_uint(rng, bit_length);
+        let start = random_odd_uint::<T>(rng, bit_length);
         let sieve = Sieve::new(&start, bit_length, false);
         for num in sieve {
             if is_prime_with_rng(rng, &num) {
@@ -77,16 +73,15 @@ pub fn generate_prime_with_rng<const L: usize>(
 /// Panics if `bit_length` is less than 3, or is greater than the bit size of the target `Uint`.
 ///
 /// See [`is_prime_with_rng`] for details about the performed checks.
-pub fn generate_safe_prime_with_rng<const L: usize>(
+pub fn generate_safe_prime_with_rng<T: UintLike>(
     rng: &mut impl CryptoRngCore,
-    bit_length: Option<usize>,
-) -> Uint<L> {
-    let bit_length = bit_length.unwrap_or(Uint::<L>::BITS);
+    bit_length: usize,
+) -> T {
     if bit_length < 3 {
         panic!("`bit_length` must be 3 or greater.");
     }
     loop {
-        let start: Uint<L> = random_odd_uint(rng, bit_length);
+        let start = random_odd_uint::<T>(rng, bit_length);
         let sieve = Sieve::new(&start, bit_length, true);
         for num in sieve {
             if is_safe_prime_with_rng(rng, &num) {
@@ -121,8 +116,8 @@ pub fn generate_safe_prime_with_rng<const L: usize>(
 ///       "Strengthening the Baillie-PSW primality test",
 ///       Math. Comp. 90 1931-1955 (2021),
 ///       DOI: [10.1090/mcom/3616](https://doi.org/10.1090/mcom/3616)
-pub fn is_prime_with_rng<const L: usize>(rng: &mut impl CryptoRngCore, num: &Uint<L>) -> bool {
-    if num == &Uint::<L>::from(2u32) {
+pub fn is_prime_with_rng<T: UintLike>(rng: &mut impl CryptoRngCore, num: &T) -> bool {
+    if num == &T::from(2u32) {
         return true;
     }
     if num.is_even().into() {
@@ -135,22 +130,22 @@ pub fn is_prime_with_rng<const L: usize>(rng: &mut impl CryptoRngCore, num: &Uin
 /// Checks probabilistically if the given number is a safe prime using the provided RNG.
 ///
 /// See [`is_prime_with_rng`] for details about the performed checks.
-pub fn is_safe_prime_with_rng<const L: usize>(rng: &mut impl CryptoRngCore, num: &Uint<L>) -> bool {
+pub fn is_safe_prime_with_rng<T: UintLike>(rng: &mut impl CryptoRngCore, num: &T) -> bool {
     // Since, by the definition of safe prime, `(num - 1) / 2` must also be prime,
     // and therefore odd, `num` has to be equal to 3 modulo 4.
     // 5 is the only exception, so we check for it.
-    if num == &Uint::<L>::from(5u32) {
+    if num == &T::from(5u32) {
         return true;
     }
-    if num.as_words()[0] & 3 != 3 {
+    if T::from(3u32) & num != T::from(3u32) {
         return false;
     }
 
-    _is_prime_with_rng(rng, num) && _is_prime_with_rng(rng, &(num >> 1))
+    _is_prime_with_rng(rng, num) && _is_prime_with_rng(rng, &num.shr_vartime(1))
 }
 
 /// Checks for primality assuming that `num` is odd.
-fn _is_prime_with_rng<const L: usize>(rng: &mut impl CryptoRngCore, num: &Uint<L>) -> bool {
+fn _is_prime_with_rng<T: UintLike>(rng: &mut impl CryptoRngCore, num: &T) -> bool {
     debug_assert!(bool::from(num.is_odd()));
     let mr = MillerRabin::new(num);
 
@@ -252,7 +247,7 @@ mod tests {
     #[test]
     fn prime_generation() {
         for bit_length in (28..=128).step_by(10) {
-            let p: U128 = generate_prime(Some(bit_length));
+            let p: U128 = generate_prime(bit_length);
             assert!(p.bits_vartime() == bit_length);
             assert!(is_prime(&p));
         }
@@ -261,7 +256,7 @@ mod tests {
     #[test]
     fn safe_prime_generation() {
         for bit_length in (28..=128).step_by(10) {
-            let p: U128 = generate_safe_prime(Some(bit_length));
+            let p: U128 = generate_safe_prime(bit_length);
             assert!(p.bits_vartime() == bit_length);
             assert!(is_safe_prime(&p));
         }
@@ -294,25 +289,25 @@ mod tests {
     #[test]
     #[should_panic(expected = "`bit_length` must be 2 or greater")]
     fn generate_prime_too_few_bits() {
-        let _p: U64 = generate_prime_with_rng(&mut OsRng, Some(1));
+        let _p: U64 = generate_prime_with_rng(&mut OsRng, 1);
     }
 
     #[test]
     #[should_panic(expected = "`bit_length` must be 3 or greater")]
     fn generate_safe_prime_too_few_bits() {
-        let _p: U64 = generate_safe_prime_with_rng(&mut OsRng, Some(2));
+        let _p: U64 = generate_safe_prime_with_rng(&mut OsRng, 2);
     }
 
     #[test]
     #[should_panic(expected = "The requested bit length (65) is larger than the chosen Uint size")]
     fn generate_prime_too_many_bits() {
-        let _p: U64 = generate_prime_with_rng(&mut OsRng, Some(65));
+        let _p: U64 = generate_prime_with_rng(&mut OsRng, 65);
     }
 
     #[test]
     #[should_panic(expected = "The requested bit length (65) is larger than the chosen Uint size")]
     fn generate_safe_prime_too_many_bits() {
-        let _p: U64 = generate_safe_prime_with_rng(&mut OsRng, Some(65));
+        let _p: U64 = generate_safe_prime_with_rng(&mut OsRng, 65);
     }
 
     fn is_prime_ref(num: Word) -> bool {
@@ -323,7 +318,7 @@ mod tests {
     fn corner_cases_generate_prime() {
         for bits in 2usize..5 {
             for _ in 0..100 {
-                let p: U64 = generate_prime(Some(bits));
+                let p: U64 = generate_prime(bits);
                 let p_word = p.as_words()[0];
                 assert!(is_prime_ref(p_word));
             }
@@ -334,7 +329,7 @@ mod tests {
     fn corner_cases_generate_safe_prime() {
         for bits in 3usize..5 {
             for _ in 0..100 {
-                let p: U64 = generate_safe_prime(Some(bits));
+                let p: U64 = generate_safe_prime(bits);
                 let p_word = p.as_words()[0];
                 assert!(is_prime_ref(p_word) && is_prime_ref(p_word / 2));
             }

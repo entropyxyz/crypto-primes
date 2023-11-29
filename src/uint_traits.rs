@@ -1,4 +1,4 @@
-use core::ops::{Add, BitOr, BitOrAssign, Mul, Neg, Sub};
+use core::ops::{Add, BitAnd, BitOr, BitOrAssign, Mul, Neg, Sub};
 
 use crypto_bigint::{
     modular::{DynResidue, DynResidueParams},
@@ -17,6 +17,7 @@ pub trait UintLike:
     + for<'a> CheckedAdd<&'a Self>
     + Zero
     + BitOr<Output = Self>
+    + for<'a> BitAnd<&'a Self, Output = Self>
     + BitOrAssign
     + RandomMod
 {
