@@ -60,7 +60,7 @@ impl LucasBase for SelfridgeBase {
             }
 
             if attempts >= ATTEMPTS_BEFORE_SQRT {
-                let sqrt_n = n.sqrt();
+                let sqrt_n = n.sqrt_vartime();
                 if &sqrt_n.wrapping_mul(&sqrt_n) == n {
                     return Err(Primality::Composite);
                 }
@@ -137,7 +137,7 @@ impl LucasBase for BruteForceBase {
             }
 
             if attempts >= ATTEMPTS_BEFORE_SQRT {
-                let sqrt_n = n.sqrt();
+                let sqrt_n = n.sqrt_vartime();
                 if &sqrt_n.wrapping_mul(&sqrt_n) == n {
                     return Err(Primality::Composite);
                 }
