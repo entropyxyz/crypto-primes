@@ -22,8 +22,8 @@ fn make_rng() -> ChaCha8Rng {
     ChaCha8Rng::from_seed(*b"01234567890123456789012345678901")
 }
 
-fn make_sieve<const L: usize>(rng: &mut impl CryptoRngCore) -> Sieve<L> {
-    let start = random_odd_uint::<L>(rng, Uint::<L>::BITS);
+fn make_sieve<const L: usize>(rng: &mut impl CryptoRngCore) -> Sieve<Uint<L>> {
+    let start = random_odd_uint::<Uint<L>>(rng, Uint::<L>::BITS);
     Sieve::new(&start, Uint::<L>::BITS, false)
 }
 
@@ -36,13 +36,13 @@ fn bench_sieve(c: &mut Criterion) {
     let mut group = c.benchmark_group("Sieve");
 
     group.bench_function("(U128) random start", |b| {
-        b.iter(|| random_odd_uint::<{ nlimbs!(128) }>(&mut OsRng, 128))
+        b.iter(|| random_odd_uint::<Uint<{ nlimbs!(128) }>>(&mut OsRng, 128))
     });
 
     group.bench_function("(U128) creation", |b| {
         b.iter_batched(
-            || random_odd_uint::<{ nlimbs!(128) }>(&mut OsRng, 128),
-            |start| Sieve::new(&start, 128, false),
+            || random_odd_uint::<Uint<{ nlimbs!(128) }>>(&mut OsRng, 128),
+            |start| Sieve::new(start.as_ref(), 128, false),
             BatchSize::SmallInput,
         )
     });
@@ -57,13 +57,13 @@ fn bench_sieve(c: &mut Criterion) {
     });
 
     group.bench_function("(U1024) random start", |b| {
-        b.iter(|| random_odd_uint::<{ nlimbs!(1024) }>(&mut OsRng, 1024))
+        b.iter(|| random_odd_uint::<Uint<{ nlimbs!(1024) }>>(&mut OsRng, 1024))
     });
 
     group.bench_function("(U1024) creation", |b| {
         b.iter_batched(
-            || random_odd_uint::<{ nlimbs!(1024) }>(&mut OsRng, 1024),
-            |start| Sieve::new(&start, 1024, false),
+            || random_odd_uint::<Uint<{ nlimbs!(1024) }>>(&mut OsRng, 1024),
+            |start| Sieve::new(start.as_ref(), 1024, false),
             BatchSize::SmallInput,
         )
     });
@@ -84,7 +84,7 @@ fn bench_miller_rabin(c: &mut Criterion) {
 
     group.bench_function("(U128) creation", |b| {
         b.iter_batched(
-            || random_odd_uint::<{ nlimbs!(128) }>(&mut OsRng, 128),
+            || random_odd_uint::<Uint<{ nlimbs!(128) }>>(&mut OsRng, 128),
             MillerRabin::new,
             BatchSize::SmallInput,
         )
@@ -100,7 +100,7 @@ fn bench_miller_rabin(c: &mut Criterion) {
 
     group.bench_function("(U1024) creation", |b| {
         b.iter_batched(
-            || random_odd_uint::<{ nlimbs!(1024) }>(&mut OsRng, 1024),
+            || random_odd_uint::<Uint<{ nlimbs!(1024) }>>(&mut OsRng, 1024),
             MillerRabin::new,
             BatchSize::SmallInput,
         )
@@ -193,39 +193,39 @@ fn bench_presets(c: &mut Criterion) {
 
     group.bench_function("(U128) Prime test", |b| {
         b.iter_batched(
-            || random_odd_uint::<{ nlimbs!(128) }>(&mut OsRng, 128),
-            |num| is_prime_with_rng(&mut OsRng, &num),
+            || random_odd_uint::<Uint<{ nlimbs!(128) }>>(&mut OsRng, 128),
+            |num| is_prime_with_rng(&mut OsRng, num.as_ref()),
             BatchSize::SmallInput,
         )
     });
 
     group.bench_function("(U128) Safe prime test", |b| {
         b.iter_batched(
-            || random_odd_uint::<{ nlimbs!(128) }>(&mut OsRng, 128),
-            |num| is_safe_prime_with_rng(&mut OsRng, &num),
+            || random_odd_uint::<Uint<{ nlimbs!(128) }>>(&mut OsRng, 128),
+            |num| is_safe_prime_with_rng(&mut OsRng, num.as_ref()),
             BatchSize::SmallInput,
         )
     });
 
     let mut rng = make_rng();
     group.bench_function("(U128) Random prime", |b| {
-        b.iter(|| generate_prime_with_rng::<{ nlimbs!(128) }>(&mut rng, None))
+        b.iter(|| generate_prime_with_rng::<Uint<{ nlimbs!(128) }>>(&mut rng, 128))
     });
 
     let mut rng = make_rng();
     group.bench_function("(U1024) Random prime", |b| {
-        b.iter(|| generate_prime_with_rng::<{ nlimbs!(1024) }>(&mut rng, None))
+        b.iter(|| generate_prime_with_rng::<Uint<{ nlimbs!(1024) }>>(&mut rng, 1024))
     });
 
     let mut rng = make_rng();
     group.bench_function("(U128) Random safe prime", |b| {
-        b.iter(|| generate_safe_prime_with_rng::<{ nlimbs!(128) }>(&mut rng, None))
+        b.iter(|| generate_safe_prime_with_rng::<Uint<{ nlimbs!(128) }>>(&mut rng, 128))
     });
 
     group.sample_size(20);
     let mut rng = make_rng();
     group.bench_function("(U1024) Random safe prime", |b| {
-        b.iter(|| generate_safe_prime_with_rng::<{ nlimbs!(1024) }>(&mut rng, None))
+        b.iter(|| generate_safe_prime_with_rng::<Uint<{ nlimbs!(1024) }>>(&mut rng, 1024))
     });
 
     group.finish();
@@ -235,19 +235,19 @@ fn bench_presets(c: &mut Criterion) {
 
     let mut rng = make_rng();
     group.bench_function("(U128) Random safe prime", |b| {
-        b.iter(|| generate_safe_prime_with_rng::<{ nlimbs!(128) }>(&mut rng, None))
+        b.iter(|| generate_safe_prime_with_rng::<Uint<{ nlimbs!(128) }>>(&mut rng, 128))
     });
 
     // The performance should scale with the prime size, not with the Uint size.
     // So we should strive for this test's result to be as close as possible
     // to that of the previous one and as far away as possible from the next one.
     group.bench_function("(U256) Random 128 bit safe prime", |b| {
-        b.iter(|| generate_safe_prime_with_rng::<{ nlimbs!(256) }>(&mut rng, Some(128)))
+        b.iter(|| generate_safe_prime_with_rng::<Uint<{ nlimbs!(256) }>>(&mut rng, 128))
     });
 
     // The upper bound for the previous test.
     group.bench_function("(U256) Random 256 bit safe prime", |b| {
-        b.iter(|| generate_safe_prime_with_rng::<{ nlimbs!(256) }>(&mut rng, None))
+        b.iter(|| generate_safe_prime_with_rng::<Uint<{ nlimbs!(256) }>>(&mut rng, 256))
     });
 
     group.finish();
@@ -258,7 +258,7 @@ fn bench_gmp(c: &mut Criterion) {
     let mut group = c.benchmark_group("GMP");
 
     fn random<const L: usize>(rng: &mut impl CryptoRngCore) -> Integer {
-        let num = random_odd_uint::<L>(rng, Uint::<L>::BITS);
+        let num = random_odd_uint::<Uint<L>>(rng, Uint::<L>::BITS).get();
         Integer::from_digits(num.as_words(), Order::Lsf)
     }
 

@@ -1,14 +1,12 @@
 //! Lucas primality test.
-use crypto_bigint::{
-    modular::{MontyForm, MontyParams},
-    CheckedAdd, Integer, Odd, Uint, Word,
-};
+use crypto_bigint::{Integer, Monty, Odd, Square, Word};
 
 use super::{
     gcd::gcd_vartime,
     jacobi::{jacobi_symbol_vartime, JacobiSymbol},
     Primality,
 };
+use crate::UintLike;
 
 /// The maximum number of attempts to find `D` such that `(D/n) == -1`.
 // This is widely believed to be impossible.
@@ -30,7 +28,7 @@ pub trait LucasBase {
     /// Given an odd integer, returns `Ok((P, abs(Q), is_negative(Q)))` on success,
     /// or `Err(Primality)` if the primality for the given integer was discovered
     /// during the search for a base.
-    fn generate<const L: usize>(&self, n: &Odd<Uint<L>>) -> Result<(Word, Word, bool), Primality>;
+    fn generate<T: UintLike>(&self, n: &Odd<T>) -> Result<(Word, Word, bool), Primality>;
 }
 
 /// "Method A" for selecting the base given in Baillie & Wagstaff[^Baillie1980],
@@ -48,11 +46,11 @@ pub trait LucasBase {
 pub struct SelfridgeBase;
 
 impl LucasBase for SelfridgeBase {
-    fn generate<const L: usize>(&self, n: &Odd<Uint<L>>) -> Result<(Word, Word, bool), Primality> {
+    fn generate<T: UintLike>(&self, n: &Odd<T>) -> Result<(Word, Word, bool), Primality> {
         let mut abs_d = 5;
         let mut d_is_negative = false;
         let n_is_small = n.bits_vartime() < Word::BITS; // if true, `n` fits into one `Word`
-        let small_n = n.as_words()[0];
+        let small_n = n.as_ref().as_ref()[0].0;
         let mut attempts = 0;
         loop {
             if attempts >= MAX_ATTEMPTS {
@@ -61,7 +59,7 @@ impl LucasBase for SelfridgeBase {
 
             if attempts >= ATTEMPTS_BEFORE_SQRT {
                 let sqrt_n = n.sqrt_vartime();
-                if &sqrt_n.wrapping_mul(&sqrt_n) == n {
+                if &sqrt_n.wrapping_mul(&sqrt_n) == n.as_ref() {
                     return Err(Primality::Composite);
                 }
             }
@@ -113,7 +111,7 @@ impl LucasBase for SelfridgeBase {
 pub struct AStarBase;
 
 impl LucasBase for AStarBase {
-    fn generate<const L: usize>(&self, n: &Odd<Uint<L>>) -> Result<(Word, Word, bool), Primality> {
+    fn generate<T: UintLike>(&self, n: &Odd<T>) -> Result<(Word, Word, bool), Primality> {
         SelfridgeBase.generate(n).map(|(p, abs_q, q_is_negative)| {
             if abs_q == 1 && q_is_negative {
                 (5, 5, false)
@@ -136,7 +134,7 @@ impl LucasBase for AStarBase {
 pub struct BruteForceBase;
 
 impl LucasBase for BruteForceBase {
-    fn generate<const L: usize>(&self, n: &Odd<Uint<L>>) -> Result<(Word, Word, bool), Primality> {
+    fn generate<T: UintLike>(&self, n: &Odd<T>) -> Result<(Word, Word, bool), Primality> {
         let mut p = 3;
         let mut attempts = 0;
 
@@ -147,7 +145,7 @@ impl LucasBase for BruteForceBase {
 
             if attempts >= ATTEMPTS_BEFORE_SQRT {
                 let sqrt_n = n.sqrt_vartime();
-                if &sqrt_n.wrapping_mul(&sqrt_n) == n {
+                if &sqrt_n.wrapping_mul(&sqrt_n) == n.as_ref() {
                     return Err(Primality::Composite);
                 }
             }
@@ -164,7 +162,7 @@ impl LucasBase for BruteForceBase {
                 // Since the loop proceeds in increasing P and starts with P - 2 == 1,
                 // the shared prime factor must be P + 2.
                 // If P + 2 == n, then n is prime; otherwise P + 2 is a proper factor of n.
-                let primality = if n.as_ref() == &Uint::<L>::from(p + 2) {
+                let primality = if n.as_ref() == &T::from(p + 2) {
                     Primality::Prime
                 } else {
                     Primality::Composite
@@ -181,22 +179,22 @@ impl LucasBase for BruteForceBase {
 }
 
 /// For the given odd `n`, finds `s` and odd `d` such that `n + 1 == 2^s * d`.
-fn decompose<const L: usize>(n: &Odd<Uint<L>>) -> (u32, Odd<Uint<L>>) {
+fn decompose<T: UintLike>(n: &Odd<T>) -> (u32, Odd<T>) {
     // Need to be careful here since `n + 1` can overflow.
     // Instead of adding 1 and counting trailing 0s, we count trailing ones on the original `n`.
 
-    let s = n.trailing_ones();
+    let s = n.trailing_ones_vartime();
     let d = if s < n.bits_precision() {
         // The shift won't overflow because of the check above.
         // The addition won't overflow since the original `n` was odd,
         // so we right-shifted at least once.
         n.as_ref()
-            .overflowing_shr(s)
+            .overflowing_shr_vartime(s)
             .expect("shift should be within range by construction")
-            .checked_add(&Uint::ONE)
+            .checked_add(&T::one())
             .expect("addition should not overflow by construction")
     } else {
-        Uint::ONE
+        T::one()
     };
 
     (s, Odd::new(d).expect("`d` should be odd by construction"))
@@ -285,8 +283,8 @@ pub enum LucasCheck {
 /// Performs the primality test based on Lucas sequence.
 /// See [`LucasCheck`] for possible checks, and the implementors of [`LucasBase`]
 /// for the corresponding bases.
-pub fn lucas_test<const L: usize>(
-    candidate: &Odd<Uint<L>>,
+pub fn lucas_test<T: UintLike>(
+    candidate: &Odd<T>,
     base: impl LucasBase,
     check: LucasCheck,
 ) -> Primality {
@@ -330,8 +328,8 @@ pub fn lucas_test<const L: usize>(
     // we check that gcd(n, Q) = 1 anyway - again, since `Q` is small,
     // it does not noticeably affect the performance.
     if abs_q != 1
-        && gcd_vartime(candidate, abs_q) != 1
-        && candidate.as_ref() > &Uint::<L>::from(abs_q)
+        && gcd_vartime(candidate.as_ref(), abs_q) != 1
+        && candidate.as_ref() > &T::from(abs_q)
     {
         return Primality::Composite;
     }
@@ -342,19 +340,19 @@ pub fn lucas_test<const L: usize>(
 
     // Some constants in Montgomery form
 
-    let params = MontyParams::<L>::new(*candidate);
+    let params = <T as Integer>::Monty::new_params(candidate.clone());
 
-    let zero = MontyForm::<L>::zero(params);
-    let one = MontyForm::<L>::one(params);
-    let two = one + one;
-    let minus_two = -two;
+    let zero = <T as Integer>::Monty::zero(params.clone());
+    let one = <T as Integer>::Monty::one(params.clone());
+    let two = one.clone() + &one;
+    let minus_two = -two.clone();
 
     // Convert Q to Montgomery form
 
     let q = if q_is_one {
-        one
+        one.clone()
     } else {
-        let abs_q = MontyForm::<L>::new(&Uint::<L>::from(abs_q), params);
+        let abs_q = <T as Integer>::Monty::new(T::from(abs_q), params.clone());
         if q_is_negative {
             -abs_q
         } else {
@@ -365,9 +363,9 @@ pub fn lucas_test<const L: usize>(
     // Convert P to Montgomery form
 
     let p = if p_is_one {
-        one
+        one.clone()
     } else {
-        MontyForm::<L>::new(&Uint::<L>::from(p), params)
+        <T as Integer>::Monty::new(T::from(p), params.clone())
     };
 
     // Compute d-th element of Lucas sequence (U_d(P, Q), V_d(P, Q)), where:
@@ -385,20 +383,20 @@ pub fn lucas_test<const L: usize>(
     // We can therefore start with k=0 and build up to k=d in log2(d) steps.
 
     // Starting with k = 0
-    let mut vk = two; // keeps V_k
-    let mut uk = MontyForm::<L>::zero(params); // keeps U_k
-    let mut qk = one; // keeps Q^k
+    let mut vk = two.clone(); // keeps V_k
+    let mut uk = <T as Integer>::Monty::zero(params.clone()); // keeps U_k
+    let mut qk = one.clone(); // keeps Q^k
 
     // D in Montgomery representation - note that it can be negative.
-    let abs_d = MontyForm::<L>::new(&Uint::<L>::from(abs_d), params);
+    let abs_d = <T as Integer>::Monty::new(T::from(abs_d), params);
     let d_m = if d_is_negative { -abs_d } else { abs_d };
 
     for i in (0..d.bits_vartime()).rev() {
         // k' = k * 2
 
-        let u_2k = uk * vk;
-        let v_2k = vk.square() - (qk + qk);
         let q_2k = qk.square();
+        let u_2k = uk * &vk;
+        let v_2k = vk.square() - &(qk.clone() + &qk);
 
         uk = u_2k;
         vk = v_2k;
@@ -407,11 +405,15 @@ pub fn lucas_test<const L: usize>(
         if d.bit_vartime(i) {
             // k' = k + 1
 
-            let (p_uk, p_vk) = if p_is_one { (uk, vk) } else { (p * uk, p * vk) };
+            let (p_uk, p_vk) = if p_is_one {
+                (uk.clone(), vk.clone())
+            } else {
+                (p.clone() * &uk, p.clone() * &vk)
+            };
 
-            let u_k1 = (p_uk + vk).div_by_2();
-            let v_k1 = (d_m * uk + p_vk).div_by_2();
-            let q_k1 = qk * q;
+            let u_k1 = (p_uk + &vk).div_by_2();
+            let v_k1 = (d_m.clone() * &uk + &p_vk).div_by_2();
+            let q_k1 = qk * &q;
 
             uk = u_k1;
             vk = v_k1;
@@ -469,7 +471,7 @@ pub fn lucas_test<const L: usize>(
 
         // k' = 2k
         // V_{k'} = V_k^2 - 2 Q^k
-        vk = vk * vk - qk - qk;
+        vk = vk.square() - &qk - &qk;
 
         if check != LucasCheck::LucasV && vk == zero {
             return Primality::ProbablyPrime;
@@ -483,10 +485,10 @@ pub fn lucas_test<const L: usize>(
     if check == LucasCheck::LucasV {
         // At this point vk = V_{d * 2^(s-1)}.
         // Double the index again:
-        vk = vk * vk - qk - qk; // now vk = V_{d * 2^s} = V_{n+1}
+        vk = vk.square() - &qk - &qk; // now vk = V_{d * 2^s} = V_{n+1}
 
         // Lucas-V check[^Baillie2021]: if V_{n+1} == 2 Q, report `n` as prime.
-        if vk == q + q {
+        if vk == q.clone() + &q {
             return Primality::ProbablyPrime;
         }
     }
@@ -507,7 +509,10 @@ mod tests {
     use super::{
         decompose, lucas_test, AStarBase, BruteForceBase, LucasBase, LucasCheck, SelfridgeBase,
     };
-    use crate::hazmat::{primes, pseudoprimes, Primality};
+    use crate::{
+        hazmat::{primes, pseudoprimes, Primality},
+        UintLike,
+    };
 
     #[test]
     fn bases_derived_traits() {
@@ -552,10 +557,7 @@ mod tests {
         struct TestBase;
 
         impl LucasBase for TestBase {
-            fn generate<const L: usize>(
-                &self,
-                _n: &Odd<Uint<L>>,
-            ) -> Result<(Word, Word, bool), Primality> {
+            fn generate<T: UintLike>(&self, _n: &Odd<T>) -> Result<(Word, Word, bool), Primality> {
                 Ok((5, 5, false))
             }
         }

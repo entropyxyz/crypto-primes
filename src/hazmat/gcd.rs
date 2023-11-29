@@ -1,9 +1,9 @@
-use crypto_bigint::{Limb, NonZero, Uint, Word};
+use crypto_bigint::{Integer, Limb, NonZero, Word};
 
 /// Calculates the greatest common divisor of `n` and `m`.
 /// By definition, `gcd(0, m) == m`.
 /// `n` must be non-zero.
-pub(crate) fn gcd_vartime<const L: usize>(n: &Uint<L>, m: Word) -> Word {
+pub(crate) fn gcd_vartime<T: Integer>(n: &T, m: Word) -> Word {
     // This is an internal function, and it will never be called with `m = 0`.
     // Allowing `m = 0` would require us to have the return type of `Uint<L>`
     // (since `gcd(n, 0) = n`).
@@ -11,7 +11,7 @@ pub(crate) fn gcd_vartime<const L: usize>(n: &Uint<L>, m: Word) -> Word {
 
     // This we can check since it doesn't affect the return type,
     // even though `n` will not be 0 either in the application.
-    if n == &Uint::<L>::ZERO {
+    if n.is_zero().into() {
         return m;
     }
 
@@ -23,7 +23,7 @@ pub(crate) fn gcd_vartime<const L: usize>(n: &Uint<L>, m: Word) -> Word {
     } else {
         // In this branch `n` is `Word::BITS` bits or shorter,
         // so we can safely take the first limb.
-        let n = n.as_words()[0];
+        let n = n.as_ref()[0].0;
         if n > m {
             (n, m)
         } else {
