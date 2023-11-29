@@ -1,14 +1,8 @@
 //! Lucas primality test.
-use crypto_bigint::{
-    modular::runtime_mod::{DynResidue, DynResidueParams},
-    CheckedAdd, Integer, Limb, Uint, Word,
-};
 
-use super::{
-    gcd::gcd,
-    jacobi::{jacobi_symbol, JacobiSymbol},
-    Primality,
-};
+use crate::{JacobiSymbol, UintLike, UintModLike};
+
+use super::Primality;
 
 /// The maximum number of attempts to find `D` such that `(D/n) == -1`.
 // This is widely believed to be impossible.
@@ -30,7 +24,7 @@ pub trait LucasBase {
     /// Given an odd integer, returns `Ok((P, Q))` on success,
     /// or `Err(Primality)` if the primality for the given integer was discovered
     /// during the search for a base.
-    fn generate<const L: usize>(&self, n: &Uint<L>) -> Result<(u32, i32), Primality>;
+    fn generate<T: UintLike>(&self, n: &T) -> Result<(u32, i32), Primality>;
 }
 
 /// "Method A" for selecting the base given in Baillie & Wagstaff[^Baillie1980],
@@ -48,11 +42,8 @@ pub trait LucasBase {
 pub struct SelfridgeBase;
 
 impl LucasBase for SelfridgeBase {
-    fn generate<const L: usize>(&self, n: &Uint<L>) -> Result<(u32, i32), Primality> {
+    fn generate<T: UintLike>(&self, n: &T) -> Result<(u32, i32), Primality> {
         let mut d = 5_i32;
-        let n_is_small = n.bits_vartime() < (Limb::BITS - 1);
-        // Can unwrap here since it won't overflow after `&`
-        let small_n: u32 = (n.as_words()[0] & Word::from(u32::MAX)).try_into().unwrap();
         let mut attempts = 0;
         loop {
             if attempts >= MAX_ATTEMPTS {
@@ -66,7 +57,7 @@ impl LucasBase for SelfridgeBase {
                 }
             }
 
-            let j = jacobi_symbol(d, n);
+            let j = T::jacobi_symbol_small(d, n);
 
             if j == JacobiSymbol::MinusOne {
                 break;
@@ -78,7 +69,7 @@ impl LucasBase for SelfridgeBase {
                 // this small modification of Selfridge's method A
                 // enables 5 and 11 to be classified as Lucas probable primes.
                 // Otherwise GCD(D, n) > 1, and therefore n is not prime.
-                if !(n_is_small && small_n == d.abs_diff(0)) {
+                if n != &T::from(d.abs_diff(0)) {
                     return Err(Primality::Composite);
                 }
             }
@@ -108,7 +99,7 @@ impl LucasBase for SelfridgeBase {
 pub struct AStarBase;
 
 impl LucasBase for AStarBase {
-    fn generate<const L: usize>(&self, n: &Uint<L>) -> Result<(u32, i32), Primality> {
+    fn generate<T: UintLike>(&self, n: &T) -> Result<(u32, i32), Primality> {
         SelfridgeBase
             .generate(n)
             .map(|(p, q)| if q == -1 { (5, 5) } else { (p, q) })
@@ -127,7 +118,7 @@ impl LucasBase for AStarBase {
 pub struct BruteForceBase;
 
 impl LucasBase for BruteForceBase {
-    fn generate<const L: usize>(&self, n: &Uint<L>) -> Result<(u32, i32), Primality> {
+    fn generate<T: UintLike>(&self, n: &T) -> Result<(u32, i32), Primality> {
         let mut p = 3_u32;
         let mut attempts = 0;
 
@@ -144,7 +135,7 @@ impl LucasBase for BruteForceBase {
             }
 
             // Can unwrap here since `p` is always small (see the condition above).
-            let j = jacobi_symbol((p * p - 4).try_into().unwrap(), n);
+            let j = T::jacobi_symbol_small((p * p - 4).try_into().unwrap(), n);
 
             if j == JacobiSymbol::MinusOne {
                 break;
@@ -155,7 +146,7 @@ impl LucasBase for BruteForceBase {
                 // Since the loop proceeds in increasing P and starts with P - 2 == 1,
                 // the shared prime factor must be P + 2.
                 // If P + 2 == n, then n is prime; otherwise P + 2 is a proper factor of n.
-                let primality = if n == &Uint::<L>::from(p + 2) {
+                let primality = if n == &T::from(p + 2) {
                     Primality::Prime
                 } else {
                     Primality::Composite
@@ -172,7 +163,7 @@ impl LucasBase for BruteForceBase {
 }
 
 /// For the given odd `n`, finds `s` and odd `d` such that `n + 1 == 2^s * d`.
-fn decompose<const L: usize>(n: &Uint<L>) -> (usize, Uint<L>) {
+fn decompose<T: UintLike>(n: &T) -> (usize, T) {
     debug_assert!(bool::from(n.is_odd()));
 
     // Need to be careful here since `n + 1` can overflow.
@@ -180,7 +171,7 @@ fn decompose<const L: usize>(n: &Uint<L>) -> (usize, Uint<L>) {
 
     let s = n.trailing_ones();
     // This won't overflow since the original `n` was odd, so we right-shifted at least once.
-    let d = Option::from((n >> s).checked_add(&Uint::<L>::ONE)).expect("Integer overflow");
+    let d = Option::from(n.shr(s).checked_add(&T::one())).expect("Integer overflow");
 
     (s, d)
 }
@@ -268,8 +259,8 @@ pub enum LucasCheck {
 /// Performs the primality test based on Lucas sequence.
 /// See [`LucasCheck`] for possible checks, and the implementors of [`LucasBase`]
 /// for the corresponding bases.
-pub fn lucas_test<const L: usize>(
-    candidate: &Uint<L>,
+pub fn lucas_test<T: UintLike>(
+    candidate: &T,
     base: impl LucasBase,
     check: LucasCheck,
 ) -> Primality {
@@ -305,7 +296,7 @@ pub fn lucas_test<const L: usize>(
     // we check that gcd(n, Q) = 1 anyway - again, since `Q` is small,
     // it does not noticeably affect the performance.
     let abs_q = q.abs_diff(0);
-    if abs_q != 1 && gcd(candidate, abs_q) != 1 && candidate > &Uint::<L>::from(abs_q) {
+    if abs_q != 1 && candidate.gcd_small(abs_q) != 1 && candidate > &T::from(abs_q) {
         return Primality::Composite;
     }
 
@@ -315,19 +306,21 @@ pub fn lucas_test<const L: usize>(
 
     // Some constants in Montgomery form
 
-    let params = DynResidueParams::<L>::new(candidate);
+    // Can unwrap here since we already checked that `candidate` is odd
+    let params =
+        <T as UintLike>::Modular::new_params(candidate).expect("Montgomery modulus must be odd");
 
-    let zero = DynResidue::<L>::zero(params);
-    let one = DynResidue::<L>::one(params);
-    let two = one + one;
-    let minus_two = -two;
+    let zero = <T as UintLike>::Modular::zero(&params);
+    let one = <T as UintLike>::Modular::one(&params);
+    let two = one.clone() + &one;
+    let minus_two = -two.clone();
 
     // Convert Q to Montgomery form
 
     let q = if q_is_one {
-        one
+        one.clone()
     } else {
-        let abs_q = DynResidue::<L>::new(&Uint::<L>::from(q.abs_diff(0)), params);
+        let abs_q = <T as UintLike>::Modular::new(&T::from(q.abs_diff(0)), &params);
         if q < 0 {
             -abs_q
         } else {
@@ -338,9 +331,9 @@ pub fn lucas_test<const L: usize>(
     // Convert P to Montgomery form
 
     let p = if p_is_one {
-        one
+        one.clone()
     } else {
-        DynResidue::<L>::new(&Uint::<L>::from(p), params)
+        <T as UintLike>::Modular::new(&T::from(p), &params)
     };
 
     // Compute d-th element of Lucas sequence (U_d(P, Q), V_d(P, Q)), where:
@@ -358,20 +351,20 @@ pub fn lucas_test<const L: usize>(
     // We can therefore start with k=0 and build up to k=d in log2(d) steps.
 
     // Starting with k = 0
-    let mut vk = two; // keeps V_k
-    let mut uk = DynResidue::<L>::zero(params); // keeps U_k
-    let mut qk = one; // keeps Q^k
+    let mut vk = two.clone(); // keeps V_k
+    let mut uk = <T as UintLike>::Modular::zero(&params); // keeps U_k
+    let mut qk = one.clone(); // keeps Q^k
 
     // D in Montgomery representation - note that it can be negative.
-    let abs_d = DynResidue::<L>::new(&Uint::<L>::from(discriminant.abs_diff(0)), params);
+    let abs_d = <T as UintLike>::Modular::new(&T::from(discriminant.abs_diff(0)), &params);
     let d_m = if discriminant < 0 { -abs_d } else { abs_d };
 
     for i in (0..d.bits_vartime()).rev() {
         // k' = k * 2
 
-        let u_2k = uk * vk;
-        let v_2k = vk.square() - (qk + qk);
         let q_2k = qk.square();
+        let u_2k = uk * &vk;
+        let v_2k = vk.square() - &(qk.clone() + &qk);
 
         uk = u_2k;
         vk = v_2k;
@@ -380,11 +373,15 @@ pub fn lucas_test<const L: usize>(
         if d.bit_vartime(i) {
             // k' = k + 1
 
-            let (p_uk, p_vk) = if p_is_one { (uk, vk) } else { (p * uk, p * vk) };
+            let (p_uk, p_vk) = if p_is_one {
+                (uk.clone(), vk.clone())
+            } else {
+                (p.clone() * &uk, p.clone() * &vk)
+            };
 
-            let u_k1 = (p_uk + vk).div_by_2();
-            let v_k1 = (d_m * uk + p_vk).div_by_2();
-            let q_k1 = qk * q;
+            let u_k1 = (p_uk + &vk).div_by_2();
+            let v_k1 = (d_m.clone() * &uk + &p_vk).div_by_2();
+            let q_k1 = qk * &q;
 
             uk = u_k1;
             vk = v_k1;
@@ -442,7 +439,7 @@ pub fn lucas_test<const L: usize>(
 
         // k' = 2k
         // V_{k'} = V_k^2 - 2 Q^k
-        vk = vk * vk - qk - qk;
+        vk = vk.square() - &qk - &qk;
 
         if check != LucasCheck::LucasV && vk == zero {
             return Primality::ProbablyPrime;
@@ -456,10 +453,10 @@ pub fn lucas_test<const L: usize>(
     if check == LucasCheck::LucasV {
         // At this point vk = V_{d * 2^(s-1)}.
         // Double the index again:
-        vk = vk * vk - qk - qk; // now vk = V_{d * 2^s} = V_{n+1}
+        vk = vk.square() - &qk - &qk; // now vk = V_{d * 2^s} = V_{n+1}
 
         // Lucas-V check[^Baillie2021]: if V_{n+1} == 2 Q, report `n` as prime.
-        if vk == q + q {
+        if vk == q.clone() + &q {
             return Primality::ProbablyPrime;
         }
     }
@@ -480,7 +477,10 @@ mod tests {
     use super::{
         decompose, lucas_test, AStarBase, BruteForceBase, LucasBase, LucasCheck, SelfridgeBase,
     };
-    use crate::hazmat::{primes, pseudoprimes, Primality};
+    use crate::{
+        hazmat::{primes, pseudoprimes, Primality},
+        UintLike,
+    };
 
     #[test]
     fn bases_derived_traits() {
@@ -534,7 +534,7 @@ mod tests {
         struct TestBase;
 
         impl LucasBase for TestBase {
-            fn generate<const L: usize>(&self, _n: &Uint<L>) -> Result<(u32, i32), Primality> {
+            fn generate<T: UintLike>(&self, _n: &T) -> Result<(u32, i32), Primality> {
                 Ok((5, 5))
             }
         }

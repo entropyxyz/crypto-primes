@@ -1,20 +1,20 @@
 //! Components to build your own primality test.
 //! Handle with care.
 
-mod gcd;
-mod jacobi;
+//mod gcd;
+//mod jacobi;
 mod lucas;
-mod miller_rabin;
-mod precomputed;
+//mod miller_rabin;
+//mod precomputed;
 #[cfg(test)]
 pub(crate) mod primes;
 #[cfg(test)]
 pub(crate) mod pseudoprimes;
-mod sieve;
+//mod sieve;
 
 pub use lucas::{lucas_test, AStarBase, BruteForceBase, LucasBase, LucasCheck, SelfridgeBase};
-pub use miller_rabin::MillerRabin;
-pub use sieve::{random_odd_uint, Sieve};
+//pub use miller_rabin::MillerRabin;
+//pub use sieve::{random_odd_uint, Sieve};
 
 /// Possible results of various primality tests.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
