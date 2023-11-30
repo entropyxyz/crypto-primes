@@ -137,7 +137,7 @@ pub fn is_safe_prime_with_rng<T: UintLike>(rng: &mut impl CryptoRngCore, num: &T
     if num == &T::from(5u32) {
         return true;
     }
-    if T::from(3u32) & num != T::from(3u32) {
+    if T::from(3u32) & num.clone() != T::from(3u32) {
         return false;
     }
 

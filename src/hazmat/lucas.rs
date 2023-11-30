@@ -171,7 +171,7 @@ fn decompose<T: UintLike>(n: &T) -> (usize, T) {
 
     let s = n.trailing_ones();
     // This won't overflow since the original `n` was odd, so we right-shifted at least once.
-    let d = Option::from(n.shr(s).checked_add(&T::one())).expect("Integer overflow");
+    let d = Option::from((n.clone() >> s).checked_add(&T::one())).expect("Integer overflow");
 
     (s, d)
 }

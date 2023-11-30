@@ -114,7 +114,7 @@ impl<T: UintLike> Sieve<T> {
             base = T::from(3u32);
         } else {
             // Adjust the base so that we hit odd numbers when incrementing it by 2.
-            base |= T::one();
+            base = base | T::one();
         }
 
         // Only calculate residues by primes up to and not including `base`,
