@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Bumped `crypto-bigint` to 0.5.4. ([#35])
 
 
-[#35]: https://github.com/nucypher/rust-umbral/pull/35
+[#35]: https://github.com/entropyxyz/crypto-primes/pull/35
 
 
 ## [0.5.0] - 2023-08-20
@@ -23,7 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Set lower bound `rand_core = 0.6.4`. ([#31])
 
 
-[#31]: https://github.com/nucypher/rust-umbral/pull/31
+[#31]: https://github.com/entropyxyz/crypto-primes/pull/31
 
 
 ## [0.4.1] - 2023-07-11
@@ -33,7 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `subtle` version requirement relaxed to the (implicit) 2.4, instead of technically requiring 2.5 to compile. ([#30])
 
 
-[#30]: https://github.com/nucypher/rust-umbral/pull/30
+[#30]: https://github.com/entropyxyz/crypto-primes/pull/30
 
 
 ## [0.4.0] - 2023-06-28
@@ -50,9 +50,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Default preset now uses A* instead of A base selection method for the Lucas test. This does not change the outcomes, but is implemented as a security recommendation. ([#26])
 
 
-[#26]: https://github.com/nucypher/rust-umbral/pull/26
-[#28]: https://github.com/nucypher/rust-umbral/pull/28
-[#29]: https://github.com/nucypher/rust-umbral/pull/29
+[#26]: https://github.com/entropyxyz/crypto-primes/pull/26
+[#28]: https://github.com/entropyxyz/crypto-primes/pull/28
+[#29]: https://github.com/entropyxyz/crypto-primes/pull/29
 
 
 ## [0.3.0] - 2023-05-05
@@ -78,10 +78,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Performance increase for the cases when the bit size of the generated prime is smaller than that of the containing `Uint`. ([#19])
 
 
-[#19]: https://github.com/nucypher/rust-umbral/pull/19
-[#20]: https://github.com/nucypher/rust-umbral/pull/20
-[#22]: https://github.com/nucypher/rust-umbral/pull/22
-[#24]: https://github.com/nucypher/rust-umbral/pull/24
+[#19]: https://github.com/entropyxyz/crypto-primes/pull/19
+[#20]: https://github.com/entropyxyz/crypto-primes/pull/20
+[#22]: https://github.com/entropyxyz/crypto-primes/pull/22
+[#24]: https://github.com/entropyxyz/crypto-primes/pull/24
 
 
 ## [0.2.0] - 2023-03-06
@@ -105,11 +105,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed multiple corner cases in `Sieve` for small ranges. ([#14])
 
 
-[#11]: https://github.com/nucypher/rust-umbral/pull/11
-[#12]: https://github.com/nucypher/rust-umbral/pull/12
-[#13]: https://github.com/nucypher/rust-umbral/pull/13
-[#14]: https://github.com/nucypher/rust-umbral/pull/14
-[#18]: https://github.com/nucypher/rust-umbral/pull/18
+[#11]: https://github.com/entropyxyz/crypto-primes/pull/11
+[#12]: https://github.com/entropyxyz/crypto-primes/pull/12
+[#13]: https://github.com/entropyxyz/crypto-primes/pull/13
+[#14]: https://github.com/entropyxyz/crypto-primes/pull/14
+[#18]: https://github.com/entropyxyz/crypto-primes/pull/18
 
 
 ## [0.1.0] - 2023-01-20
@@ -117,9 +117,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Initial release.
 
 
-[0.1.0]: https://github.com/nucypher/rust-umbral/releases/tag/v0.1.0
-[0.2.0]: https://github.com/nucypher/rust-umbral/releases/tag/v0.2.0
-[0.3.0]: https://github.com/nucypher/rust-umbral/releases/tag/v0.3.0
-[0.4.0]: https://github.com/nucypher/rust-umbral/releases/tag/v0.4.0
-[0.4.1]: https://github.com/nucypher/rust-umbral/releases/tag/v0.4.1
-[0.5.0]: https://github.com/nucypher/rust-umbral/releases/tag/v0.5.0
+[0.1.0]: https://github.com/entropyxyz/crypto-primes/releases/tag/v0.1.0
+[0.2.0]: https://github.com/entropyxyz/crypto-primes/releases/tag/v0.2.0
+[0.3.0]: https://github.com/entropyxyz/crypto-primes/releases/tag/v0.3.0
+[0.4.0]: https://github.com/entropyxyz/crypto-primes/releases/tag/v0.4.0
+[0.4.1]: https://github.com/entropyxyz/crypto-primes/releases/tag/v0.4.1
+[0.5.0]: https://github.com/entropyxyz/crypto-primes/releases/tag/v0.5.0
