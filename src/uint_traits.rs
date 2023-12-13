@@ -2,35 +2,30 @@ use core::ops::{Add, Mul, Neg, Sub};
 
 use crypto_bigint::{
     modular::{DynResidue, DynResidueParams},
-    subtle::{CtOption},
+    subtle::CtOption,
     Integer, Limb, PowBoundedExp, RandomMod, Reciprocal, Uint,
 };
 use rand_core::CryptoRngCore;
 
 // would be nice to have: *Assign traits; arithmetic traits for &self (BitAnd and Shr in particular);
-pub trait UintLike:
-    Integer
-    + From<u32>
-    + From<u16>
-    + RandomMod
-{
+pub trait UintLike: Integer + From<u32> + From<u16> + RandomMod {
     type Modular: UintModLike<Raw = Self>;
 
     // We can get by with non-small versions of jacobi_symbol and gcd, they don't have a big impact
     // on the performance.
     fn jacobi_symbol_small(lhs: i32, rhs: &Self) -> JacobiSymbol;
     fn gcd_small(&self, rhs: u32) -> u32;
-    fn bits(&self) -> usize;
-    fn bits_vartime(&self) -> usize;
-    fn bit_vartime(&self, index: usize) -> bool;
-    fn trailing_zeros(&self) -> usize;
-    fn trailing_ones(&self) -> usize;
+    fn bits(&self) -> u32;
+    fn bits_vartime(&self) -> u32;
+    fn bit_vartime(&self, index: u32) -> bool;
+    fn trailing_zeros(&self) -> u32;
+    fn trailing_ones(&self) -> u32;
     fn wrapping_sub(&self, rhs: &Self) -> Self;
     fn wrapping_mul(&self, rhs: &Self) -> Self;
     fn sqrt_vartime(&self) -> Self;
-    fn shr_vartime(&self, shift: usize) -> Self;
-    fn shl_vartime(&self, shift: usize) -> Self;
-    fn random_bits(rng: &mut impl CryptoRngCore, bit_length: usize) -> Self;
+    fn shr_vartime(&self, shift: u32) -> Self;
+    fn shl_vartime(&self, shift: u32) -> Self;
+    fn random_bits(rng: &mut impl CryptoRngCore, bit_length: u32) -> Self;
     fn ct_div_rem_limb_with_reciprocal(&self, reciprocal: &Reciprocal) -> (Self, Limb);
     fn try_into_u32(&self) -> Option<u32>; // Will have to be implemented at Uint<L> level if we want to use TryFrom trait
 }
@@ -89,11 +84,11 @@ impl<const L: usize> UintLike for Uint<L> {
         unimplemented!()
     }
 
-    fn trailing_zeros(&self) -> usize {
+    fn trailing_zeros(&self) -> u32 {
         Self::trailing_zeros(self)
     }
 
-    fn trailing_ones(&self) -> usize {
+    fn trailing_ones(&self) -> u32 {
         Self::trailing_ones(self)
     }
 
@@ -105,15 +100,15 @@ impl<const L: usize> UintLike for Uint<L> {
         Self::wrapping_mul(self, rhs)
     }
 
-    fn bits(&self) -> usize {
+    fn bits(&self) -> u32 {
         Self::bits(self)
     }
 
-    fn bits_vartime(&self) -> usize {
+    fn bits_vartime(&self) -> u32 {
         Self::bits_vartime(self)
     }
 
-    fn bit_vartime(&self, index: usize) -> bool {
+    fn bit_vartime(&self, index: u32) -> bool {
         Self::bit_vartime(self, index)
     }
 
@@ -121,15 +116,15 @@ impl<const L: usize> UintLike for Uint<L> {
         Self::sqrt_vartime(self)
     }
 
-    fn shr_vartime(&self, shift: usize) -> Self {
+    fn shr_vartime(&self, shift: u32) -> Self {
         Self::shr_vartime(self, shift)
     }
 
-    fn shl_vartime(&self, shift: usize) -> Self {
+    fn shl_vartime(&self, shift: u32) -> Self {
         Self::shl_vartime(self, shift)
     }
 
-    fn random_bits(rng: &mut impl CryptoRngCore, bit_length: usize) -> Self {
+    fn random_bits(rng: &mut impl CryptoRngCore, bit_length: u32) -> Self {
         unimplemented!()
     }
 

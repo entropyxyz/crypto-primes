@@ -163,7 +163,7 @@ impl LucasBase for BruteForceBase {
 }
 
 /// For the given odd `n`, finds `s` and odd `d` such that `n + 1 == 2^s * d`.
-fn decompose<T: UintLike>(n: &T) -> (usize, T) {
+fn decompose<T: UintLike>(n: &T) -> (u32, T) {
     debug_assert!(bool::from(n.is_odd()));
 
     // Need to be careful here since `n + 1` can overflow.

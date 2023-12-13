@@ -14,7 +14,7 @@ use crate::{
 /// (that is, with both `0` and `bit_length-1` bits set).
 ///
 /// Panics if `bit_length` is 0 or is greater than the bit size of the target `Uint`.
-pub fn random_odd_uint<T: UintLike>(rng: &mut impl CryptoRngCore, bit_length: usize) -> T {
+pub fn random_odd_uint<T: UintLike>(rng: &mut impl CryptoRngCore, bit_length: u32) -> T {
     if bit_length == 0 {
         panic!("Bit length must be non-zero");
     }
@@ -60,7 +60,7 @@ pub struct Sieve<T: UintLike> {
     incr_limit: Residue,
     safe_primes: bool,
     residues: Vec<SmallPrime>,
-    max_bit_length: usize,
+    max_bit_length: u32,
     produces_nothing: bool,
     starts_from_exception: bool,
     last_round: bool,
@@ -79,7 +79,7 @@ impl<T: UintLike> Sieve<T> {
     /// Panics if `max_bit_length` is zero or greater than the size of the target `Uint`.
     ///
     /// If `safe_primes` is `true`, both the returned `n` and `n/2` are sieved.
-    pub fn new(start: &T, max_bit_length: usize, safe_primes: bool) -> Self {
+    pub fn new(start: &T, max_bit_length: u32, safe_primes: bool) -> Self {
         if max_bit_length == 0 {
             panic!("The requested bit length cannot be zero");
         }
@@ -297,7 +297,7 @@ mod tests {
         }
     }
 
-    fn check_sieve(start: u32, bit_length: usize, safe_prime: bool, reference: &[u32]) {
+    fn check_sieve(start: u32, bit_length: u32, safe_prime: bool, reference: &[u32]) {
         let test = Sieve::new(&U64::from(start), bit_length, safe_prime).collect::<Vec<_>>();
         assert_eq!(test.len(), reference.len());
         for (x, y) in test.iter().zip(reference.iter()) {

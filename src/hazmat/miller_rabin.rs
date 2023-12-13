@@ -17,11 +17,11 @@ use crate::{UintLike, UintModLike};
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct MillerRabin<T: UintLike> {
     candidate: T,
-    bit_length: usize,
+    bit_length: u32,
     montgomery_params: <T::Modular as UintModLike>::Params,
     one: T::Modular,
     minus_one: T::Modular,
-    s: usize,
+    s: u32,
     d: T,
 }
 

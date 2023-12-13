@@ -13,7 +13,7 @@ use crate::UintLike;
 ///
 /// See [`is_prime_with_rng`] for details about the performed checks.
 #[cfg(feature = "default-rng")]
-pub fn generate_prime<T: UintLike>(bit_length: usize) -> T {
+pub fn generate_prime<T: UintLike>(bit_length: u32) -> T {
     generate_prime_with_rng(&mut OsRng, bit_length)
 }
 
@@ -23,7 +23,7 @@ pub fn generate_prime<T: UintLike>(bit_length: usize) -> T {
 ///
 /// See [`is_prime_with_rng`] for details about the performed checks.
 #[cfg(feature = "default-rng")]
-pub fn generate_safe_prime<T: UintLike>(bit_length: usize) -> T {
+pub fn generate_safe_prime<T: UintLike>(bit_length: u32) -> T {
     generate_safe_prime_with_rng(&mut OsRng, bit_length)
 }
 
@@ -51,7 +51,7 @@ pub fn is_safe_prime<T: UintLike>(num: &T) -> bool {
 /// Panics if `bit_length` is less than 2, or greater than the bit size of the target `Uint`.
 ///
 /// See [`is_prime_with_rng`] for details about the performed checks.
-pub fn generate_prime_with_rng<T: UintLike>(rng: &mut impl CryptoRngCore, bit_length: usize) -> T {
+pub fn generate_prime_with_rng<T: UintLike>(rng: &mut impl CryptoRngCore, bit_length: u32) -> T {
     if bit_length < 2 {
         panic!("`bit_length` must be 2 or greater.");
     }
@@ -75,7 +75,7 @@ pub fn generate_prime_with_rng<T: UintLike>(rng: &mut impl CryptoRngCore, bit_le
 /// See [`is_prime_with_rng`] for details about the performed checks.
 pub fn generate_safe_prime_with_rng<T: UintLike>(
     rng: &mut impl CryptoRngCore,
-    bit_length: usize,
+    bit_length: u32,
 ) -> T {
     if bit_length < 3 {
         panic!("`bit_length` must be 3 or greater.");
@@ -246,7 +246,7 @@ mod tests {
 
     #[test]
     fn prime_generation() {
-        for bit_length in (28..=128).step_by(10) {
+        for bit_length in (28u32..=128).step_by(10) {
             let p: U128 = generate_prime(bit_length);
             assert!(p.bits_vartime() == bit_length);
             assert!(is_prime(&p));
@@ -316,7 +316,7 @@ mod tests {
 
     #[test]
     fn corner_cases_generate_prime() {
-        for bits in 2usize..5 {
+        for bits in 2u32..5 {
             for _ in 0..100 {
                 let p: U64 = generate_prime(bits);
                 let p_word = p.as_words()[0];
@@ -327,7 +327,7 @@ mod tests {
 
     #[test]
     fn corner_cases_generate_safe_prime() {
-        for bits in 3usize..5 {
+        for bits in 3u32..5 {
             for _ in 0..100 {
                 let p: U64 = generate_safe_prime(bits);
                 let p_word = p.as_words()[0];
