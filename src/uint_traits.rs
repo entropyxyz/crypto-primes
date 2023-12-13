@@ -8,15 +8,13 @@ use crypto_bigint::{
 use rand_core::CryptoRngCore;
 
 // would be nice to have: *Assign traits; arithmetic traits for &self (BitAnd and Shr in particular);
-pub trait UintLike: Integer + From<u32> + From<u16> + RandomMod {
+pub trait UintLike: Integer + RandomMod {
     type Modular: UintModLike<Raw = Self>;
 
     // We can get by with non-small versions of jacobi_symbol and gcd, they don't have a big impact
     // on the performance.
     fn jacobi_symbol_small(lhs: i32, rhs: &Self) -> JacobiSymbol;
     fn gcd_small(&self, rhs: u32) -> u32;
-    fn bits(&self) -> u32;
-    fn bits_vartime(&self) -> u32;
     fn bit_vartime(&self, index: u32) -> bool;
     fn trailing_zeros(&self) -> u32;
     fn trailing_ones(&self) -> u32;
@@ -98,14 +96,6 @@ impl<const L: usize> UintLike for Uint<L> {
 
     fn wrapping_mul(&self, rhs: &Self) -> Self {
         Self::wrapping_mul(self, rhs)
-    }
-
-    fn bits(&self) -> u32 {
-        Self::bits(self)
-    }
-
-    fn bits_vartime(&self) -> u32 {
-        Self::bits_vartime(self)
     }
 
     fn bit_vartime(&self, index: u32) -> bool {
