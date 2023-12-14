@@ -13,20 +13,27 @@ use crate::{
 /// Returns a random odd integer with given bit length
 /// (that is, with both `0` and `bit_length-1` bits set).
 ///
+/// Where T is stack allocated (Uint), `bits_precision` must be exactly `T::BITS`. Where T is
+/// heap-allocated (BoxedUint), `bits_precision` will be passed to the appropriate type.
+///
 /// Panics if `bit_length` is 0 or is greater than the bit size of the target `Uint`.
-pub fn random_odd_uint<T: UintLike>(rng: &mut impl CryptoRngCore, bit_length: u32) -> T {
+pub fn random_odd_uint<T: UintLike>(
+    rng: &mut impl CryptoRngCore,
+    bit_length: u32,
+    bits_precision: u32,
+) -> T {
     if bit_length == 0 {
         panic!("Bit length must be non-zero");
     }
 
     // TODO: what do we do here if `bit_length` is greater than Uint<L>::BITS?
     // assume that the user knows what he's doing since it is a hazmat function?
-    /*if bit_length > Uint::<L>::BITS {
+    if bit_length > bits_precision {
         panic!(
             "The requested bit length ({}) is larger than the chosen Uint size",
             bit_length
         );
-    }*/
+    }
 
     // TODO: not particularly efficient, can be improved by zeroing high bits instead of shifting
     let random = T::random_bits(rng, bit_length);
@@ -286,7 +293,7 @@ mod tests {
         let max_prime = SMALL_PRIMES[SMALL_PRIMES.len() - 1];
 
         let mut rng = ChaCha8Rng::from_seed(*b"01234567890123456789012345678901");
-        let start: U64 = random_odd_uint(&mut rng, 32);
+        let start: U64 = random_odd_uint(&mut rng, 32, U64::BITS);
         for num in Sieve::new(&start, 32, false).take(100) {
             let num_u64: u64 = num.into();
             assert!(num_u64.leading_zeros() == 32);
@@ -366,7 +373,7 @@ mod tests {
     #[test]
     fn random_below_max_length() {
         for _ in 0..10 {
-            let r: U64 = random_odd_uint(&mut OsRng, 50);
+            let r: U64 = random_odd_uint(&mut OsRng, 50, U64::BITS);
             assert_eq!(r.bits(), 50);
         }
     }
@@ -374,13 +381,13 @@ mod tests {
     #[test]
     #[should_panic(expected = "Bit length must be non-zero")]
     fn random_odd_uint_0bits() {
-        let _p: U64 = random_odd_uint(&mut OsRng, 0);
+        let _p: U64 = random_odd_uint(&mut OsRng, 0, U64::BITS);
     }
 
     #[test]
     #[should_panic(expected = "The requested bit length (65) is larger than the chosen Uint size")]
     fn random_odd_uint_too_many_bits() {
-        let _p: U64 = random_odd_uint(&mut OsRng, 65);
+        let _p: U64 = random_odd_uint(&mut OsRng, 65, U64::BITS);
     }
 
     #[test]

@@ -549,8 +549,9 @@ mod tests {
     #[test]
     fn decomposition() {
         assert_eq!(decompose(&U128::MAX), (128, U128::ONE));
-        assert_eq!(decompose(&U128::ONE), (1, U128::ONE));
+        assert_eq!(decompose(&U128::ONE), (1, U128::ONE)); // OK
         assert_eq!(decompose(&U128::from(7766015u32)), (15, U128::from(237u32)));
+        // OK
     }
 
     fn is_slpsp(num: u32) -> bool {
