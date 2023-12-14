@@ -222,7 +222,7 @@ fn bench_presets(c: &mut Criterion) {
 
     let mut rng = make_rng();
     group.bench_function("(U1024) Random prime", |b| {
-        b.iter(|| generate_prime_with_rng::<U1024>(&mut rng, 1024, U128::BITS))
+        b.iter(|| generate_prime_with_rng::<U1024>(&mut rng, 1024, U1024::BITS))
     });
 
     let mut rng = make_rng();
