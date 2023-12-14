@@ -2,7 +2,7 @@
 //! Handle with care.
 
 //mod gcd;
-//mod jacobi;
+mod jacobi;
 mod lucas;
 mod miller_rabin;
 mod precomputed;

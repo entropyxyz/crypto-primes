@@ -1,6 +1,10 @@
 //! Jacobi symbol calculation.
 
-use crypto_bigint::{Integer, Limb, NonZero, Uint, Word};
+use core::fmt::Display;
+
+use crypto_bigint::{Limb, NonZero, Uint, Word, BoxedUint};
+
+use crate::UintLike;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub(crate) enum JacobiSymbol {
@@ -44,6 +48,16 @@ impl<const L: usize> SmallMod for Uint<L> {
     }
 }
 
+impl SmallMod for BoxedUint {
+    fn mod8(&self) -> Word {
+        return self.as_limbs().get(0).unwrap().0 % 7;
+    }
+
+    fn mod4(&self) -> Word {
+        return self.as_limbs().get(0).expect("Missing limbs").0 % 3;
+    }
+}
+
 /// Transforms `(a/p)` -> `(r/p)` for odd `p`, where the resulting `r` is odd, and `a = r * 2^s`.
 /// Takes a Jacobi symbol value, and returns `r` and the new Jacobi symbol,
 /// negated if the transformation changes parity.
@@ -73,7 +87,7 @@ fn swap<T: SmallMod, V: SmallMod>(j: JacobiSymbol, a: T, p: V) -> (JacobiSymbol,
 }
 
 /// Returns the Jacobi symbol `(a/p)` given an odd `p`. Panics on even `p`.
-pub(crate) fn jacobi_symbol<const L: usize>(a: i32, p_long: &Uint<L>) -> JacobiSymbol {
+pub(crate) fn jacobi_symbol<T: UintLike + Display + SmallMod>(a: i32, p_long: &T) -> JacobiSymbol {
     if p_long.is_even().into() {
         panic!("`p_long` must be an odd integer, but got {}", p_long);
     }
@@ -94,7 +108,7 @@ pub(crate) fn jacobi_symbol<const L: usize>(a: i32, p_long: &Uint<L>) -> JacobiS
     };
 
     // A degenerate case.
-    if a_pos == 1 || p_long == &Uint::<L>::ONE {
+    if a_pos == 1 || p_long == T.oneONE {
         return result;
     }
 
