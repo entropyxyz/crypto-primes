@@ -1,4 +1,4 @@
-use crypto_bigint::{Limb, Reciprocal, Word};
+use crypto_bigint::{Limb, NonZero, Reciprocal, Word};
 
 /// The type that fits any small prime from the table.
 pub(crate) type SmallPrime = u16;
@@ -151,7 +151,8 @@ const fn create_reciprocals() -> [Reciprocal; SMALL_PRIMES_SIZE] {
     let mut arr = [Reciprocal::default(); SMALL_PRIMES_SIZE];
     let mut i = 0;
     while i < SMALL_PRIMES_SIZE {
-        arr[i] = Reciprocal::ct_new(Limb(SMALL_PRIMES[i] as Word)).0;
+        let limb = NonZero::new(Limb(SMALL_PRIMES[i] as Word)).expect("Small prime is zero");
+        arr[i] = Reciprocal::new(limb);
         i += 1;
     }
     arr
