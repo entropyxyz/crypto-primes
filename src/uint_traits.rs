@@ -5,9 +5,10 @@ use crate::hazmat::{
 use core::ops::{Add, Mul, Neg, Sub};
 
 use crypto_bigint::{
-    modular::{DynResidue, DynResidueParams},
+    modular::{BoxedResidue, BoxedResidueParams, DynResidue, DynResidueParams},
     subtle::CtOption,
-    ConstChoice, Integer, Limb, NonZero, PowBoundedExp, Random, RandomMod, Reciprocal, Uint, Word,
+    BoxedUint, ConstChoice, Integer, Limb, NonZero, PowBoundedExp, Random, RandomMod, Reciprocal,
+    Uint, Word,
 };
 use rand_core::CryptoRngCore;
 
@@ -158,5 +159,102 @@ impl<const L: usize> UintModLike for DynResidue<L> {
 
     fn div_by_2(&self) -> Self {
         Self::div_by_2(self)
+    }
+}
+
+impl UintLike for BoxedUint {
+    type Modular = BoxedResidue;
+
+    fn jacobi_symbol_small(lhs: i32, rhs: &Self) -> JacobiSymbol {
+        todo!();
+    }
+
+    fn gcd_small(&self, rhs: u32) -> u32 {
+        todo!();
+    }
+
+    fn bit_vartime(&self, index: u32) -> bool {
+        todo!();
+    }
+
+    fn trailing_zeros(&self) -> u32 {
+        todo!();
+    }
+
+    fn trailing_ones(&self) -> u32 {
+        todo!();
+    }
+
+    fn wrapping_sub(&self, rhs: &Self) -> Self {
+        todo!();
+    }
+
+    fn wrapping_mul(&self, rhs: &Self) -> Self {
+        todo!();
+    }
+
+    fn sqrt_vartime(&self) -> Self {
+        todo!();
+    }
+
+    fn shr_vartime(&self, shift: u32) -> (Self, ConstChoice) {
+        todo!();
+    }
+
+    fn shl_vartime(&self, shift: u32) -> (Self, ConstChoice) {
+        todo!();
+    }
+
+    fn random_bits(rng: &mut impl CryptoRngCore, bit_length: u32) -> Self {
+        todo!();
+    }
+
+    fn ct_div_rem_limb_with_reciprocal(&self, reciprocal: &Reciprocal) -> (Self, Limb) {
+        todo!();
+    }
+
+    fn try_into_u32(&self) -> Option<u32> {
+        todo!();
+    }
+
+    fn as_limbs(&self) -> &[Limb] {
+        todo!();
+    }
+
+    fn as_words(&self) -> &[Word] {
+        todo!();
+    }
+
+    fn div_rem_limb(&self, rhs: NonZero<Limb>) -> (Self, Limb) {
+        todo!();
+    }
+}
+
+impl UintModLike for BoxedResidue {
+    type Raw = BoxedUint;
+    type Params = BoxedResidueParams;
+
+    fn new_params(modulus: &Self::Raw) -> CtOption<Self::Params> {
+        todo!();
+    }
+
+    fn new(raw: &Self::Raw, params: &Self::Params) -> Self {
+        todo!();
+    }
+
+    fn zero(params: &Self::Params) -> Self {
+        todo!();
+    }
+
+    fn one(params: &Self::Params) -> Self {
+        todo!();
+    }
+
+    fn square(&self) -> Self {
+        todo!();
+    }
+
+    fn div_by_2(&self) -> Self {
+        todo!();
     }
 }
