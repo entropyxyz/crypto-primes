@@ -86,19 +86,19 @@ impl<T: UintLike> Sieve<T> {
     /// Panics if `max_bit_length` is zero or greater than the size of the target `Uint`.
     ///
     /// If `safe_primes` is `true`, both the returned `n` and `n/2` are sieved.
-    pub fn new(start: &T, max_bit_length: u32, safe_primes: bool) -> Self {
+    pub fn new(start: &T, max_bit_length: u32, safe_primes: bool, bits_precision: u32) -> Self {
         if max_bit_length == 0 {
             panic!("The requested bit length cannot be zero");
         }
 
         // TODO: what do we do here if `bit_length` is greater than Uint<L>::BITS?
         // assume that the user knows what he's doing since it is a hazmat function?
-        /*if max_bit_length > Uint::<L>::BITS {
+        if max_bit_length > bits_precision {
             panic!(
                 "The requested bit length ({}) is larger than the chosen Uint size",
                 max_bit_length
             );
-        }*/
+        }
 
         // If we are targeting safe primes, iterate over the corresponding
         // possible Germain primes (`n/2`), reducing the task to that with `safe_primes = false`.
@@ -294,7 +294,7 @@ mod tests {
 
         let mut rng = ChaCha8Rng::from_seed(*b"01234567890123456789012345678901");
         let start: U64 = random_odd_uint(&mut rng, 32, U64::BITS);
-        for num in Sieve::new(&start, 32, false).take(100) {
+        for num in Sieve::new(&start, 32, false, U64::BITS).take(100) {
             let num_u64: u64 = num.into();
             assert!(num_u64.leading_zeros() == 32);
 
@@ -306,7 +306,8 @@ mod tests {
     }
 
     fn check_sieve(start: u32, bit_length: u32, safe_prime: bool, reference: &[u32]) {
-        let test = Sieve::new(&U64::from(start), bit_length, safe_prime).collect::<Vec<_>>();
+        let test =
+            Sieve::new(&U64::from(start), bit_length, safe_prime, U64::BITS).collect::<Vec<_>>();
         assert_eq!(test.len(), reference.len());
         for (x, y) in test.iter().zip(reference.iter()) {
             assert_eq!(x, &U64::from(*y));
@@ -361,13 +362,13 @@ mod tests {
     #[test]
     #[should_panic(expected = "The requested bit length cannot be zero")]
     fn sieve_zero_bits() {
-        let _sieve = Sieve::new(&U64::ONE, 0, false);
+        let _sieve = Sieve::new(&U64::ONE, 0, false, U64::BITS);
     }
 
     #[test]
     #[should_panic(expected = "The requested bit length (65) is larger than the chosen Uint size")]
     fn sieve_too_many_bits() {
-        let _sieve = Sieve::new(&U64::ONE, 65, false);
+        let _sieve = Sieve::new(&U64::ONE, 65, false, U64::BITS);
     }
 
     #[test]
@@ -392,7 +393,7 @@ mod tests {
 
     #[test]
     fn sieve_derived_traits() {
-        let s = Sieve::new(&U64::ONE, 10, false);
+        let s = Sieve::new(&U64::ONE, 10, false, U64::BITS);
         assert!(format!("{s:?}").starts_with("Sieve"));
         assert_eq!(s.clone(), s);
     }

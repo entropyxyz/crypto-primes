@@ -29,7 +29,7 @@ fn make_sieve<T: UintLike>(
     bits_precision: u32,
 ) -> Sieve<T> {
     let start: T = random_odd_uint(rng, bit_length, bits_precision);
-    return Sieve::new(&start, bit_length, false);
+    return Sieve::new(&start, bit_length, false, bits_precision);
 }
 
 fn make_presieved_num<T: UintLike>(
@@ -51,7 +51,7 @@ fn bench_sieve(c: &mut Criterion) {
     group.bench_function("(U128) creation", |b| {
         b.iter_batched(
             || random_odd_uint(&mut OsRng, 128, U128::BITS),
-            |start| Sieve::<U128>::new(&start, 128, false),
+            |start| Sieve::<U128>::new(&start, 128, false, U128::BITS),
             BatchSize::SmallInput,
         )
     });
@@ -72,7 +72,7 @@ fn bench_sieve(c: &mut Criterion) {
     group.bench_function("(U1024) creation", |b| {
         b.iter_batched(
             || random_odd_uint(&mut OsRng, 1024, U1024::BITS),
-            |start| Sieve::<U1024>::new(&start, 1024, false),
+            |start| Sieve::<U1024>::new(&start, 1024, false, U1024::BITS),
             BatchSize::SmallInput,
         )
     });

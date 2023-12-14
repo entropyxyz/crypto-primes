@@ -64,7 +64,7 @@ pub fn generate_prime_with_rng<T: UintLike>(
     }
     loop {
         let start = random_odd_uint::<T>(rng, bit_length, bits_precision);
-        let sieve = Sieve::new(&start, bit_length, false);
+        let sieve = Sieve::new(&start, bit_length, false, bits_precision);
         for num in sieve {
             if is_prime_with_rng(rng, &num) {
                 return num;
@@ -90,7 +90,7 @@ pub fn generate_safe_prime_with_rng<T: UintLike>(
     }
     loop {
         let start = random_odd_uint::<T>(rng, bit_length, bits_precision);
-        let sieve = Sieve::new(&start, bit_length, true);
+        let sieve = Sieve::new(&start, bit_length, true, bits_precision);
         for num in sieve {
             if is_safe_prime_with_rng(rng, &num) {
                 return num;
