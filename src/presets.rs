@@ -183,7 +183,7 @@ fn _is_prime_with_rng<T: UintLike>(rng: &mut impl CryptoRngCore, num: &T) -> boo
 
 #[cfg(test)]
 mod tests {
-    use crypto_bigint::{CheckedAdd, Uint, Word, U128, U64};
+    use crypto_bigint::{CheckedAdd, Uint, Word, U128, U64, BoxedUint};
     use num_prime::nt_funcs::is_prime64;
     use rand_core::OsRng;
 
@@ -265,12 +265,24 @@ mod tests {
             assert!(p.bits_vartime() == bit_length);
             assert!(is_prime(&p));
         }
+
+        for bit_length in (28u32..=128).step_by(10) {
+            let p: BoxedUint = generate_prime(bit_length, 128);
+            assert!(p.bits_vartime() == bit_length);
+            assert!(is_prime(&p));
+        }
     }
 
     #[test]
     fn safe_prime_generation() {
         for bit_length in (28..=128).step_by(10) {
             let p: U128 = generate_safe_prime(bit_length, U128::BITS);
+            assert!(p.bits_vartime() == bit_length);
+            assert!(is_safe_prime(&p));
+        }
+
+        for bit_length in (28u32..=128).step_by(10) {
+            let p: BoxedUint = generate_safe_prime(bit_length, 128);
             assert!(p.bits_vartime() == bit_length);
             assert!(is_safe_prime(&p));
         }
