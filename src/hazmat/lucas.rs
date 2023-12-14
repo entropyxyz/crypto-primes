@@ -172,9 +172,7 @@ fn decompose<T: UintLike>(n: &T) -> (u32, T) {
 
     let s = n.trailing_ones();
     // This won't overflow since the original `n` was odd, so we right-shifted at least once.
-    // TODO: shr(s-1).shr(1) is a hack around the fact that a full right shift will panic
-    // see https://github.com/RustCrypto/crypto-bigint/commit/55312b6aa71#r134960147
-    let d = Option::from((n.clone().shr(s - 1).shr(1)).checked_add(&T::one()))
+    let d = Option::from((n.clone().shr_vartime(s).0).checked_add(&T::one()))
         .expect("Integer overflow");
 
     (s, d)
@@ -551,7 +549,6 @@ mod tests {
 
     #[test]
     fn decomposition() {
-        // TODO: the first one overflows
         assert_eq!(decompose(&U128::MAX), (128, U128::ONE));
         assert_eq!(decompose(&U128::ONE), (1, U128::ONE));
         assert_eq!(decompose(&U128::from(7766015u32)), (15, U128::from(237u32)));

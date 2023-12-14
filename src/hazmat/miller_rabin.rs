@@ -43,8 +43,7 @@ impl<T: UintLike> MillerRabin<T> {
         // Find `s` and odd `d` such that `candidate - 1 == 2^s * d`.
         let candidate_minus_one = candidate.wrapping_sub(&T::one());
         let s = candidate_minus_one.trailing_zeros();
-        // TODO: https://github.com/RustCrypto/crypto-bigint/commit/55312b6aa71#r134960147
-        let d = candidate_minus_one.shr(s - 1).shr(1);
+        let d = candidate_minus_one.shr_vartime(s).0;
 
         Self {
             candidate: candidate.clone(),

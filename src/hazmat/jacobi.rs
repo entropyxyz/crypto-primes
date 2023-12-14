@@ -125,8 +125,9 @@ pub(crate) fn jacobi_symbol<T: UintLike + Display + SmallMod>(a: i32, p_long: &T
         if a == 1 {
             return result;
         }
-        // TODO: used to be *p_long because Uint implements Copy
-        // However, BoxedUint does not implement Copy. Is clone the best idea?
+        // NOTE: prior to the UintLike generics it was *p_long, which works because Uint implements
+        // Copy. However, BoxedUint does not implement Copy (which it should not anyways since it
+        // is heap-allocated), so explicit cloning is the next best thing
         let (result, a_long, p) = swap(result, a, p_long.clone());
         // Can unwrap here, since `p` is swapped with `a`,
         // and `a` would be odd after `reduce_numerator()`.

@@ -10,7 +10,9 @@ use crate::UintLike;
 
 /// Returns a random prime of size `bit_length` using [`OsRng`] as the RNG.
 /// If `bit_length` is `None`, the full size of `Uint<L>` is used.
-/// TODO: bits_precision?
+///
+/// Where T is stack allocated (Uint), `bits_precision` must be exactly `T::BITS`. Where T is
+/// heap-allocated (BoxedUint), `bits_precision` will be passed to the appropriate type.
 ///
 /// See [`is_prime_with_rng`] for details about the performed checks.
 #[cfg(feature = "default-rng")]
@@ -21,7 +23,9 @@ pub fn generate_prime<T: UintLike>(bit_length: u32, bits_precision: u32) -> T {
 /// Returns a random safe prime (that is, such that `(n - 1) / 2` is also prime)
 /// of size `bit_length` using [`OsRng`] as the RNG.
 /// If `bit_length` is `None`, the full size of `Uint<L>` is used.
-/// TODO: bits_precision?
+///
+/// Where T is stack allocated (Uint), `bits_precision` must be exactly `T::BITS`. Where T is
+/// heap-allocated (BoxedUint), `bits_precision` will be passed to the appropriate type.
 ///
 /// See [`is_prime_with_rng`] for details about the performed checks.
 #[cfg(feature = "default-rng")]
@@ -49,7 +53,9 @@ pub fn is_safe_prime<T: UintLike>(num: &T) -> bool {
 
 /// Returns a random prime of size `bit_length` using the provided RNG.
 /// If `bit_length` is `None`, the full size of `Uint<L>` is used.
-/// TODO: bits_precision?
+///
+/// Where T is stack allocated (Uint), `bits_precision` must be exactly `T::BITS`. Where T is
+/// heap-allocated (BoxedUint), `bits_precision` will be passed to the appropriate type.
 ///
 /// Panics if `bit_length` is less than 2, or greater than the bit size of the target `Uint`.
 ///

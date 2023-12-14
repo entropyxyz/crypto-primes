@@ -16,7 +16,8 @@ use crate::{
 /// Where T is stack allocated (Uint), `bits_precision` must be exactly `T::BITS`. Where T is
 /// heap-allocated (BoxedUint), `bits_precision` will be passed to the appropriate type.
 ///
-/// Panics if `bit_length` is 0 or is greater than the bit size of the target `Uint`.
+/// If `bit_length` is greater than `bits_precision`, or if `bit_length` is 0, this function will
+/// panic
 pub fn random_odd_uint<T: UintLike>(
     rng: &mut impl CryptoRngCore,
     bit_length: u32,
@@ -26,8 +27,6 @@ pub fn random_odd_uint<T: UintLike>(
         panic!("Bit length must be non-zero");
     }
 
-    // TODO: what do we do here if `bit_length` is greater than Uint<L>::BITS?
-    // assume that the user knows what he's doing since it is a hazmat function?
     if bit_length > bits_precision {
         panic!(
             "The requested bit length ({}) is larger than the chosen Uint size",
@@ -83,7 +82,7 @@ impl<T: UintLike> Sieve<T> {
     /// Note that `start` is adjusted to `2`, or the next `1 mod 2` number (`safe_primes = false`);
     /// and `5`, or `3 mod 4` number (`safe_primes = true`).
     ///
-    /// Panics if `max_bit_length` is zero or greater than the size of the target `Uint`.
+    /// Panics if `max_bit_length` is zero or greater than `bits_precision`
     ///
     /// If `safe_primes` is `true`, both the returned `n` and `n/2` are sieved.
     pub fn new(start: &T, max_bit_length: u32, safe_primes: bool, bits_precision: u32) -> Self {
@@ -91,8 +90,6 @@ impl<T: UintLike> Sieve<T> {
             panic!("The requested bit length cannot be zero");
         }
 
-        // TODO: what do we do here if `bit_length` is greater than Uint<L>::BITS?
-        // assume that the user knows what he's doing since it is a hazmat function?
         if max_bit_length > bits_precision {
             panic!(
                 "The requested bit length ({}) is larger than the chosen Uint size",
