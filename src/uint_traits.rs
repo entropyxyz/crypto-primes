@@ -2,7 +2,7 @@ use core::ops::{Add, Mul, Neg, Sub};
 
 use crypto_bigint::{
     modular::{DynResidue, DynResidueParams},
-    subtle::CtOption,
+    subtle::CtOption, ConstChoice,
     Integer, Limb, PowBoundedExp, RandomMod, Reciprocal, Uint,
 };
 use rand_core::CryptoRngCore;
@@ -21,11 +21,13 @@ pub trait UintLike: Integer + RandomMod {
     fn wrapping_sub(&self, rhs: &Self) -> Self;
     fn wrapping_mul(&self, rhs: &Self) -> Self;
     fn sqrt_vartime(&self) -> Self;
-    fn shr_vartime(&self, shift: u32) -> Self;
-    fn shl_vartime(&self, shift: u32) -> Self;
+    fn shr_vartime(&self, shift: u32) -> (Self, ConstChoice);
+    fn shl_vartime(&self, shift: u32) -> (Self, ConstChoice);
     fn random_bits(rng: &mut impl CryptoRngCore, bit_length: u32) -> Self;
     fn ct_div_rem_limb_with_reciprocal(&self, reciprocal: &Reciprocal) -> (Self, Limb);
     fn try_into_u32(&self) -> Option<u32>; // Will have to be implemented at Uint<L> level if we want to use TryFrom trait
+
+    fn as_limbs(&self) -> &[Limb];
 }
 
 pub trait UintModLike:
@@ -106,12 +108,16 @@ impl<const L: usize> UintLike for Uint<L> {
         Self::sqrt_vartime(self)
     }
 
-    fn shr_vartime(&self, shift: u32) -> Self {
+    fn shr_vartime(&self, shift: u32) -> (Self, ConstChoice) {
         Self::shr_vartime(self, shift)
     }
 
-    fn shl_vartime(&self, shift: u32) -> Self {
+    fn shl_vartime(&self, shift: u32) -> (Self, ConstChoice) {
         Self::shl_vartime(self, shift)
+    }
+
+    fn as_limbs(&self) -> &[Limb] {
+        self.as_limbs()
     }
 
     fn random_bits(rng: &mut impl CryptoRngCore, bit_length: u32) -> Self {
