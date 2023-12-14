@@ -8,6 +8,7 @@ use crypto_bigint::{
     modular::{DynResidue, DynResidueParams},
     subtle::CtOption,
     ConstChoice, Integer, Limb, NonZero, PowBoundedExp, RandomMod, Reciprocal, Uint, Word,
+    Random
 };
 use rand_core::CryptoRngCore;
 
@@ -113,9 +114,8 @@ impl<const L: usize> UintLike for Uint<L> {
         self.as_limbs()
     }
 
-    #[allow(unused_variables)]
     fn random_bits(rng: &mut impl CryptoRngCore, bit_length: u32) -> Self {
-        unimplemented!()
+        Self::random(rng).shl(Self::BITS - bit_length).0
     }
 
     fn ct_div_rem_limb_with_reciprocal(&self, reciprocal: &Reciprocal) -> (Self, Limb) {
