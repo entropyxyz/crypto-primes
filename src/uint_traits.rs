@@ -1,10 +1,13 @@
+use crate::hazmat::{
+    gcd::gcd,
+    jacobi::{self, JacobiSymbol},
+};
 use core::ops::{Add, Mul, Neg, Sub};
-use crate::hazmat::jacobi::{self, JacobiSymbol};
 
 use crypto_bigint::{
     modular::{DynResidue, DynResidueParams},
     subtle::CtOption,
-    ConstChoice, Integer, Limb, NonZero, PowBoundedExp, RandomMod, Reciprocal, Uint,
+    ConstChoice, Integer, Limb, NonZero, PowBoundedExp, RandomMod, Reciprocal, Uint, Word,
 };
 use rand_core::CryptoRngCore;
 
@@ -30,6 +33,7 @@ pub trait UintLike: Integer + RandomMod {
     fn try_into_u32(&self) -> Option<u32>; // Will have to be implemented at Uint<L> level if we want to use TryFrom trait
 
     fn as_limbs(&self) -> &[Limb];
+    fn as_words(&self) -> &[Word];
     fn div_rem_limb(&self, rhs: NonZero<Limb>) -> (Self, Limb);
 }
 
@@ -61,13 +65,16 @@ pub trait UintModLike:
 impl<const L: usize> UintLike for Uint<L> {
     type Modular = DynResidue<L>;
 
+    fn as_words(&self) -> &[Word] {
+        self.as_words()
+    }
+
     fn jacobi_symbol_small(lhs: i32, rhs: &Self) -> JacobiSymbol {
         jacobi::jacobi_symbol(lhs, rhs)
     }
 
-    #[allow(unused_variables)]
     fn gcd_small(&self, rhs: u32) -> u32 {
-        unimplemented!()
+        gcd(self, rhs)
     }
 
     fn trailing_zeros(&self) -> u32 {

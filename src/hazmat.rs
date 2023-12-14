@@ -1,7 +1,7 @@
 //! Components to build your own primality test.
 //! Handle with care.
 
-//mod gcd;
+pub(crate) mod gcd;
 pub(crate) mod jacobi;
 mod lucas;
 mod miller_rabin;
@@ -12,6 +12,7 @@ pub(crate) mod primes;
 pub(crate) mod pseudoprimes;
 mod sieve;
 
+pub use jacobi::JacobiSymbol;
 pub use lucas::{lucas_test, AStarBase, BruteForceBase, LucasBase, LucasCheck, SelfridgeBase};
 pub use miller_rabin::MillerRabin;
 pub use sieve::{random_odd_uint, Sieve};

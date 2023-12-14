@@ -1,9 +1,11 @@
 use crypto_bigint::{Limb, NonZero, Uint};
 
+use crate::UintLike;
+
 /// Calculates the greatest common divisor of `n` and `m`.
 /// By definition, `gcd(0, m) == m`.
 /// `n` must be non-zero.
-pub(crate) fn gcd<const L: usize>(n: &Uint<L>, m: u32) -> u32 {
+pub(crate) fn gcd<T: UintLike>(n: &T, m: u32) -> u32 {
     // This is an internal function, and it will never be called with `m = 0`.
     // Allowing `m = 0` would require us to have the return type of `Uint<L>`
     // (since `gcd(n, 0) = n`).
@@ -11,12 +13,12 @@ pub(crate) fn gcd<const L: usize>(n: &Uint<L>, m: u32) -> u32 {
 
     // This we can check since it doesn't affect the return type,
     // even though `n` will not be 0 either in the application.
-    if n == &Uint::<L>::ZERO {
+    if n.is_zero().into() {
         return m;
     }
 
     // Normalize input: the resulting (a, b) are both small, a >= b, and b != 0.
-    let (mut a, mut b): (u32, u32) = if n.bits() > (u32::BITS as usize) {
+    let (mut a, mut b): (u32, u32) = if n.bits() > u32::BITS {
         // `m` is non-zero, so we can unwrap.
         let (_quo, n) = n.div_rem_limb(NonZero::new(Limb::from(m)).unwrap());
         // `n` is a remainder of a division by `u32`, so it can be safely cast to `u32`.
