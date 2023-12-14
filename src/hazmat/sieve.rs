@@ -96,7 +96,7 @@ impl<T: UintLike> Sieve<T> {
         // If we are targeting safe primes, iterate over the corresponding
         // possible Germain primes (`n/2`), reducing the task to that with `safe_primes = false`.
         let (max_bit_length, base) = if safe_primes {
-            (max_bit_length - 1, start.shr_vartime(1))
+            (max_bit_length - 1, start.shr_vartime(1).0)
         } else {
             (max_bit_length, start.clone())
         };
@@ -172,6 +172,7 @@ impl<T: UintLike> Sieve<T> {
         // Find the increment limit.
         let max_value = T::one()
             .shl_vartime(self.max_bit_length)
+            .0
             .wrapping_sub(&T::one());
         let incr_limit = max_value.wrapping_sub(&self.base);
         self.incr_limit = if incr_limit > INCR_LIMIT.into() {
@@ -225,7 +226,7 @@ impl<T: UintLike> Sieve<T> {
             let mut num: T =
                 Option::from(self.base.checked_add(&self.incr.into())).expect("Integer overflow");
             if self.safe_primes {
-                num = num.shl_vartime(1) | T::one();
+                num = num.shl_vartime(1).0 | T::one();
             }
             Some(num)
         };

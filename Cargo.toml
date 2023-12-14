@@ -10,7 +10,7 @@ categories = ["cryptography", "no-std"]
 rust-version = "1.65"
 
 [dependencies]
-crypto-bigint = { git = "https://github.com/RustCrypto/crypto-bigint", branch = "master", features = ["alloc"] }
+crypto-bigint = { git = "https://github.com/RustCrypto/crypto-bigint", branch = "master", features = ["alloc", "rand_core" ] }
 rand_core = { version = "0.6.4", default-features = false }
 openssl = { version = "0.10.39", optional = true, features = ["vendored"] }
 rug = { version = "1.18", default-features = false, features = ["integer"], optional = true }

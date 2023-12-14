@@ -1,6 +1,7 @@
 //! Lucas primality test.
 
-use crate::{JacobiSymbol, UintLike, UintModLike};
+use crate::{UintLike, UintModLike};
+use crate::hazmat::jacobi::JacobiSymbol;
 
 use super::Primality;
 

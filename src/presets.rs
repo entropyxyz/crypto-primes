@@ -141,7 +141,7 @@ pub fn is_safe_prime_with_rng<T: UintLike>(rng: &mut impl CryptoRngCore, num: &T
         return false;
     }
 
-    _is_prime_with_rng(rng, num) && _is_prime_with_rng(rng, &num.shr_vartime(1))
+    _is_prime_with_rng(rng, num) && _is_prime_with_rng(rng, &num.shr_vartime(1).0)
 }
 
 /// Checks for primality assuming that `num` is odd.

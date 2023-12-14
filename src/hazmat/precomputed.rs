@@ -151,7 +151,7 @@ const fn create_reciprocals() -> [Reciprocal; SMALL_PRIMES_SIZE] {
     let mut arr = [Reciprocal::default(); SMALL_PRIMES_SIZE];
     let mut i = 0;
     while i < SMALL_PRIMES_SIZE {
-        let limb = NonZero::new(Limb(SMALL_PRIMES[i] as Word)).expect("Small prime is zero");
+        let limb = NonZero::<Limb>::const_new(Limb(SMALL_PRIMES[i] as Word)).0;
         arr[i] = Reciprocal::new(limb);
         i += 1;
     }

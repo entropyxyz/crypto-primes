@@ -1,13 +1,15 @@
 use core::ops::{Add, Mul, Neg, Sub};
+use crate::hazmat::jacobi::{self, JacobiSymbol};
 
 use crypto_bigint::{
     modular::{DynResidue, DynResidueParams},
-    subtle::CtOption, ConstChoice,
-    Integer, Limb, PowBoundedExp, RandomMod, Reciprocal, Uint,
+    subtle::CtOption,
+    ConstChoice, Integer, Limb, NonZero, PowBoundedExp, RandomMod, Reciprocal, Uint,
 };
 use rand_core::CryptoRngCore;
 
 // would be nice to have: *Assign traits; arithmetic traits for &self (BitAnd and Shr in particular);
+#[allow(missing_docs)]
 pub trait UintLike: Integer + RandomMod {
     type Modular: UintModLike<Raw = Self>;
 
@@ -28,8 +30,10 @@ pub trait UintLike: Integer + RandomMod {
     fn try_into_u32(&self) -> Option<u32>; // Will have to be implemented at Uint<L> level if we want to use TryFrom trait
 
     fn as_limbs(&self) -> &[Limb];
+    fn div_rem_limb(&self, rhs: NonZero<Limb>) -> (Self, Limb);
 }
 
+#[allow(missing_docs)]
 pub trait UintModLike:
     core::fmt::Debug
     + Clone
@@ -53,33 +57,15 @@ pub trait UintModLike:
     fn div_by_2(&self) -> Self;
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub enum JacobiSymbol {
-    Zero,
-    One,
-    MinusOne,
-}
-
-impl Neg for JacobiSymbol {
-    type Output = Self;
-    fn neg(self) -> Self {
-        match self {
-            Self::Zero => Self::Zero,
-            Self::One => Self::MinusOne,
-            Self::MinusOne => Self::One,
-        }
-    }
-}
-
-// Uint<L> impls
-
+/// Uint<L> impls
 impl<const L: usize> UintLike for Uint<L> {
     type Modular = DynResidue<L>;
 
     fn jacobi_symbol_small(lhs: i32, rhs: &Self) -> JacobiSymbol {
-        unimplemented!()
+        jacobi::jacobi_symbol(lhs, rhs)
     }
 
+    #[allow(unused_variables)]
     fn gcd_small(&self, rhs: u32) -> u32 {
         unimplemented!()
     }
@@ -120,6 +106,7 @@ impl<const L: usize> UintLike for Uint<L> {
         self.as_limbs()
     }
 
+    #[allow(unused_variables)]
     fn random_bits(rng: &mut impl CryptoRngCore, bit_length: u32) -> Self {
         unimplemented!()
     }
@@ -130,6 +117,10 @@ impl<const L: usize> UintLike for Uint<L> {
 
     fn try_into_u32(&self) -> Option<u32> {
         self.as_words()[0].try_into().ok()
+    }
+
+    fn div_rem_limb(&self, rhs: NonZero<Limb>) -> (Self, Limb) {
+        self.div_rem_limb(rhs)
     }
 }
 

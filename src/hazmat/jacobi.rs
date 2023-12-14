@@ -2,12 +2,12 @@
 
 use core::fmt::Display;
 
-use crypto_bigint::{Limb, NonZero, Uint, Word, BoxedUint};
+use crypto_bigint::{BoxedUint, Limb, NonZero, Uint, Word};
 
 use crate::UintLike;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub(crate) enum JacobiSymbol {
+pub enum JacobiSymbol {
     Zero,
     One,
     MinusOne,
@@ -25,7 +25,7 @@ impl core::ops::Neg for JacobiSymbol {
 }
 
 // A helper trait to generalize some functions over Word and Uint.
-trait SmallMod {
+pub(crate) trait SmallMod {
     fn mod8(&self) -> Word;
     fn mod4(&self) -> Word;
 }
@@ -108,7 +108,7 @@ pub(crate) fn jacobi_symbol<T: UintLike + Display + SmallMod>(a: i32, p_long: &T
     };
 
     // A degenerate case.
-    if a_pos == 1 || p_long == T.oneONE {
+    if a_pos == 1 || p_long == &T::one() {
         return result;
     }
 
@@ -124,7 +124,9 @@ pub(crate) fn jacobi_symbol<T: UintLike + Display + SmallMod>(a: i32, p_long: &T
         if a == 1 {
             return result;
         }
-        let (result, a_long, p) = swap(result, a, *p_long);
+        // TODO: used to be *p_long because Uint implements Copy
+        // However, BoxedUint does not implement Copy. Is clone the best idea?
+        let (result, a_long, p) = swap(result, a, p_long.clone());
         // Can unwrap here, since `p` is swapped with `a`,
         // and `a` would be odd after `reduce_numerator()`.
         let (_, a) = a_long.div_rem_limb(NonZero::new(Limb::from(p)).unwrap());
