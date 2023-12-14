@@ -29,4 +29,4 @@ pub use traits::RandomPrimeWithRng;
 #[cfg(feature = "default-rng")]
 pub use presets::{generate_prime, generate_safe_prime, is_prime, is_safe_prime};
 
-pub use uint_traits::{JacobiSymbol, UintLike, UintModLike};
+pub use uint_traits::{UintLike, UintModLike};
