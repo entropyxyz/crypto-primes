@@ -6,6 +6,7 @@ use crypto_bigint::{BoxedUint, Limb, NonZero, Uint, Word};
 
 use crate::UintLike;
 
+#[allow(missing_docs)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum JacobiSymbol {
     Zero,

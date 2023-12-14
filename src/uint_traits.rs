@@ -119,7 +119,7 @@ impl<const L: usize> UintLike for Uint<L> {
     }
 
     fn ct_div_rem_limb_with_reciprocal(&self, reciprocal: &Reciprocal) -> (Self, Limb) {
-        Self::ct_div_rem_limb_with_reciprocal(self, reciprocal)
+        self.div_rem_limb_with_reciprocal(reciprocal)
     }
 
     fn try_into_u32(&self) -> Option<u32> {

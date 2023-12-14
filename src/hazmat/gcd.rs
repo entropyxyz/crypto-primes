@@ -1,4 +1,4 @@
-use crypto_bigint::{Limb, NonZero, Uint};
+use crypto_bigint::{Limb, NonZero};
 
 use crate::UintLike;
 
