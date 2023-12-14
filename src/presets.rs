@@ -183,7 +183,7 @@ fn _is_prime_with_rng<T: UintLike>(rng: &mut impl CryptoRngCore, num: &T) -> boo
 
 #[cfg(test)]
 mod tests {
-    use crypto_bigint::{CheckedAdd, Uint, Word, U128, U64, BoxedUint};
+    use crypto_bigint::{BoxedUint, CheckedAdd, Uint, Word, U128, U64};
     use num_prime::nt_funcs::is_prime64;
     use rand_core::OsRng;
 

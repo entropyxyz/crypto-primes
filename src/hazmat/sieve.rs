@@ -35,7 +35,7 @@ pub fn random_odd_uint<T: UintLike>(
     }
 
     // TODO: not particularly efficient, can be improved by zeroing high bits instead of shifting
-    let random = T::random_bits(rng, bit_length);
+    let random = T::random_bits(rng, bit_length, bits_precision);
 
     // Make it odd
     let random = random | T::one();

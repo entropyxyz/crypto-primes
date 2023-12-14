@@ -1,5 +1,5 @@
 use crate::hazmat::{
-    gcd::gcd,
+    gcd,
     jacobi::{self, JacobiSymbol},
 };
 use core::ops::{Add, Mul, Neg, Sub};
@@ -29,7 +29,7 @@ pub trait UintLike: Integer + RandomMod {
     fn sqrt_vartime(&self) -> Self;
     fn shr_vartime(&self, shift: u32) -> (Self, ConstChoice);
     fn shl_vartime(&self, shift: u32) -> (Self, ConstChoice);
-    fn random_bits(rng: &mut impl CryptoRngCore, bit_length: u32) -> Self;
+    fn random_bits(rng: &mut impl CryptoRngCore, bit_length: u32, bits_precision: u32) -> Self;
     fn ct_div_rem_limb_with_reciprocal(&self, reciprocal: &Reciprocal) -> (Self, Limb);
     fn try_into_u32(&self) -> Option<u32>; // Will have to be implemented at Uint<L> level if we want to use TryFrom trait
 
@@ -75,7 +75,7 @@ impl<const L: usize> UintLike for Uint<L> {
     }
 
     fn gcd_small(&self, rhs: u32) -> u32 {
-        gcd(self, rhs)
+        gcd::gcd(self, rhs)
     }
 
     fn trailing_zeros(&self) -> u32 {
@@ -114,7 +114,7 @@ impl<const L: usize> UintLike for Uint<L> {
         self.as_limbs()
     }
 
-    fn random_bits(rng: &mut impl CryptoRngCore, bit_length: u32) -> Self {
+    fn random_bits(rng: &mut impl CryptoRngCore, bit_length: u32, bits_precision: u32) -> Self {
         let random = Self::random(rng) & Self::MAX >> (Self::BITS - bit_length);
         let random = random | Self::ONE << (bit_length - 1);
         return random;
@@ -166,65 +166,119 @@ impl UintLike for BoxedUint {
     type Modular = BoxedResidue;
 
     fn jacobi_symbol_small(lhs: i32, rhs: &Self) -> JacobiSymbol {
-        todo!();
+        jacobi::jacobi_symbol(lhs, rhs)
     }
 
     fn gcd_small(&self, rhs: u32) -> u32 {
-        todo!();
+        gcd::gcd(self, rhs)
     }
 
+    /// TODO: BoxedUint does not implement bit_vartime
+    /// TODO: this needs to be tested
     fn bit_vartime(&self, index: u32) -> bool {
-        todo!();
+        if index >= self.bits_precision() {
+            return false;
+        }
+        (self.as_limbs()[(index / Limb::BITS) as usize].0 >> (index % Limb::BITS)) & 1 == 1
     }
 
     fn trailing_zeros(&self) -> u32 {
-        todo!();
+        self.trailing_zeros()
     }
 
+    /// TODO: BoxedUint does not implement trailing_ones, but it should be doable
+    /// TODO: this needs to be testesd, but this is not the implementation I would go with in
+    /// crypto-bigint
     fn trailing_ones(&self) -> u32 {
-        todo!();
+        let limbs = self.as_limbs();
+
+        let mut count = 0;
+        let mut i = 0;
+        let mut nonmax_limb_not_encountered = ConstChoice::TRUE;
+        while i < limbs.len() {
+            let l = limbs[i];
+            let z = l.trailing_ones();
+            let should_count: bool = nonmax_limb_not_encountered.into();
+            if should_count {
+                count += z;
+            }
+            let is_max = l.0 == Limb::MAX.0;
+            if should_count && is_max {
+                nonmax_limb_not_encountered = ConstChoice::TRUE;
+            } else {
+                nonmax_limb_not_encountered = ConstChoice::FALSE;
+            }
+            i += 1;
+        }
+
+        count
     }
 
     fn wrapping_sub(&self, rhs: &Self) -> Self {
-        todo!();
+        self.wrapping_sub(rhs)
     }
 
     fn wrapping_mul(&self, rhs: &Self) -> Self {
-        todo!();
+        self.wrapping_mul(rhs)
     }
 
+    /// BoxedUint does not implement sqrt_vartime
     fn sqrt_vartime(&self) -> Self {
         todo!();
     }
 
+    /// TODO: BoxedUint::shr_vartime should behave similarly as Uint::shr_vartime; instead of
+    /// returning Option, return (val, choice)
     fn shr_vartime(&self, shift: u32) -> (Self, ConstChoice) {
-        todo!();
+        if let Some(shifted) = self.shr_vartime(shift) {
+            return (shifted, ConstChoice::FALSE);
+        } else {
+            return (
+                Self::zero_with_precision(self.bits_precision()),
+                ConstChoice::TRUE,
+            );
+        }
     }
 
+    /// TODO: BoxedUint::shl_vartime should behave similarly as Uint::shr_vartime; instead of
+    /// returning Option, return (val, choice)
     fn shl_vartime(&self, shift: u32) -> (Self, ConstChoice) {
-        todo!();
+        if let Some(shifted) = self.shl_vartime(shift) {
+            return (shifted, ConstChoice::FALSE);
+        } else {
+            return (
+                Self::zero_with_precision(self.bits_precision()),
+                ConstChoice::TRUE,
+            );
+        }
     }
 
-    fn random_bits(rng: &mut impl CryptoRngCore, bit_length: u32) -> Self {
-        todo!();
+    fn random_bits(rng: &mut impl CryptoRngCore, bit_length: u32, bits_precision: u32) -> Self {
+        let random = Self::random(rng, bits_precision)
+            & Self::max(bits_precision) >> (bits_precision - bit_length);
+        let random = random | Self::one_with_precision(bits_precision) << (bit_length - 1);
+        return random;
     }
 
+    /// TODO: BoxedUint does not implement div_rem_limb_with_reciprocal
+    /// TODO: BoxedUint does not implement shl_limb
     fn ct_div_rem_limb_with_reciprocal(&self, reciprocal: &Reciprocal) -> (Self, Limb) {
         todo!();
     }
 
     fn try_into_u32(&self) -> Option<u32> {
-        todo!();
+        self.as_words()[0].try_into().ok()
     }
 
     fn as_limbs(&self) -> &[Limb] {
-        todo!();
+        self.as_limbs()
     }
 
     fn as_words(&self) -> &[Word] {
-        todo!();
+        self.as_words()
     }
 
+    /// TODO: BoxedUint does not implement div_rem_limb
     fn div_rem_limb(&self, rhs: NonZero<Limb>) -> (Self, Limb) {
         todo!();
     }
@@ -235,25 +289,26 @@ impl UintModLike for BoxedResidue {
     type Params = BoxedResidueParams;
 
     fn new_params(modulus: &Self::Raw) -> CtOption<Self::Params> {
-        todo!();
+        Self::Params::new(modulus.clone())
     }
 
     fn new(raw: &Self::Raw, params: &Self::Params) -> Self {
-        todo!();
+        Self::new(raw.clone(), params.clone())
     }
 
     fn zero(params: &Self::Params) -> Self {
-        todo!();
+        Self::zero(params.clone())
     }
 
     fn one(params: &Self::Params) -> Self {
-        todo!();
+        Self::one(params.clone())
     }
 
     fn square(&self) -> Self {
-        todo!();
+        self.square()
     }
 
+    /// TODO: BoxedUint does not implement div_by_2
     fn div_by_2(&self) -> Self {
         todo!();
     }
