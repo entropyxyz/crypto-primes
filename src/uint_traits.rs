@@ -114,7 +114,7 @@ impl<const L: usize> UintLike for Uint<L> {
         self.as_limbs()
     }
 
-    fn random_bits(rng: &mut impl CryptoRngCore, bit_length: u32, bits_precision: u32) -> Self {
+    fn random_bits(rng: &mut impl CryptoRngCore, bit_length: u32, _bits_precision: u32) -> Self {
         let random = Self::random(rng) & Self::MAX >> (Self::BITS - bit_length);
         let random = random | Self::ONE << (bit_length - 1);
         return random;
@@ -224,33 +224,19 @@ impl UintLike for BoxedUint {
 
     /// BoxedUint does not implement sqrt_vartime
     fn sqrt_vartime(&self) -> Self {
-        todo!();
+        self.sqrt_vartime()
     }
 
     /// TODO: BoxedUint::shr_vartime should behave similarly as Uint::shr_vartime; instead of
     /// returning Option, return (val, choice)
     fn shr_vartime(&self, shift: u32) -> (Self, ConstChoice) {
-        if let Some(shifted) = self.shr_vartime(shift) {
-            return (shifted, ConstChoice::FALSE);
-        } else {
-            return (
-                Self::zero_with_precision(self.bits_precision()),
-                ConstChoice::TRUE,
-            );
-        }
+        self.shr_vartime(shift)
     }
 
     /// TODO: BoxedUint::shl_vartime should behave similarly as Uint::shr_vartime; instead of
     /// returning Option, return (val, choice)
     fn shl_vartime(&self, shift: u32) -> (Self, ConstChoice) {
-        if let Some(shifted) = self.shl_vartime(shift) {
-            return (shifted, ConstChoice::FALSE);
-        } else {
-            return (
-                Self::zero_with_precision(self.bits_precision()),
-                ConstChoice::TRUE,
-            );
-        }
+        self.shl_vartime(shift)
     }
 
     fn random_bits(rng: &mut impl CryptoRngCore, bit_length: u32, bits_precision: u32) -> Self {
@@ -263,7 +249,7 @@ impl UintLike for BoxedUint {
     /// TODO: BoxedUint does not implement div_rem_limb_with_reciprocal
     /// TODO: BoxedUint does not implement shl_limb
     fn ct_div_rem_limb_with_reciprocal(&self, reciprocal: &Reciprocal) -> (Self, Limb) {
-        todo!();
+        self.div_rem_limb_with_reciprocal(reciprocal)
     }
 
     fn try_into_u32(&self) -> Option<u32> {
@@ -280,7 +266,7 @@ impl UintLike for BoxedUint {
 
     /// TODO: BoxedUint does not implement div_rem_limb
     fn div_rem_limb(&self, rhs: NonZero<Limb>) -> (Self, Limb) {
-        todo!();
+        self.div_rem_limb(rhs)
     }
 }
 
