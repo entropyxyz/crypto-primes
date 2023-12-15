@@ -103,11 +103,11 @@ impl<const L: usize> UintLike for Uint<L> {
     }
 
     fn shr_vartime(&self, shift: u32) -> (Self, ConstChoice) {
-        Self::shr_vartime(self, shift)
+        Self::overflowing_shr_vartime(self, shift)
     }
 
     fn shl_vartime(&self, shift: u32) -> (Self, ConstChoice) {
-        Self::shl_vartime(self, shift)
+        Self::overflowing_shl_vartime(self, shift)
     }
 
     fn as_limbs(&self) -> &[Limb] {

@@ -174,11 +174,9 @@ impl<T: UintLike> Sieve<T> {
         }
 
         // Find the increment limit.
-        let max_value = T::one()
-            .shl_vartime(self.max_bit_length)
-            .0
-            .wrapping_sub(&T::one());
-        let incr_limit = max_value.wrapping_sub(&self.base);
+        let max_value =
+            <T as UintLike>::wrapping_sub(&T::one().shl_vartime(self.max_bit_length).0, &T::one());
+        let incr_limit = <T as UintLike>::wrapping_sub(&max_value, &self.base);
         self.incr_limit = if incr_limit > INCR_LIMIT.into() {
             INCR_LIMIT
         } else {

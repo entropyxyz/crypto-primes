@@ -41,7 +41,7 @@ impl<T: UintLike> MillerRabin<T> {
         let minus_one = -one.clone();
 
         // Find `s` and odd `d` such that `candidate - 1 == 2^s * d`.
-        let candidate_minus_one = candidate.wrapping_sub(&T::one());
+        let candidate_minus_one = <T as UintLike>::wrapping_sub(candidate, &T::one());
         let s = candidate_minus_one.trailing_zeros();
         let d = candidate_minus_one.shr_vartime(s).0;
 
@@ -101,7 +101,7 @@ impl<T: UintLike> MillerRabin<T> {
             panic!("No suitable random base possible when `candidate == 3`; use the base 2 test.")
         }
 
-        let range = self.candidate.wrapping_sub(&T::from(4u32));
+        let range = <T as UintLike>::wrapping_sub(&self.candidate, &T::from(4u32));
         let range_nonzero = NonZero::new(range).unwrap();
         // This should not overflow as long as `random_mod()` behaves according to the contract
         // (that is, returns a number within the given range).
