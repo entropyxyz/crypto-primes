@@ -38,10 +38,13 @@ pub fn random_odd_uint<T: UintLike>(
     let random = T::random_bits(rng, bit_length, bits_precision);
 
     // Make it odd
-    let random = random | T::one();
+    let random = random | T::one_with_precision(bits_precision);
 
     // Make sure it's the correct bit size
-    let random = random | T::one().shl_vartime(bit_length - 1).0;
+    let random = random
+        | T::one_with_precision(bits_precision)
+            .shl_vartime(bit_length - 1)
+            .0;
 
     random
 }
@@ -106,6 +109,7 @@ impl<T: UintLike> Sieve<T> {
         };
 
         let mut base = base;
+        let base_bits_precision = base.bits_precision();
 
         // This is easier than making all the methods generic enough to handle these corner cases.
         let produces_nothing = max_bit_length < base.bits_vartime() || max_bit_length < 2;
@@ -118,7 +122,7 @@ impl<T: UintLike> Sieve<T> {
             base = T::from(3u32);
         } else {
             // Adjust the base so that we hit odd numbers when incrementing it by 2.
-            base = base | T::one();
+            base = base | T::one_with_precision(base_bits_precision);
         }
 
         // Only calculate residues by primes up to and not including `base`,
@@ -174,8 +178,12 @@ impl<T: UintLike> Sieve<T> {
         }
 
         // Find the increment limit.
-        let max_value =
-            <T as UintLike>::wrapping_sub(&T::one().shl_vartime(self.max_bit_length).0, &T::one());
+        let max_value = <T as UintLike>::wrapping_sub(
+            &T::one_with_precision(self.base.bits_precision())
+                .shl_vartime(self.max_bit_length)
+                .0,
+            &T::one_with_precision(self.base.bits_precision()),
+        );
         let incr_limit = <T as UintLike>::wrapping_sub(&max_value, &self.base);
         self.incr_limit = if incr_limit > INCR_LIMIT.into() {
             INCR_LIMIT
@@ -228,7 +236,7 @@ impl<T: UintLike> Sieve<T> {
             let mut num: T =
                 Option::from(self.base.checked_add(&self.incr.into())).expect("Integer overflow");
             if self.safe_primes {
-                num = num.shl_vartime(1).0 | T::one();
+                num = num.shl_vartime(1).0 | T::one_with_precision(self.base.bits_precision());
             }
             Some(num)
         };

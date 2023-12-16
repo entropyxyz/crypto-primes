@@ -109,7 +109,7 @@ pub(crate) fn jacobi_symbol<T: UintLike + Display + SmallMod>(a: i32, p_long: &T
     };
 
     // A degenerate case.
-    if a_pos == 1 || p_long == &T::one() {
+    if a_pos == 1 || p_long == &T::one_with_precision(p_long.bits_precision()) {
         return result;
     }
 

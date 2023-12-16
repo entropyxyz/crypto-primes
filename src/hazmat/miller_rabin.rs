@@ -41,7 +41,10 @@ impl<T: UintLike> MillerRabin<T> {
         let minus_one = -one.clone();
 
         // Find `s` and odd `d` such that `candidate - 1 == 2^s * d`.
-        let candidate_minus_one = <T as UintLike>::wrapping_sub(candidate, &T::one());
+        let candidate_minus_one = <T as UintLike>::wrapping_sub(
+            candidate,
+            &T::one_with_precision(candidate.bits_precision()),
+        );
         let s = candidate_minus_one.trailing_zeros();
         let d = candidate_minus_one.shr_vartime(s).0;
 

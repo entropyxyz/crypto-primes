@@ -172,8 +172,10 @@ fn decompose<T: UintLike>(n: &T) -> (u32, T) {
 
     let s = n.trailing_ones();
     // This won't overflow since the original `n` was odd, so we right-shifted at least once.
-    let d = Option::from((n.clone().shr_vartime(s).0).checked_add(&T::one()))
-        .expect("Integer overflow");
+    let d = Option::from(
+        (n.clone().shr_vartime(s).0).checked_add(&T::one_with_precision(n.bits_precision())),
+    )
+    .expect("Integer overflow");
 
     (s, d)
 }
