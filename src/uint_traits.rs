@@ -329,6 +329,6 @@ impl UintModLike for BoxedResidue {
 
     /// TODO: BoxedUint does not implement div_by_2
     fn div_by_2(&self) -> Self {
-        todo!();
+        self.div_by_2()
     }
 }
