@@ -478,7 +478,7 @@ mod tests {
 
     use alloc::format;
 
-    use crypto_bigint::{Uint, U128, U64};
+    use crypto_bigint::{BoxedUint, Uint, U128, U64};
 
     #[cfg(feature = "tests-exhaustive")]
     use num_prime::nt_funcs::is_prime64;
@@ -512,6 +512,12 @@ mod tests {
         assert_eq!(SelfridgeBase.generate(&num), Err(Primality::Composite));
         assert_eq!(AStarBase.generate(&num), Err(Primality::Composite));
         assert_eq!(BruteForceBase.generate(&num), Err(Primality::Composite));
+
+        // The same test, but with BoxedUint
+        let num = BoxedUint::from(131u32).widen(64).square();
+        assert_eq!(SelfridgeBase.generate(&num), Err(Primality::Composite));
+        assert_eq!(AStarBase.generate(&num), Err(Primality::Composite));
+        assert_eq!(BruteForceBase.generate(&num), Err(Primality::Composite));
     }
 
     #[test]
@@ -520,7 +526,11 @@ mod tests {
         assert_eq!(
             BruteForceBase.generate(&U64::from(5u32)),
             Err(Primality::Prime)
-        )
+        );
+        assert_eq!(
+            BruteForceBase.generate(&BoxedUint::from(5u32).widen(64)),
+            Err(Primality::Prime)
+        );
     }
 
     #[test]
@@ -528,6 +538,10 @@ mod tests {
         // If the number is even, no need to run the test.
         assert_eq!(
             lucas_test(&U64::from(6u32), SelfridgeBase, LucasCheck::Strong),
+            Primality::Composite
+        );
+        assert_eq!(
+            lucas_test(&BoxedUint::from(6u32), SelfridgeBase, LucasCheck::Strong),
             Primality::Composite
         );
     }
@@ -552,6 +566,14 @@ mod tests {
             lucas_test(&U64::from(15u32), TestBase, LucasCheck::Strong),
             Primality::Composite
         );
+        assert_eq!(
+            lucas_test(
+                &BoxedUint::from(15u32).widen(64),
+                TestBase,
+                LucasCheck::Strong
+            ),
+            Primality::Composite
+        );
     }
 
     #[test]
@@ -559,6 +581,19 @@ mod tests {
         assert_eq!(decompose(&U128::MAX), (128, U128::ONE));
         assert_eq!(decompose(&U128::ONE), (1, U128::ONE));
         assert_eq!(decompose(&U128::from(7766015u32)), (15, U128::from(237u32)));
+
+        assert_eq!(
+            decompose(&BoxedUint::from(u128::MAX)),
+            (128, BoxedUint::one_with_precision(128))
+        );
+        assert_eq!(
+            decompose(&BoxedUint::one_with_precision(128)),
+            (1, BoxedUint::one_with_precision(128))
+        );
+        assert_eq!(
+            decompose(&BoxedUint::from(7766015u32)),
+            (15, BoxedUint::from(237u32))
+        );
     }
 
     fn is_slpsp(num: u32) -> bool {
