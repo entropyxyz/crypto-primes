@@ -89,7 +89,7 @@ impl<T: UintLike> MillerRabin<T> {
 
     /// Perform a Miller-Rabin check with base 2.
     pub fn test_base_two(&self) -> Primality {
-        self.test(&T::from(2u32))
+        self.test(&T::from(2u32).widen(self.candidate.bits_precision()))
     }
 
     /// Perform a Miller-Rabin check with a random base (in the range `[3, candidate-2]`)
@@ -104,12 +104,18 @@ impl<T: UintLike> MillerRabin<T> {
             panic!("No suitable random base possible when `candidate == 3`; use the base 2 test.")
         }
 
-        let range = <T as UintLike>::wrapping_sub(&self.candidate, &T::from(4u32));
+        let range = <T as UintLike>::wrapping_sub(
+            &self.candidate,
+            &T::from(4u32).widen(self.candidate.bits_precision()),
+        );
         let range_nonzero = NonZero::new(range).unwrap();
         // This should not overflow as long as `random_mod()` behaves according to the contract
         // (that is, returns a number within the given range).
-        let random = Option::from(T::random_mod(rng, &range_nonzero).checked_add(&T::from(3u32)))
-            .expect("Integer overflow");
+        let random = Option::from(
+            T::random_mod(rng, &range_nonzero)
+                .checked_add(&T::from(3u32).widen(self.candidate.bits_precision())),
+        )
+        .expect("Integer overflow");
         self.test(&random)
     }
 }

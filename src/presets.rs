@@ -131,7 +131,7 @@ pub fn generate_safe_prime_with_rng<T: UintLike>(
 ///       Math. Comp. 90 1931-1955 (2021),
 ///       DOI: [10.1090/mcom/3616](https://doi.org/10.1090/mcom/3616)
 pub fn is_prime_with_rng<T: UintLike>(rng: &mut impl CryptoRngCore, num: &T) -> bool {
-    if num == &T::from(2u32) {
+    if num == &T::from(2u32).widen(num.bits_precision()) {
         return true;
     }
     if num.is_even().into() {
@@ -148,10 +148,12 @@ pub fn is_safe_prime_with_rng<T: UintLike>(rng: &mut impl CryptoRngCore, num: &T
     // Since, by the definition of safe prime, `(num - 1) / 2` must also be prime,
     // and therefore odd, `num` has to be equal to 3 modulo 4.
     // 5 is the only exception, so we check for it.
-    if num == &T::from(5u32) {
+    if num == &T::from(5u32).widen(num.bits_precision()) {
         return true;
     }
-    if T::from(3u32) & num.clone() != T::from(3u32) {
+    if T::from(3u32).widen(num.bits_precision()) & num.clone()
+        != T::from(3u32).widen(num.bits_precision())
+    {
         return false;
     }
 

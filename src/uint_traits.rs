@@ -36,8 +36,12 @@ pub trait UintLike: Integer + RandomMod {
     fn as_limbs(&self) -> &[Limb];
     fn as_words(&self) -> &[Word];
     fn div_rem_limb(&self, rhs: NonZero<Limb>) -> (Self, Limb);
+
+    // This is necessary for making sure that every BoxedUint has the same bits_precision
+    // TODO: remove them after BoxedUint can work with different bits_precision
     fn one_with_precision(bits_precision: u32) -> Self;
     fn zero_with_precision(bits_precision: u32) -> Self;
+    fn widen(&self, bits_precision: u32) -> Self;
 }
 
 #[allow(missing_docs)]
@@ -140,6 +144,10 @@ impl<const L: usize> UintLike for Uint<L> {
 
     fn zero_with_precision(_bits_precision: u32) -> Self {
         Self::ZERO
+    }
+
+    fn widen(&self, _bits_precision: u32) -> Self {
+        *self
     }
 }
 
@@ -300,6 +308,10 @@ impl UintLike for BoxedUint {
 
     fn zero_with_precision(bits_precision: u32) -> Self {
         Self::zero_with_precision(bits_precision)
+    }
+
+    fn widen(&self, bits_precision: u32) -> Self {
+        self.widen(bits_precision)
     }
 }
 

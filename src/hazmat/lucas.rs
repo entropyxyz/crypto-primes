@@ -70,7 +70,7 @@ impl LucasBase for SelfridgeBase {
                 // this small modification of Selfridge's method A
                 // enables 5 and 11 to be classified as Lucas probable primes.
                 // Otherwise GCD(D, n) > 1, and therefore n is not prime.
-                if n != &T::from(d.abs_diff(0)) {
+                if n != &T::from(d.abs_diff(0)).widen(n.bits_precision()) {
                     return Err(Primality::Composite);
                 }
             }
@@ -147,7 +147,7 @@ impl LucasBase for BruteForceBase {
                 // Since the loop proceeds in increasing P and starts with P - 2 == 1,
                 // the shared prime factor must be P + 2.
                 // If P + 2 == n, then n is prime; otherwise P + 2 is a proper factor of n.
-                let primality = if n == &T::from(p + 2) {
+                let primality = if n == &T::from(p + 2).widen(n.bits_precision()) {
                     Primality::Prime
                 } else {
                     Primality::Composite
@@ -300,7 +300,10 @@ pub fn lucas_test<T: UintLike>(
     // we check that gcd(n, Q) = 1 anyway - again, since `Q` is small,
     // it does not noticeably affect the performance.
     let abs_q = q.abs_diff(0);
-    if abs_q != 1 && candidate.gcd_small(abs_q) != 1 && candidate > &T::from(abs_q) {
+    if abs_q != 1
+        && candidate.gcd_small(abs_q) != 1
+        && candidate > &T::from(abs_q).widen(candidate.bits_precision())
+    {
         return Primality::Composite;
     }
 
@@ -324,6 +327,7 @@ pub fn lucas_test<T: UintLike>(
     let q = if q_is_one {
         one.clone()
     } else {
+        // No need to widen; widen happens at T::Modular::new
         let abs_q = <T as UintLike>::Modular::new(&T::from(q.abs_diff(0)), &params);
         if q < 0 {
             -abs_q
@@ -368,6 +372,9 @@ pub fn lucas_test<T: UintLike>(
 
         let q_2k = qk.square();
         let u_2k = uk * &vk;
+
+        dbg!(i, &qk, &vk);
+
         let v_2k = vk.square() - &(qk.clone() + &qk);
 
         uk = u_2k;

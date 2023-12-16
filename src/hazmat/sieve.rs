@@ -117,9 +117,9 @@ impl<T: UintLike> Sieve<T> {
         // Add the exception to the produced candidates - the only one that doesn't fit
         // the general pattern of incrementing the base by 2.
         let mut starts_from_exception = false;
-        if base <= T::from(2u32) {
+        if base <= T::from(2u32).widen(base.bits_precision()) {
             starts_from_exception = true;
-            base = T::from(3u32);
+            base = T::from(3u32).widen(base.bits_precision());
         } else {
             // Adjust the base so that we hit odd numbers when incrementing it by 2.
             base = base | T::one_with_precision(base_bits_precision);
@@ -128,17 +128,18 @@ impl<T: UintLike> Sieve<T> {
         // Only calculate residues by primes up to and not including `base`,
         // because when we only have the resiude,
         // we cannot distinguish between a prime itself and a multiple of that prime.
-        let residues_len = if T::from(SMALL_PRIMES[SMALL_PRIMES.len() - 1]) >= base {
-            SMALL_PRIMES
-                .iter()
-                .enumerate()
-                .find(|(_i, p)| T::from(**p) >= base)
-                .map(|(i, _p)| i)
-                .unwrap_or(SMALL_PRIMES.len())
-        } else {
-            // This will be the majority of use cases
-            SMALL_PRIMES.len()
-        };
+        let residues_len =
+            if T::from(SMALL_PRIMES[SMALL_PRIMES.len() - 1]).widen(base.bits_precision()) >= base {
+                SMALL_PRIMES
+                    .iter()
+                    .enumerate()
+                    .find(|(_i, p)| T::from(**p).widen(base.bits_precision()) >= base)
+                    .map(|(i, _p)| i)
+                    .unwrap_or(SMALL_PRIMES.len())
+            } else {
+                // This will be the majority of use cases
+                SMALL_PRIMES.len()
+            };
 
         Self {
             base,
@@ -254,7 +255,10 @@ impl<T: UintLike> Sieve<T> {
 
         if self.starts_from_exception {
             self.starts_from_exception = false;
-            return Some(T::from(if self.safe_primes { 5u32 } else { 2u32 }));
+            return Some(
+                T::from(if self.safe_primes { 5u32 } else { 2u32 })
+                    .widen(self.base.bits_precision()),
+            );
         }
 
         // Main loop
