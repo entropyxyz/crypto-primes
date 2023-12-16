@@ -370,10 +370,10 @@ pub fn lucas_test<T: UintLike>(
     for i in (0..d.bits_vartime()).rev() {
         // k' = k * 2
 
-        let q_2k = qk.square().refresh();
-        let u_2k = (uk * &vk).refresh();
+        let q_2k = qk.square();
+        let u_2k = uk * &vk;
 
-        let v_2k = vk.square().refresh() - &(qk.clone() + &qk);
+        let v_2k = vk.square() - &(qk.clone() + &qk);
 
         uk = u_2k;
         vk = v_2k;
@@ -385,16 +385,16 @@ pub fn lucas_test<T: UintLike>(
             let (p_uk, p_vk) = if p_is_one {
                 (uk.clone(), vk.clone())
             } else {
-                ((p.clone() * &uk).refresh(), (p.clone() * &vk).refresh())
+                ((p.clone() * &uk), (p.clone() * &vk))
             };
 
-            let u_k1 = (p_uk + &vk).div_by_2().refresh();
-            let v_k1 = ((d_m.clone() * &uk).refresh() + &p_vk).div_by_2().refresh();
+            let u_k1 = (p_uk + &vk).div_by_2();
+            let v_k1 = ((d_m.clone() * &uk) + &p_vk).div_by_2();
             let q_k1 = qk * &q;
 
             uk = u_k1;
             vk = v_k1;
-            qk = q_k1.refresh();
+            qk = q_k1;
         }
     }
 
@@ -448,21 +448,21 @@ pub fn lucas_test<T: UintLike>(
 
         // k' = 2k
         // V_{k'} = V_k^2 - 2 Q^k
-        vk = vk.square().refresh() - &qk - &qk;
+        vk = vk.square() - &qk - &qk;
 
         if check != LucasCheck::LucasV && vk == zero {
             return Primality::ProbablyPrime;
         }
 
         if !q_is_one {
-            qk = qk.square().refresh();
+            qk = qk.square();
         }
     }
 
     if check == LucasCheck::LucasV {
         // At this point vk = V_{d * 2^(s-1)}.
         // Double the index again:
-        vk = vk.square().refresh() - &qk - &qk; // now vk = V_{d * 2^s} = V_{n+1}
+        vk = vk.square() - &qk - &qk; // now vk = V_{d * 2^s} = V_{n+1}
 
         // Lucas-V check[^Baillie2021]: if V_{n+1} == 2 Q, report `n` as prime.
         if vk == q.clone() + &q {
