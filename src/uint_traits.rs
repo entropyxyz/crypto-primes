@@ -230,19 +230,34 @@ impl UintLike for BoxedUint {
     /// TODO: BoxedUint::shr_vartime should behave similarly as Uint::shr_vartime; instead of
     /// returning Option, return (val, choice)
     fn shr_vartime(&self, shift: u32) -> (Self, ConstChoice) {
-        self.shr_vartime(shift)
+        let (val, overflow) = self.overflowing_shr(shift);
+        if overflow.into() {
+            (val, ConstChoice::TRUE)
+        } else {
+            (val, ConstChoice::FALSE)
+        }
     }
 
     /// TODO: BoxedUint::shl_vartime should behave similarly as Uint::shr_vartime; instead of
     /// returning Option, return (val, choice)
     fn shl_vartime(&self, shift: u32) -> (Self, ConstChoice) {
-        self.shl_vartime(shift)
+        let (val, overflow) = self.overflowing_shl(shift);
+        if overflow.into() {
+            (val, ConstChoice::TRUE)
+        } else {
+            (val, ConstChoice::FALSE)
+        }
     }
 
     fn random_bits(rng: &mut impl CryptoRngCore, bit_length: u32, bits_precision: u32) -> Self {
         let random = Self::random(rng, bits_precision)
-            & Self::max(bits_precision) >> (bits_precision - bit_length);
-        let random = random | Self::one_with_precision(bits_precision) << (bit_length - 1);
+            & Self::max(bits_precision)
+                .overflowing_shr(bits_precision - bit_length)
+                .0;
+        let random = random
+            | Self::one_with_precision(bits_precision)
+                .overflowing_shl(bit_length - 1)
+                .0;
         return random;
     }
 

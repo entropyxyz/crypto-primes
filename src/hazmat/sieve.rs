@@ -41,7 +41,7 @@ pub fn random_odd_uint<T: UintLike>(
     let random = random | T::one();
 
     // Make sure it's the correct bit size
-    let random = random | T::one().shr(bit_length - 1);
+    let random = random | T::one().shl_vartime(bit_length - 1).0;
 
     random
 }
