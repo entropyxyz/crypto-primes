@@ -373,8 +373,6 @@ pub fn lucas_test<T: UintLike>(
         let q_2k = qk.square().refresh();
         let u_2k = (uk * &vk).refresh();
 
-        dbg!(i, &qk, &vk);
-
         let v_2k = vk.square().refresh() - &(qk.clone() + &qk);
 
         uk = u_2k;
