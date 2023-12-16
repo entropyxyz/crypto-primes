@@ -10,14 +10,13 @@ categories = ["cryptography", "no-std"]
 rust-version = "1.65"
 
 [dependencies]
-# crypto-bigint = { git = "https://github.com/RustCrypto/crypto-bigint.git", default-features = false, features = ["rand_core", "alloc"], rev = "4bf6932cee08af70d0a05625b540242522cc77f3" }
-crypto-bigint = { path = "../crypto-bigint", default-features = false, features = ["rand_core", "alloc"] }
+crypto-bigint = { git = "https://github.com/xuganyu96/crypto-bigint.git", default-features = false, features = ["rand_core", "alloc"], rev = "9d730ab" }
 rand_core = { version = "0.6.4", default-features = false }
 openssl = { version = "0.10.39", optional = true, features = ["vendored"] }
 rug = { version = "1.18", default-features = false, features = ["integer"], optional = true }
+rand_chacha = "0.3"
 
 [dev-dependencies]
-rand_chacha = "0.3"
 criterion = { version = "0.4", features = ["html_reports"] }
 num-modular = { version = "0.5", features = ["num-bigint"] }
 num-bigint = "0.4"

@@ -270,7 +270,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "Boxed prime generation is not ready"]
     fn boxed_prime_generation() {
         for bit_length in (28u32..=128).step_by(10) {
             let p: BoxedUint = generate_prime(bit_length, 128);
@@ -289,7 +288,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "Boxed prime generation is not ready"]
     fn safe_boxed_prime_generation() {
         for bit_length in (28u32..=128).step_by(10) {
             let p: BoxedUint = generate_safe_prime(bit_length, 128);

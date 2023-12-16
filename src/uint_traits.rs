@@ -66,6 +66,8 @@ pub trait UintModLike:
     fn one(params: &Self::Params) -> Self;
     fn square(&self) -> Self;
     fn div_by_2(&self) -> Self;
+
+    fn refresh(&self) -> Self;
 }
 
 /// Uint<L> impls
@@ -177,6 +179,10 @@ impl<const L: usize> UintModLike for DynResidue<L> {
 
     fn div_by_2(&self) -> Self {
         Self::div_by_2(self)
+    }
+
+    fn refresh(&self) -> Self {
+        *self
     }
 }
 
@@ -342,5 +348,12 @@ impl UintModLike for BoxedResidue {
     /// TODO: BoxedUint does not implement div_by_2
     fn div_by_2(&self) -> Self {
         self.div_by_2()
+    }
+
+    // TODO: BoxedResidue::square might be buggy
+    // Check https://github.com/RustCrypto/crypto-bigint/issues/441 for details
+    // Calling "retrieve" and reinstantiate seems to help
+    fn refresh(&self) -> Self {
+        Self::new(self.retrieve(), self.params().clone())
     }
 }
