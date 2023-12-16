@@ -312,7 +312,7 @@ impl UintModLike for BoxedResidue {
     }
 
     fn new(raw: &Self::Raw, params: &Self::Params) -> Self {
-        Self::new(raw.clone(), params.clone())
+        Self::new(raw.widen(params.bits_precision()).clone(), params.clone())
     }
 
     fn zero(params: &Self::Params) -> Self {
