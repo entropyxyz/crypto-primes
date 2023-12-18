@@ -49,7 +49,7 @@ pub(crate) fn gcd<T: UintLike>(n: &T, m: u32) -> u32 {
 
 #[cfg(test)]
 mod tests {
-    use crypto_bigint::{Encoding, U128};
+    use crypto_bigint::U128;
     use num_bigint::BigUint;
     use num_integer::Integer;
     use proptest::prelude::*;

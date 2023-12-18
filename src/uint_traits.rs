@@ -109,11 +109,29 @@ impl<const L: usize> UintLike for Uint<L> {
     }
 
     fn shr_vartime(&self, shift: u32) -> (Self, ConstChoice) {
-        Self::overflowing_shr_vartime(self, shift)
+        let opt = self.overflowing_shr_vartime(shift);
+        if opt.is_none().into() {
+            // opt.is_none() indicates overflow
+            (Self::ZERO, ConstChoice::TRUE)
+        } else {
+            (
+                opt.expect("attempt to right shift with overflow"),
+                ConstChoice::FALSE,
+            )
+        }
     }
 
     fn shl_vartime(&self, shift: u32) -> (Self, ConstChoice) {
-        Self::overflowing_shl_vartime(self, shift)
+        let opt = self.overflowing_shl_vartime(shift);
+        if opt.is_none().into() {
+            // opt.is_none() indicates overflow
+            (Self::ZERO, ConstChoice::TRUE)
+        } else {
+            (
+                opt.expect("attempt to left shift with overflow"),
+                ConstChoice::FALSE,
+            )
+        }
     }
 
     fn as_limbs(&self) -> &[Limb] {
