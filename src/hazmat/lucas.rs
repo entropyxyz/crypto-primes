@@ -13,7 +13,7 @@ use super::{
 /// The maximum number of attempts to find `D` such that `(D/n) == -1`.
 // This is widely believed to be impossible.
 // So if we exceed it, we will panic reporting the value of `n`.
-const MAX_ATTEMPTS: u32 = 10000;
+const MAX_ATTEMPTS: usize = 10000;
 
 /// The number of attempts to find `D` such that `(D/n) == -1`
 /// before checking that `n` is a square (in which case such `D` does not exist).
@@ -23,14 +23,14 @@ const MAX_ATTEMPTS: u32 = 10000;
 // in just a few attempts on average (an estimate for the Selfridge method
 // can be found in [^Baillie1980], section 7; for the brute force method
 // it seems to be about the same).
-const ATTEMPTS_BEFORE_SQRT: u32 = 30;
+const ATTEMPTS_BEFORE_SQRT: usize = 30;
 
 /// A method for selecting the base `(P, Q)` for the Lucas primality test.
 pub trait LucasBase {
-    /// Given an odd integer, returns `Ok((P, Q))` on success,
+    /// Given an odd integer, returns `Ok((P, abs(Q), is_negative(Q)))` on success,
     /// or `Err(Primality)` if the primality for the given integer was discovered
     /// during the search for a base.
-    fn generate<const L: usize>(&self, n: &Odd<Uint<L>>) -> Result<(u32, i32), Primality>;
+    fn generate<const L: usize>(&self, n: &Odd<Uint<L>>) -> Result<(Word, Word, bool), Primality>;
 }
 
 /// "Method A" for selecting the base given in Baillie & Wagstaff[^Baillie1980],
@@ -48,13 +48,11 @@ pub trait LucasBase {
 pub struct SelfridgeBase;
 
 impl LucasBase for SelfridgeBase {
-    fn generate<const L: usize>(&self, n: &Odd<Uint<L>>) -> Result<(u32, i32), Primality> {
-        let mut d = 5_i32;
-        let n_is_small = n.bits_vartime() < (u32::BITS - 1);
-        // Can unwrap here since it won't overflow after `&`
-        let small_n: u32 = (n.as_words()[0] & Word::from(u32::MAX))
-            .try_into()
-            .expect("ensured to fit into `u32`");
+    fn generate<const L: usize>(&self, n: &Odd<Uint<L>>) -> Result<(Word, Word, bool), Primality> {
+        let mut abs_d = 5;
+        let mut d_is_negative = false;
+        let n_is_small = n.bits_vartime() < (Word::BITS - 1);
+        let small_n = n.as_words()[0];
         let mut attempts = 0;
         loop {
             if attempts >= MAX_ATTEMPTS {
@@ -68,7 +66,7 @@ impl LucasBase for SelfridgeBase {
                 }
             }
 
-            let j = jacobi_symbol(d, n);
+            let j = jacobi_symbol(abs_d, d_is_negative, n);
 
             if j == JacobiSymbol::MinusOne {
                 break;
@@ -80,20 +78,25 @@ impl LucasBase for SelfridgeBase {
                 // this small modification of Selfridge's method A
                 // enables 5 and 11 to be classified as Lucas probable primes.
                 // Otherwise GCD(D, n) > 1, and therefore n is not prime.
-                if !(n_is_small && small_n == d.abs_diff(0)) {
+                if !(n_is_small && small_n == abs_d) {
                     return Err(Primality::Composite);
                 }
             }
 
             attempts += 1;
-            d = -d;
-            d += d.signum() * 2;
+            d_is_negative = !d_is_negative;
+            abs_d += 2;
         }
 
-        // No remainder by construction of `d`.
-        let q = (1 - d) / 4;
+        // Calculate `q = (1 - d) / 4`.
+        // No remainder from division by 4, by construction of `d`.
+        let (abs_q, q_is_negative) = if d_is_negative {
+            ((abs_d + 1) / 4, false)
+        } else {
+            ((abs_d - 1) / 4, true)
+        };
 
-        Ok((1, q))
+        Ok((1, abs_q, q_is_negative))
     }
 }
 
@@ -110,10 +113,14 @@ impl LucasBase for SelfridgeBase {
 pub struct AStarBase;
 
 impl LucasBase for AStarBase {
-    fn generate<const L: usize>(&self, n: &Odd<Uint<L>>) -> Result<(u32, i32), Primality> {
-        SelfridgeBase
-            .generate(n)
-            .map(|(p, q)| if q == -1 { (5, 5) } else { (p, q) })
+    fn generate<const L: usize>(&self, n: &Odd<Uint<L>>) -> Result<(Word, Word, bool), Primality> {
+        SelfridgeBase.generate(n).map(|(p, abs_q, q_is_negative)| {
+            if abs_q == 1 && q_is_negative {
+                (5, 5, false)
+            } else {
+                (p, abs_q, q_is_negative)
+            }
+        })
     }
 }
 
@@ -129,8 +136,8 @@ impl LucasBase for AStarBase {
 pub struct BruteForceBase;
 
 impl LucasBase for BruteForceBase {
-    fn generate<const L: usize>(&self, n: &Odd<Uint<L>>) -> Result<(u32, i32), Primality> {
-        let mut p = 3_u32;
+    fn generate<const L: usize>(&self, n: &Odd<Uint<L>>) -> Result<(Word, Word, bool), Primality> {
+        let mut p = 3;
         let mut attempts = 0;
 
         loop {
@@ -146,7 +153,7 @@ impl LucasBase for BruteForceBase {
             }
 
             // Can unwrap here since `p` is always small (see the condition above).
-            let j = jacobi_symbol((p * p - 4).try_into().expect("fits into `i32`"), n);
+            let j = jacobi_symbol(p * p - 4, false, n);
 
             if j == JacobiSymbol::MinusOne {
                 break;
@@ -169,7 +176,7 @@ impl LucasBase for BruteForceBase {
             p += 1;
         }
 
-        Ok((p, 1))
+        Ok((p, 1, false))
     }
 }
 
@@ -296,15 +303,27 @@ pub fn lucas_test<const L: usize>(
     };
 
     // Find the base for the Lucas sequence.
-    let (p, q) = match base.generate(&odd_candidate) {
-        Ok((p, q)) => (p, q),
+    let (p, abs_q, q_is_negative) = match base.generate(&odd_candidate) {
+        Ok(pq) => pq,
         Err(primality) => return primality,
     };
-    let discriminant = (p * p) as i32 - 4 * q;
+
+    // Discriminant `d = p^2 - 4q`
+    let (abs_d, d_is_negative) = if q_is_negative {
+        (p * p + 4 * abs_q, false)
+    } else {
+        let t1 = p * p;
+        let t2 = 4 * abs_q;
+        if t2 > t1 {
+            (t2 - t1, true)
+        } else {
+            (t1 - t2, false)
+        }
+    };
 
     // If either is true, it allows us to optimize certain parts of the calculations.
     let p_is_one = p == 1;
-    let q_is_one = q == 1;
+    let q_is_one = abs_q == 1 && !q_is_negative;
 
     // See the references for the specific checks in the docstrings for [`LucasCheck`].
 
@@ -316,7 +335,6 @@ pub fn lucas_test<const L: usize>(
     // But in order to avoid an implicit assumption that a sieve has been run,
     // we check that gcd(n, Q) = 1 anyway - again, since `Q` is small,
     // it does not noticeably affect the performance.
-    let abs_q = q.abs_diff(0);
     if abs_q != 1 && gcd(candidate, abs_q) != 1 && candidate > &Uint::<L>::from(abs_q) {
         return Primality::Composite;
     }
@@ -339,8 +357,8 @@ pub fn lucas_test<const L: usize>(
     let q = if q_is_one {
         one
     } else {
-        let abs_q = MontyForm::<L>::new(&Uint::<L>::from(q.abs_diff(0)), params);
-        if q < 0 {
+        let abs_q = MontyForm::<L>::new(&Uint::<L>::from(abs_q), params);
+        if q_is_negative {
             -abs_q
         } else {
             abs_q
@@ -375,8 +393,8 @@ pub fn lucas_test<const L: usize>(
     let mut qk = one; // keeps Q^k
 
     // D in Montgomery representation - note that it can be negative.
-    let abs_d = MontyForm::<L>::new(&Uint::<L>::from(discriminant.abs_diff(0)), params);
-    let d_m = if discriminant < 0 { -abs_d } else { abs_d };
+    let abs_d = MontyForm::<L>::new(&Uint::<L>::from(abs_d), params);
+    let d_m = if d_is_negative { -abs_d } else { abs_d };
 
     for i in (0..d.bits_vartime()).rev() {
         // k' = k * 2
@@ -484,7 +502,7 @@ mod tests {
 
     use alloc::format;
 
-    use crypto_bigint::{Odd, Uint, U128, U64};
+    use crypto_bigint::{Odd, Uint, Word, U128, U64};
 
     #[cfg(feature = "tests-exhaustive")]
     use num_prime::nt_funcs::is_prime64;
@@ -546,8 +564,11 @@ mod tests {
         struct TestBase;
 
         impl LucasBase for TestBase {
-            fn generate<const L: usize>(&self, _n: &Odd<Uint<L>>) -> Result<(u32, i32), Primality> {
-                Ok((5, 5))
+            fn generate<const L: usize>(
+                &self,
+                _n: &Odd<Uint<L>>,
+            ) -> Result<(Word, Word, bool), Primality> {
+                Ok((5, 5, false))
             }
         }
 

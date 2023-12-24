@@ -73,7 +73,11 @@ fn swap<T: SmallMod, V: SmallMod>(j: JacobiSymbol, a: T, p: V) -> (JacobiSymbol,
 }
 
 /// Returns the Jacobi symbol `(a/p)` given an odd `p`. Panics on even `p`.
-pub(crate) fn jacobi_symbol<const L: usize>(a: i32, p_long: &Uint<L>) -> JacobiSymbol {
+pub(crate) fn jacobi_symbol<const L: usize>(
+    abs_a: Word,
+    a_is_negative: bool,
+    p_long: &Uint<L>,
+) -> JacobiSymbol {
     if p_long.is_even().into() {
         panic!("`p_long` must be an odd integer, but got {}", p_long);
     }
@@ -84,21 +88,18 @@ pub(crate) fn jacobi_symbol<const L: usize>(a: i32, p_long: &Uint<L>) -> JacobiS
     // (-a/n) = (-1/n) * (a/n)
     //        = (-1)^((n-1)/2) * (a/n)
     //        = (-1 if n = 3 mod 4 else 1) * (a/n)
-    let (result, a_pos) = {
-        let result = if a < 0 && p_long.mod4() == 3 {
-            -result
-        } else {
-            result
-        };
-        (result, a.abs_diff(0))
+    let result = if a_is_negative && p_long.mod4() == 3 {
+        -result
+    } else {
+        result
     };
 
     // A degenerate case.
-    if a_pos == 1 || p_long == &Uint::<L>::ONE {
+    if abs_a == 1 || p_long == &Uint::<L>::ONE {
         return result;
     }
 
-    let a_limb = Limb::from(a_pos);
+    let a_limb = Limb::from(abs_a);
 
     // Normalize input: at the end we want `a < p`, `p` odd, and both fitting into a `Word`.
     let (result, a, p): (JacobiSymbol, Word, Word) = if p_long.bits_vartime() <= Limb::BITS {
@@ -152,7 +153,7 @@ mod tests {
 
     use alloc::format;
 
-    use crypto_bigint::U128;
+    use crypto_bigint::{Word, U128};
     use num_bigint::{BigInt, Sign};
     use num_modular::ModularSymbols;
     use proptest::prelude::*;
@@ -179,12 +180,15 @@ mod tests {
         expected = "`p_long` must be an odd integer, but got 00000000000000000000000000000004"
     )]
     fn jacobi_symbol_p_is_even() {
-        let _j = jacobi_symbol(1, &U128::from(4u32));
+        let _j = jacobi_symbol(1, false, &U128::from(4u32));
     }
 
     // Reference from `num-modular` - supports long `p`, but only positive `a`.
-    fn jacobi_symbol_ref(a: i32, p: &U128) -> JacobiSymbol {
-        let a_bi = BigInt::from(a);
+    fn jacobi_symbol_ref(a: Word, a_is_negative: bool, p: &U128) -> JacobiSymbol {
+        let mut a_bi = BigInt::from(a);
+        if a_is_negative {
+            a_bi = -a_bi;
+        }
         let p_bi = BigInt::from_bytes_be(Sign::Plus, p.to_be_bytes().as_ref());
         let j = a_bi.jacobi(&p_bi);
         if j == 1 {
@@ -199,12 +203,14 @@ mod tests {
     #[test]
     fn small_values() {
         // Test small values, using a reference implementation.
-        for a in -31i32..31 {
-            for p in (1u32..31).step_by(2) {
-                let p_long = U128::from(p);
-                let j_ref = jacobi_symbol_ref(a, &p_long);
-                let j = jacobi_symbol(a, &p_long);
-                assert_eq!(j, j_ref);
+        for a in 0..31 {
+            for a_is_negative in [true, false] {
+                for p in (1u32..31).step_by(2) {
+                    let p_long = U128::from(p);
+                    let j_ref = jacobi_symbol_ref(a, a_is_negative, &p_long);
+                    let j = jacobi_symbol(a, a_is_negative, &p_long);
+                    assert_eq!(j, j_ref);
+                }
             }
         }
     }
@@ -212,21 +218,23 @@ mod tests {
     #[test]
     fn big_values() {
         // a = x, p = x * y, where x and y are big primes. Should give 0.
-        let a = 2147483647i32; // 2^31 - 1, a prime
+        let a = 2147483647; // 2^31 - 1, a prime
         let p = U128::from_be_hex("000000007ffffffeffffffe28000003b"); // (2^31 - 1) * (2^64 - 59)
-        assert_eq!(jacobi_symbol(a, &p), JacobiSymbol::Zero);
-        assert_eq!(jacobi_symbol_ref(a, &p), JacobiSymbol::Zero);
+        assert_eq!(jacobi_symbol(a, false, &p), JacobiSymbol::Zero);
+        assert_eq!(jacobi_symbol_ref(a, false, &p), JacobiSymbol::Zero);
 
         // a = x^2 mod p, should give 1.
-        let a = 659456i32; // Obtained from x = 2^70
+        let a = 659456; // Obtained from x = 2^70
         let p = U128::from_be_hex("ffffffffffffffffffffffffffffff5f"); // 2^128 - 161 - not a prime
-        assert_eq!(jacobi_symbol(a, &p), JacobiSymbol::One);
-        assert_eq!(jacobi_symbol_ref(a, &p), JacobiSymbol::One);
+        assert_eq!(jacobi_symbol(a, false, &p), JacobiSymbol::One);
+        assert_eq!(jacobi_symbol_ref(a, false, &p), JacobiSymbol::One);
 
-        let a = i32::MIN; // -2^31, check that no overflow occurs
+        // -2^31
+        let a = 2147483648;
+        let a_is_negative = true;
         let p = U128::from_be_hex("000000007ffffffeffffffe28000003b"); // (2^31 - 1) * (2^64 - 59)
-        assert_eq!(jacobi_symbol(a, &p), JacobiSymbol::One);
-        assert_eq!(jacobi_symbol_ref(a, &p), JacobiSymbol::One);
+        assert_eq!(jacobi_symbol(a, a_is_negative, &p), JacobiSymbol::One);
+        assert_eq!(jacobi_symbol_ref(a, a_is_negative, &p), JacobiSymbol::One);
     }
 
     prop_compose! {
@@ -237,9 +245,9 @@ mod tests {
 
     proptest! {
         #[test]
-        fn fuzzy(a in any::<i32>(), p in odd_uint()) {
-            let j_ref = jacobi_symbol_ref(a, &p);
-            let j = jacobi_symbol(a, &p);
+        fn fuzzy(abs_a in any::<Word>(), a_is_negative in any::<bool>(), p in odd_uint()) {
+            let j_ref = jacobi_symbol_ref(abs_a, a_is_negative, &p);
+            let j = jacobi_symbol(abs_a, a_is_negative, &p);
             assert_eq!(j, j_ref);
         }
     }
