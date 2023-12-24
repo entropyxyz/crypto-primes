@@ -1,5 +1,5 @@
 use criterion::{criterion_group, criterion_main, BatchSize, Criterion};
-use crypto_bigint::{nlimbs, Uint, U1024};
+use crypto_bigint::{nlimbs, Odd, Uint, U1024};
 use rand_chacha::ChaCha8Rng;
 use rand_core::{CryptoRngCore, OsRng, SeedableRng};
 
@@ -23,13 +23,13 @@ fn make_rng() -> ChaCha8Rng {
 }
 
 fn make_sieve<const L: usize>(rng: &mut impl CryptoRngCore) -> Sieve<L> {
-    let start: Uint<L> = random_odd_uint(rng, Uint::<L>::BITS);
+    let start = random_odd_uint::<L>(rng, Uint::<L>::BITS);
     Sieve::new(&start, Uint::<L>::BITS, false)
 }
 
-fn make_presieved_num<const L: usize>(rng: &mut impl CryptoRngCore) -> Uint<L> {
+fn make_presieved_num<const L: usize>(rng: &mut impl CryptoRngCore) -> Odd<Uint<L>> {
     let mut sieve = make_sieve(rng);
-    sieve.next().unwrap()
+    Odd::new(sieve.next().unwrap()).unwrap()
 }
 
 fn bench_sieve(c: &mut Criterion) {
@@ -85,14 +85,14 @@ fn bench_miller_rabin(c: &mut Criterion) {
     group.bench_function("(U128) creation", |b| {
         b.iter_batched(
             || random_odd_uint::<{ nlimbs!(128) }>(&mut OsRng, 128),
-            |start| MillerRabin::new(&start),
+            MillerRabin::new,
             BatchSize::SmallInput,
         )
     });
 
     group.bench_function("(U128) random base test (pre-sieved)", |b| {
         b.iter_batched(
-            || MillerRabin::new(&make_presieved_num::<{ nlimbs!(128) }>(&mut OsRng)),
+            || MillerRabin::new(make_presieved_num::<{ nlimbs!(128) }>(&mut OsRng)),
             |mr| mr.test_random_base(&mut OsRng),
             BatchSize::SmallInput,
         )
@@ -101,14 +101,14 @@ fn bench_miller_rabin(c: &mut Criterion) {
     group.bench_function("(U1024) creation", |b| {
         b.iter_batched(
             || random_odd_uint::<{ nlimbs!(1024) }>(&mut OsRng, 1024),
-            |start| MillerRabin::new(&start),
+            MillerRabin::new,
             BatchSize::SmallInput,
         )
     });
 
     group.bench_function("(U1024) random base test (pre-sieved)", |b| {
         b.iter_batched(
-            || MillerRabin::new(&make_presieved_num::<{ nlimbs!(1024) }>(&mut OsRng)),
+            || MillerRabin::new(make_presieved_num::<{ nlimbs!(1024) }>(&mut OsRng)),
             |mr| mr.test_random_base(&mut OsRng),
             BatchSize::SmallInput,
         )
@@ -257,7 +257,7 @@ fn bench_gmp(c: &mut Criterion) {
     let mut group = c.benchmark_group("GMP");
 
     fn random<const L: usize>(rng: &mut impl CryptoRngCore) -> Integer {
-        let num: Uint<L> = random_odd_uint(rng, Uint::<L>::BITS);
+        let num = random_odd_uint::<L>(rng, Uint::<L>::BITS);
         Integer::from_digits(num.as_words(), Order::Lsf)
     }
 

@@ -151,7 +151,7 @@ mod tests {
 
     use alloc::format;
 
-    use crypto_bigint::{Encoding, U128};
+    use crypto_bigint::U128;
     use num_bigint::{BigInt, Sign};
     use num_modular::ModularSymbols;
     use proptest::prelude::*;

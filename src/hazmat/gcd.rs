@@ -16,7 +16,7 @@ pub(crate) fn gcd<const L: usize>(n: &Uint<L>, m: u32) -> u32 {
     }
 
     // Normalize input: the resulting (a, b) are both small, a >= b, and b != 0.
-    let (mut a, mut b): (u32, u32) = if n.bits() > (u32::BITS as usize) {
+    let (mut a, mut b): (u32, u32) = if n.bits() > u32::BITS {
         // `m` is non-zero, so we can unwrap.
         let (_quo, n) = n.div_rem_limb(NonZero::new(Limb::from(m)).unwrap());
         // `n` is a remainder of a division by `u32`, so it can be safely cast to `u32`.
@@ -47,7 +47,7 @@ pub(crate) fn gcd<const L: usize>(n: &Uint<L>, m: u32) -> u32 {
 
 #[cfg(test)]
 mod tests {
-    use crypto_bigint::{Encoding, U128};
+    use crypto_bigint::U128;
     use num_bigint::BigUint;
     use num_integer::Integer;
     use proptest::prelude::*;

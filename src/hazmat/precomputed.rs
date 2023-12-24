@@ -151,7 +151,11 @@ const fn create_reciprocals() -> [Reciprocal; SMALL_PRIMES_SIZE] {
     let mut arr = [Reciprocal::default(); SMALL_PRIMES_SIZE];
     let mut i = 0;
     while i < SMALL_PRIMES_SIZE {
-        arr[i] = Reciprocal::ct_new(Limb(SMALL_PRIMES[i] as Word)).0;
+        arr[i] = Reciprocal::new(
+            Limb(SMALL_PRIMES[i] as Word)
+                .to_nz()
+                .expect("ensured to be non-zero"),
+        );
         i += 1;
     }
     arr

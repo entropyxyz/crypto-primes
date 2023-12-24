@@ -1,7 +1,7 @@
 //! Lucas primality test.
 use crypto_bigint::{
-    modular::runtime_mod::{DynResidue, DynResidueParams},
-    CheckedAdd, Integer, Limb, Uint, Word,
+    modular::{MontyForm, MontyParams},
+    CheckedAdd, Integer, Limb, Odd, Uint, Word,
 };
 
 use super::{
@@ -172,17 +172,22 @@ impl LucasBase for BruteForceBase {
 }
 
 /// For the given odd `n`, finds `s` and odd `d` such that `n + 1 == 2^s * d`.
-fn decompose<const L: usize>(n: &Uint<L>) -> (usize, Uint<L>) {
-    debug_assert!(bool::from(n.is_odd()));
-
+fn decompose<const L: usize>(n: &Odd<Uint<L>>) -> (u32, Odd<Uint<L>>) {
     // Need to be careful here since `n + 1` can overflow.
     // Instead of adding 1 and counting trailing 0s, we count trailing ones on the original `n`.
 
     let s = n.trailing_ones();
-    // This won't overflow since the original `n` was odd, so we right-shifted at least once.
-    let d = Option::from((n >> s).checked_add(&Uint::<L>::ONE)).expect("Integer overflow");
+    let d = if s < n.bits_precision() {
+        // This won't overflow since the original `n` was odd, so we right-shifted at least once.
+        n.as_ref()
+            .wrapping_shr(s)
+            .checked_add(&Uint::ONE)
+            .expect("Integer overflow")
+    } else {
+        Uint::ONE
+    };
 
-    (s, d)
+    (s, Odd::new(d).expect("ensured to be odd"))
 }
 
 /// The checks to perform in the Lucas test.
@@ -279,9 +284,14 @@ pub fn lucas_test<const L: usize>(
     //   R. Crandall, C. Pomerance, "Prime numbers: a computational perspective",
     //   2nd ed., Springer (2005) (ISBN: 0-387-25282-7, 978-0387-25282-7)
 
-    if candidate.is_even().into() {
-        return Primality::Composite;
+    if candidate == &Uint::<L>::from(2u32) {
+        return Primality::Prime;
     }
+
+    let odd_candidate = match Odd::new(*candidate).into() {
+        Some(x) => x,
+        None => return Primality::Composite,
+    };
 
     // Find the base for the Lucas sequence.
     let (p, q) = match base.generate(candidate) {
@@ -311,14 +321,14 @@ pub fn lucas_test<const L: usize>(
 
     // Find `d` and `s`, such that `d` is odd and `d * 2^s = n - (D/n)`.
     // Since `(D/n) == -1` by construction, we're looking for `d * 2^s = n + 1`.
-    let (s, d) = decompose(candidate);
+    let (s, d) = decompose(&odd_candidate);
 
     // Some constants in Montgomery form
 
-    let params = DynResidueParams::<L>::new(candidate);
+    let params = MontyParams::<L>::new(odd_candidate);
 
-    let zero = DynResidue::<L>::zero(params);
-    let one = DynResidue::<L>::one(params);
+    let zero = MontyForm::<L>::zero(params);
+    let one = MontyForm::<L>::one(params);
     let two = one + one;
     let minus_two = -two;
 
@@ -327,7 +337,7 @@ pub fn lucas_test<const L: usize>(
     let q = if q_is_one {
         one
     } else {
-        let abs_q = DynResidue::<L>::new(&Uint::<L>::from(q.abs_diff(0)), params);
+        let abs_q = MontyForm::<L>::new(&Uint::<L>::from(q.abs_diff(0)), params);
         if q < 0 {
             -abs_q
         } else {
@@ -340,7 +350,7 @@ pub fn lucas_test<const L: usize>(
     let p = if p_is_one {
         one
     } else {
-        DynResidue::<L>::new(&Uint::<L>::from(p), params)
+        MontyForm::<L>::new(&Uint::<L>::from(p), params)
     };
 
     // Compute d-th element of Lucas sequence (U_d(P, Q), V_d(P, Q)), where:
@@ -359,11 +369,11 @@ pub fn lucas_test<const L: usize>(
 
     // Starting with k = 0
     let mut vk = two; // keeps V_k
-    let mut uk = DynResidue::<L>::zero(params); // keeps U_k
+    let mut uk = MontyForm::<L>::zero(params); // keeps U_k
     let mut qk = one; // keeps Q^k
 
     // D in Montgomery representation - note that it can be negative.
-    let abs_d = DynResidue::<L>::new(&Uint::<L>::from(discriminant.abs_diff(0)), params);
+    let abs_d = MontyForm::<L>::new(&Uint::<L>::from(discriminant.abs_diff(0)), params);
     let d_m = if discriminant < 0 { -abs_d } else { abs_d };
 
     for i in (0..d.bits_vartime()).rev() {
@@ -472,7 +482,7 @@ mod tests {
 
     use alloc::format;
 
-    use crypto_bigint::{Uint, U128, U64};
+    use crypto_bigint::{Odd, Uint, U128, U64};
 
     #[cfg(feature = "tests-exhaustive")]
     use num_prime::nt_funcs::is_prime64;
@@ -547,9 +557,18 @@ mod tests {
 
     #[test]
     fn decomposition() {
-        assert_eq!(decompose(&U128::MAX), (128, U128::ONE));
-        assert_eq!(decompose(&U128::ONE), (1, U128::ONE));
-        assert_eq!(decompose(&U128::from(7766015u32)), (15, U128::from(237u32)));
+        assert_eq!(
+            decompose(&Odd::new(U128::MAX).unwrap()),
+            (128, Odd::new(U128::ONE).unwrap())
+        );
+        assert_eq!(
+            decompose(&Odd::new(U128::ONE).unwrap()),
+            (1, Odd::new(U128::ONE).unwrap())
+        );
+        assert_eq!(
+            decompose(&Odd::new(U128::from(7766015u32)).unwrap()),
+            (15, Odd::new(U128::from(237u32)).unwrap())
+        );
     }
 
     fn is_slpsp(num: u32) -> bool {
