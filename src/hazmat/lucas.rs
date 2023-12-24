@@ -51,7 +51,7 @@ impl LucasBase for SelfridgeBase {
     fn generate<const L: usize>(&self, n: &Odd<Uint<L>>) -> Result<(Word, Word, bool), Primality> {
         let mut abs_d = 5;
         let mut d_is_negative = false;
-        let n_is_small = n.bits_vartime() < (Word::BITS - 1);
+        let n_is_small = n.bits_vartime() < Word::BITS; // if true, `n` fits into one `Word`
         let small_n = n.as_words()[0];
         let mut attempts = 0;
         loop {
