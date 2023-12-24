@@ -183,7 +183,9 @@ impl<const L: usize> Sieve<L> {
             self.last_round = true;
             // Can unwrap here since we just checked above that `incr_limit <= INCR_LIMIT`,
             // and `INCR_LIMIT` fits into `Residue`.
-            let incr_limit_small: Residue = incr_limit.as_words()[0].try_into().unwrap();
+            let incr_limit_small: Residue = incr_limit.as_words()[0]
+                .try_into()
+                .expect("ensured to fit within `Residue`");
             incr_limit_small
         };
 

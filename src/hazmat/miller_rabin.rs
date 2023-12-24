@@ -104,7 +104,8 @@ impl<const L: usize> MillerRabin<L> {
         }
 
         let range = self.candidate.wrapping_sub(&Uint::<L>::from(4u32));
-        let range_nonzero = NonZero::new(range).unwrap();
+        // Can unwrap here since `candidate` is odd, and `candidate >= 4` (as checked above)
+        let range_nonzero = NonZero::new(range).expect("ensured to be non-zero");
         // This should not overflow as long as `random_mod()` behaves according to the contract
         // (that is, returns a number within the given range).
         let random = Option::from(

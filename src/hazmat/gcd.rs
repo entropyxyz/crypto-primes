@@ -18,14 +18,17 @@ pub(crate) fn gcd<const L: usize>(n: &Uint<L>, m: u32) -> u32 {
     // Normalize input: the resulting (a, b) are both small, a >= b, and b != 0.
     let (mut a, mut b): (u32, u32) = if n.bits() > u32::BITS {
         // `m` is non-zero, so we can unwrap.
-        let (_quo, n) = n.div_rem_limb(NonZero::new(Limb::from(m)).unwrap());
+        let (_quo, n) =
+            n.div_rem_limb(NonZero::new(Limb::from(m)).expect("divisor ensured to be non-zero"));
         // `n` is a remainder of a division by `u32`, so it can be safely cast to `u32`.
-        let b: u32 = n.0.try_into().unwrap();
+        let b: u32 = n.0.try_into().expect("ensured to fit into `u32`");
         (m, b)
     } else {
         // In this branch `n` is 32 bits or shorter,
         // so we can safely take the first limb and cast it to u32.
-        let n: u32 = n.as_words()[0].try_into().unwrap();
+        let n: u32 = n.as_words()[0]
+            .try_into()
+            .expect("ensured to fit into `u32`");
         if n > m {
             (n, m)
         } else {

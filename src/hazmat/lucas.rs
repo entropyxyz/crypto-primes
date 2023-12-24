@@ -1,7 +1,7 @@
 //! Lucas primality test.
 use crypto_bigint::{
     modular::{MontyForm, MontyParams},
-    CheckedAdd, Integer, Limb, Odd, Uint, Word,
+    CheckedAdd, Integer, Odd, Uint, Word,
 };
 
 use super::{
@@ -50,9 +50,11 @@ pub struct SelfridgeBase;
 impl LucasBase for SelfridgeBase {
     fn generate<const L: usize>(&self, n: &Odd<Uint<L>>) -> Result<(u32, i32), Primality> {
         let mut d = 5_i32;
-        let n_is_small = n.bits_vartime() < (Limb::BITS - 1);
+        let n_is_small = n.bits_vartime() < (u32::BITS - 1);
         // Can unwrap here since it won't overflow after `&`
-        let small_n: u32 = (n.as_words()[0] & Word::from(u32::MAX)).try_into().unwrap();
+        let small_n: u32 = (n.as_words()[0] & Word::from(u32::MAX))
+            .try_into()
+            .expect("ensured to fit into `u32`");
         let mut attempts = 0;
         loop {
             if attempts >= MAX_ATTEMPTS {
@@ -144,7 +146,7 @@ impl LucasBase for BruteForceBase {
             }
 
             // Can unwrap here since `p` is always small (see the condition above).
-            let j = jacobi_symbol((p * p - 4).try_into().unwrap(), n);
+            let j = jacobi_symbol((p * p - 4).try_into().expect("fits into `i32`"), n);
 
             if j == JacobiSymbol::MinusOne {
                 break;
