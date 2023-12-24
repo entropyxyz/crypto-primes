@@ -110,8 +110,7 @@ pub(crate) fn jacobi_symbol_vartime<const L: usize>(
         let (result, a_long, p) = swap(result, a, p_long.get());
         // Can unwrap here, since `p` is swapped with `a`,
         // and `a` would be odd after `reduce_numerator()`.
-        let (_, a) =
-            a_long.div_rem_limb(NonZero::new(Limb::from(p)).expect("ensured to be non-zero"));
+        let a = a_long.rem_limb(NonZero::new(Limb::from(p)).expect("ensured to be non-zero"));
         (result, a.0, p)
     };
 

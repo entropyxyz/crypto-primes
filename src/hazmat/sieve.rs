@@ -167,7 +167,7 @@ impl<const L: usize> Sieve<L> {
 
         // Re-calculate residues.
         for (i, rec) in RECIPROCALS.iter().enumerate().take(self.residues.len()) {
-            let (_quo, rem) = self.base.div_rem_limb_with_reciprocal(rec);
+            let rem = self.base.rem_limb_with_reciprocal(rec);
             self.residues[i] = rem.0 as SmallPrime;
         }
 
