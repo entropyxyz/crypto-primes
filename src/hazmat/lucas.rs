@@ -192,14 +192,14 @@ fn decompose<const L: usize>(n: &Odd<Uint<L>>) -> (u32, Odd<Uint<L>>) {
         // so we right-shifted at least once.
         n.as_ref()
             .overflowing_shr(s)
-            .expect("shift within range")
+            .expect("shift should be within range by construction")
             .checked_add(&Uint::ONE)
-            .expect("Integer overflow")
+            .expect("addition should not overflow by construction")
     } else {
         Uint::ONE
     };
 
-    (s, Odd::new(d).expect("ensured to be odd"))
+    (s, Odd::new(d).expect("`d` should be odd by construction"))
 }
 
 /// The checks to perform in the Lucas test.

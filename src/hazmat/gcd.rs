@@ -18,7 +18,7 @@ pub(crate) fn gcd_vartime<const L: usize>(n: &Uint<L>, m: Word) -> Word {
     // Normalize input: the resulting (a, b) are both small, a >= b, and b != 0.
     let (mut a, mut b): (Word, Word) = if n.bits() > Word::BITS {
         // `m` is non-zero, so we can unwrap.
-        let r = n.rem_limb(NonZero::new(Limb::from(m)).expect("divisor ensured to be non-zero"));
+        let r = n.rem_limb(NonZero::new(Limb::from(m)).expect("divisor should be non-zero here"));
         (m, r.0)
     } else {
         // In this branch `n` is `Word::BITS` bits or shorter,

@@ -152,7 +152,7 @@ const fn create_reciprocals() -> [Reciprocal; SMALL_PRIMES.len()] {
         arr[i] = Reciprocal::new(
             Limb(SMALL_PRIMES[i] as Word)
                 .to_nz()
-                .expect("ensured to be non-zero"),
+                .expect("divisor should be non-zero"),
         );
         i += 1;
     }

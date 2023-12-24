@@ -46,7 +46,7 @@ impl<const L: usize> MillerRabin<L> {
             // Will not overflow because `candidate` is odd and greater than 1.
             let d = candidate_minus_one
                 .overflowing_shr_vartime(s)
-                .expect("shift within range");
+                .expect("shift should be within range by construction");
             (s, d)
         };
 
@@ -108,12 +108,13 @@ impl<const L: usize> MillerRabin<L> {
 
         let range = self.candidate.wrapping_sub(&Uint::<L>::from(4u32));
         // Can unwrap here since `candidate` is odd, and `candidate >= 4` (as checked above)
-        let range_nonzero = NonZero::new(range).expect("ensured to be non-zero");
+        let range_nonzero =
+            NonZero::new(range).expect("the range should be non-zero by construction");
         // This should not overflow as long as `random_mod()` behaves according to the contract
         // (that is, returns a number within the given range).
         let random = Uint::<L>::random_mod(rng, &range_nonzero)
             .checked_add(&Uint::<L>::from(3u32))
-            .expect("Integer overflow");
+            .expect("addition should not overflow by construction");
         self.test(&random)
     }
 }

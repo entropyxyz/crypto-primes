@@ -1,4 +1,4 @@
-use crypto_bigint::{Integer, Odd, Uint};
+use crypto_bigint::{Odd, Uint};
 use rand_core::CryptoRngCore;
 
 #[cfg(feature = "default-rng")]
@@ -125,11 +125,12 @@ pub fn is_prime_with_rng<const L: usize>(rng: &mut impl CryptoRngCore, num: &Uin
     if num == &Uint::<L>::from(2u32) {
         return true;
     }
-    if num.is_even().into() {
-        return false;
-    }
 
-    let odd_num = Odd::new(*num).expect("ensured to be odd");
+    let odd_num = match Odd::new(*num).into() {
+        Some(x) => x,
+        None => return false,
+    };
+
     _is_prime_with_rng(rng, &odd_num)
 }
 
@@ -148,8 +149,8 @@ pub fn is_safe_prime_with_rng<const L: usize>(rng: &mut impl CryptoRngCore, num:
     }
 
     // These are ensured to be odd by the check above.
-    let odd_num = Odd::new(*num).expect("ensured to be odd");
-    let odd_half_num = Odd::new(num.wrapping_shr_vartime(1)).expect("ensured to be odd");
+    let odd_num = Odd::new(*num).expect("`num` should be odd here");
+    let odd_half_num = Odd::new(num.wrapping_shr_vartime(1)).expect("`num/2` should be odd here");
 
     _is_prime_with_rng(rng, &odd_num) && _is_prime_with_rng(rng, &odd_half_num)
 }

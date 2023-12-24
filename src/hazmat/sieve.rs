@@ -40,9 +40,9 @@ pub fn random_odd_uint<const L: usize>(
     // Will not overflow since `bit_length` is ensured to be within the size of the integer.
     random |= Uint::<L>::ONE
         .overflowing_shl_vartime(bit_length - 1)
-        .expect("shift within range");
+        .expect("shift should be within range by construction");
 
-    Odd::new(random).expect("ensured to be odd")
+    Odd::new(random).expect("the number should be odd by construction")
 }
 
 // The type we use to calculate incremental residues.
@@ -164,7 +164,7 @@ impl<const L: usize> Sieve<L> {
         self.base = self
             .base
             .checked_add(&self.incr.into())
-            .expect("Integer overflow");
+            .expect("addition should not overflow by construction");
 
         self.incr = 0;
 
@@ -190,7 +190,7 @@ impl<const L: usize> Sieve<L> {
             // and `INCR_LIMIT` fits into `Residue`.
             let incr_limit_small: Residue = incr_limit.as_words()[0]
                 .try_into()
-                .expect("ensured to fit within `Residue`");
+                .expect("the increment limit should fit within `Residue`");
             incr_limit_small
         };
 
@@ -233,7 +233,7 @@ impl<const L: usize> Sieve<L> {
             let mut num: Uint<L> = self
                 .base
                 .checked_add(&self.incr.into())
-                .expect("Integer overflow");
+                .expect("addition should not overflow by construction");
             if self.safe_primes {
                 num = num.wrapping_shl_vartime(1) | Uint::<L>::ONE;
             }
