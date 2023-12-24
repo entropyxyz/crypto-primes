@@ -129,7 +129,8 @@ pub fn is_prime_with_rng<const L: usize>(rng: &mut impl CryptoRngCore, num: &Uin
         return false;
     }
 
-    _is_prime_with_rng(rng, num)
+    let odd_num = Odd::new(*num).expect("ensured to be odd");
+    _is_prime_with_rng(rng, &odd_num)
 }
 
 /// Checks probabilistically if the given number is a safe prime using the provided RNG.
@@ -146,19 +147,22 @@ pub fn is_safe_prime_with_rng<const L: usize>(rng: &mut impl CryptoRngCore, num:
         return false;
     }
 
-    _is_prime_with_rng(rng, num) && _is_prime_with_rng(rng, &(num >> 1))
+    // These are ensured to be odd by the check above.
+    let odd_num = Odd::new(*num).expect("ensured to be odd");
+    let odd_half_num = Odd::new(num.wrapping_shr_vartime(1)).expect("ensured to be odd");
+
+    _is_prime_with_rng(rng, &odd_num) && _is_prime_with_rng(rng, &odd_half_num)
 }
 
 /// Checks for primality assuming that `num` is odd.
-fn _is_prime_with_rng<const L: usize>(rng: &mut impl CryptoRngCore, num: &Uint<L>) -> bool {
-    debug_assert!(bool::from(num.is_odd()));
-    let mr = MillerRabin::new(Odd::new(*num).unwrap());
+fn _is_prime_with_rng<const L: usize>(rng: &mut impl CryptoRngCore, num: &Odd<Uint<L>>) -> bool {
+    let mr = MillerRabin::new(*num);
 
     if !mr.test_base_two().is_probably_prime() {
         return false;
     }
 
-    match lucas_test(num, AStarBase, LucasCheck::Strong) {
+    match lucas_test(num.as_ref(), AStarBase, LucasCheck::Strong) {
         Primality::Composite => return false,
         Primality::Prime => return true,
         _ => {}
