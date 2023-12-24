@@ -30,7 +30,7 @@ pub trait LucasBase {
     /// Given an odd integer, returns `Ok((P, Q))` on success,
     /// or `Err(Primality)` if the primality for the given integer was discovered
     /// during the search for a base.
-    fn generate<const L: usize>(&self, n: &Uint<L>) -> Result<(u32, i32), Primality>;
+    fn generate<const L: usize>(&self, n: &Odd<Uint<L>>) -> Result<(u32, i32), Primality>;
 }
 
 /// "Method A" for selecting the base given in Baillie & Wagstaff[^Baillie1980],
@@ -48,7 +48,7 @@ pub trait LucasBase {
 pub struct SelfridgeBase;
 
 impl LucasBase for SelfridgeBase {
-    fn generate<const L: usize>(&self, n: &Uint<L>) -> Result<(u32, i32), Primality> {
+    fn generate<const L: usize>(&self, n: &Odd<Uint<L>>) -> Result<(u32, i32), Primality> {
         let mut d = 5_i32;
         let n_is_small = n.bits_vartime() < (Limb::BITS - 1);
         // Can unwrap here since it won't overflow after `&`
@@ -108,7 +108,7 @@ impl LucasBase for SelfridgeBase {
 pub struct AStarBase;
 
 impl LucasBase for AStarBase {
-    fn generate<const L: usize>(&self, n: &Uint<L>) -> Result<(u32, i32), Primality> {
+    fn generate<const L: usize>(&self, n: &Odd<Uint<L>>) -> Result<(u32, i32), Primality> {
         SelfridgeBase
             .generate(n)
             .map(|(p, q)| if q == -1 { (5, 5) } else { (p, q) })
@@ -127,7 +127,7 @@ impl LucasBase for AStarBase {
 pub struct BruteForceBase;
 
 impl LucasBase for BruteForceBase {
-    fn generate<const L: usize>(&self, n: &Uint<L>) -> Result<(u32, i32), Primality> {
+    fn generate<const L: usize>(&self, n: &Odd<Uint<L>>) -> Result<(u32, i32), Primality> {
         let mut p = 3_u32;
         let mut attempts = 0;
 
@@ -155,7 +155,7 @@ impl LucasBase for BruteForceBase {
                 // Since the loop proceeds in increasing P and starts with P - 2 == 1,
                 // the shared prime factor must be P + 2.
                 // If P + 2 == n, then n is prime; otherwise P + 2 is a proper factor of n.
-                let primality = if n == &Uint::<L>::from(p + 2) {
+                let primality = if n.as_ref() == &Uint::<L>::from(p + 2) {
                     Primality::Prime
                 } else {
                     Primality::Composite
@@ -294,7 +294,7 @@ pub fn lucas_test<const L: usize>(
     };
 
     // Find the base for the Lucas sequence.
-    let (p, q) = match base.generate(candidate) {
+    let (p, q) = match base.generate(&odd_candidate) {
         Ok((p, q)) => (p, q),
         Err(primality) => return primality,
     };
@@ -509,7 +509,7 @@ mod tests {
     fn base_for_square() {
         // We can't find a base with Jacobi symbol = -1 for a square,
         // check that it is handled properly.
-        let num = U64::from(131u32).square();
+        let num = Odd::new(U64::from(131u32).square()).unwrap();
         assert_eq!(SelfridgeBase.generate(&num), Err(Primality::Composite));
         assert_eq!(AStarBase.generate(&num), Err(Primality::Composite));
         assert_eq!(BruteForceBase.generate(&num), Err(Primality::Composite));
@@ -519,7 +519,7 @@ mod tests {
     fn base_early_quit() {
         // 5 is flagged as prime at the base generation stage
         assert_eq!(
-            BruteForceBase.generate(&U64::from(5u32)),
+            BruteForceBase.generate(&Odd::new(U64::from(5u32)).unwrap()),
             Err(Primality::Prime)
         )
     }
@@ -544,7 +544,7 @@ mod tests {
         struct TestBase;
 
         impl LucasBase for TestBase {
-            fn generate<const L: usize>(&self, _n: &Uint<L>) -> Result<(u32, i32), Primality> {
+            fn generate<const L: usize>(&self, _n: &Odd<Uint<L>>) -> Result<(u32, i32), Primality> {
                 Ok((5, 5))
             }
         }
