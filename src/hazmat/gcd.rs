@@ -1,9 +1,9 @@
-use crypto_bigint::{Limb, NonZero, Uint};
+use crypto_bigint::{Limb, NonZero, Uint, Word};
 
 /// Calculates the greatest common divisor of `n` and `m`.
 /// By definition, `gcd(0, m) == m`.
 /// `n` must be non-zero.
-pub(crate) fn gcd<const L: usize>(n: &Uint<L>, m: u32) -> u32 {
+pub(crate) fn gcd_vartime<const L: usize>(n: &Uint<L>, m: Word) -> Word {
     // This is an internal function, and it will never be called with `m = 0`.
     // Allowing `m = 0` would require us to have the return type of `Uint<L>`
     // (since `gcd(n, 0) = n`).
@@ -16,16 +16,14 @@ pub(crate) fn gcd<const L: usize>(n: &Uint<L>, m: u32) -> u32 {
     }
 
     // Normalize input: the resulting (a, b) are both small, a >= b, and b != 0.
-    let (mut a, mut b): (u32, u32) = if n.bits() > (u32::BITS as usize) {
+    let (mut a, mut b): (Word, Word) = if n.bits() > Word::BITS {
         // `m` is non-zero, so we can unwrap.
-        let (_quo, n) = n.div_rem_limb(NonZero::new(Limb::from(m)).unwrap());
-        // `n` is a remainder of a division by `u32`, so it can be safely cast to `u32`.
-        let b: u32 = n.0.try_into().unwrap();
-        (m, b)
+        let r = n.rem_limb(NonZero::new(Limb::from(m)).expect("divisor should be non-zero here"));
+        (m, r.0)
     } else {
-        // In this branch `n` is 32 bits or shorter,
-        // so we can safely take the first limb and cast it to u32.
-        let n: u32 = n.as_words()[0].try_into().unwrap();
+        // In this branch `n` is `Word::BITS` bits or shorter,
+        // so we can safely take the first limb.
+        let n = n.as_words()[0];
         if n > m {
             (n, m)
         } else {
@@ -47,19 +45,22 @@ pub(crate) fn gcd<const L: usize>(n: &Uint<L>, m: u32) -> u32 {
 
 #[cfg(test)]
 mod tests {
-    use crypto_bigint::{Encoding, U128};
+    use crypto_bigint::{Word, U128};
     use num_bigint::BigUint;
     use num_integer::Integer;
     use proptest::prelude::*;
 
-    use super::gcd;
+    use super::gcd_vartime;
 
     #[test]
     fn corner_cases() {
-        assert_eq!(gcd(&U128::from(0u64), 5), 5);
-        assert_eq!(gcd(&U128::from(1u64), 11 * 13 * 19), 1);
-        assert_eq!(gcd(&U128::from(7u64 * 11 * 13), 1), 1);
-        assert_eq!(gcd(&U128::from(7u64 * 11 * 13), 11 * 13 * 19), 11 * 13);
+        assert_eq!(gcd_vartime(&U128::from(0u64), 5), 5);
+        assert_eq!(gcd_vartime(&U128::from(1u64), 11 * 13 * 19), 1);
+        assert_eq!(gcd_vartime(&U128::from(7u64 * 11 * 13), 1), 1);
+        assert_eq!(
+            gcd_vartime(&U128::from(7u64 * 11 * 13), 11 * 13 * 19),
+            11 * 13
+        );
     }
 
     prop_compose! {
@@ -70,16 +71,16 @@ mod tests {
 
     proptest! {
         #[test]
-        fn fuzzy(m in any::<u32>(), n in uint()) {
+        fn fuzzy(m in any::<Word>(), n in uint()) {
             if m == 0 {
                 return Ok(());
             }
 
             let m_bi = BigUint::from(m);
             let n_bi = BigUint::from_bytes_be(n.to_be_bytes().as_ref());
-            let gcd_ref: u32 = n_bi.gcd(&m_bi).try_into().unwrap();
+            let gcd_ref: Word = n_bi.gcd(&m_bi).try_into().unwrap();
 
-            let gcd_test = gcd(&n, m);
+            let gcd_test = gcd_vartime(&n, m);
             assert_eq!(gcd_test, gcd_ref);
         }
     }

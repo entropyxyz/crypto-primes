@@ -4,14 +4,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
-## [0.5.1] - Unreleased
+## [0.6.0-pre.0] - Unreleased
 
-### Fixed
+### Changed
 
-- Bumped `crypto-bigint` to 0.5.4. ([#35])
+- Bumped `crypto-bigint` to 0.6.0-pre.5. ([#38])
+- Bumped MSRV to 1.73. (#[38])
+- `MillerRabin::new()` takes an `Odd`-wrapped integer by value. `random_odd_uint()` returns an `Odd`-wrapped integer. `LucasBase::generate()` takes an `Odd`-wrapped integer. `lucas_test` takes an `Odd`-wrapped integer. (#[38])
+- All bit length-type parameters take `u32` instead of `usize`. (#[38])
 
 
-[#35]: https://github.com/entropyxyz/crypto-primes/pull/35
+[#35]: https://github.com/entropyxyz/crypto-primes/pull/38
 
 
 ## [0.5.0] - 2023-08-20

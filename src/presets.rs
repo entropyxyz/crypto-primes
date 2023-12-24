@@ -1,4 +1,4 @@
-use crypto_bigint::{Integer, Uint};
+use crypto_bigint::{Odd, Uint};
 use rand_core::CryptoRngCore;
 
 #[cfg(feature = "default-rng")]
@@ -13,7 +13,7 @@ use crate::hazmat::{
 ///
 /// See [`is_prime_with_rng`] for details about the performed checks.
 #[cfg(feature = "default-rng")]
-pub fn generate_prime<const L: usize>(bit_length: Option<usize>) -> Uint<L> {
+pub fn generate_prime<const L: usize>(bit_length: Option<u32>) -> Uint<L> {
     generate_prime_with_rng(&mut OsRng, bit_length)
 }
 
@@ -23,7 +23,7 @@ pub fn generate_prime<const L: usize>(bit_length: Option<usize>) -> Uint<L> {
 ///
 /// See [`is_prime_with_rng`] for details about the performed checks.
 #[cfg(feature = "default-rng")]
-pub fn generate_safe_prime<const L: usize>(bit_length: Option<usize>) -> Uint<L> {
+pub fn generate_safe_prime<const L: usize>(bit_length: Option<u32>) -> Uint<L> {
     generate_safe_prime_with_rng(&mut OsRng, bit_length)
 }
 
@@ -53,14 +53,14 @@ pub fn is_safe_prime<const L: usize>(num: &Uint<L>) -> bool {
 /// See [`is_prime_with_rng`] for details about the performed checks.
 pub fn generate_prime_with_rng<const L: usize>(
     rng: &mut impl CryptoRngCore,
-    bit_length: Option<usize>,
+    bit_length: Option<u32>,
 ) -> Uint<L> {
     let bit_length = bit_length.unwrap_or(Uint::<L>::BITS);
     if bit_length < 2 {
         panic!("`bit_length` must be 2 or greater.");
     }
     loop {
-        let start: Uint<L> = random_odd_uint(rng, bit_length);
+        let start = random_odd_uint::<L>(rng, bit_length);
         let sieve = Sieve::new(&start, bit_length, false);
         for num in sieve {
             if is_prime_with_rng(rng, &num) {
@@ -79,14 +79,14 @@ pub fn generate_prime_with_rng<const L: usize>(
 /// See [`is_prime_with_rng`] for details about the performed checks.
 pub fn generate_safe_prime_with_rng<const L: usize>(
     rng: &mut impl CryptoRngCore,
-    bit_length: Option<usize>,
+    bit_length: Option<u32>,
 ) -> Uint<L> {
     let bit_length = bit_length.unwrap_or(Uint::<L>::BITS);
     if bit_length < 3 {
         panic!("`bit_length` must be 3 or greater.");
     }
     loop {
-        let start: Uint<L> = random_odd_uint(rng, bit_length);
+        let start = random_odd_uint::<L>(rng, bit_length);
         let sieve = Sieve::new(&start, bit_length, true);
         for num in sieve {
             if is_safe_prime_with_rng(rng, &num) {
@@ -125,11 +125,13 @@ pub fn is_prime_with_rng<const L: usize>(rng: &mut impl CryptoRngCore, num: &Uin
     if num == &Uint::<L>::from(2u32) {
         return true;
     }
-    if num.is_even().into() {
-        return false;
-    }
 
-    _is_prime_with_rng(rng, num)
+    let odd_num = match Odd::new(*num).into() {
+        Some(x) => x,
+        None => return false,
+    };
+
+    _is_prime_with_rng(rng, &odd_num)
 }
 
 /// Checks probabilistically if the given number is a safe prime using the provided RNG.
@@ -146,13 +148,16 @@ pub fn is_safe_prime_with_rng<const L: usize>(rng: &mut impl CryptoRngCore, num:
         return false;
     }
 
-    _is_prime_with_rng(rng, num) && _is_prime_with_rng(rng, &(num >> 1))
+    // These are ensured to be odd by the check above.
+    let odd_num = Odd::new(*num).expect("`num` should be odd here");
+    let odd_half_num = Odd::new(num.wrapping_shr_vartime(1)).expect("`num/2` should be odd here");
+
+    _is_prime_with_rng(rng, &odd_num) && _is_prime_with_rng(rng, &odd_half_num)
 }
 
 /// Checks for primality assuming that `num` is odd.
-fn _is_prime_with_rng<const L: usize>(rng: &mut impl CryptoRngCore, num: &Uint<L>) -> bool {
-    debug_assert!(bool::from(num.is_odd()));
-    let mr = MillerRabin::new(num);
+fn _is_prime_with_rng<const L: usize>(rng: &mut impl CryptoRngCore, num: &Odd<Uint<L>>) -> bool {
+    let mr = MillerRabin::new(*num);
 
     if !mr.test_base_two().is_probably_prime() {
         return false;
@@ -232,7 +237,11 @@ mod tests {
                 assert!(is_safe_prime(&next));
             }
 
-            next = (next << 1).checked_add(&Uint::<L>::ONE).unwrap();
+            next = next
+                .overflowing_shl_vartime(1)
+                .unwrap()
+                .checked_add(&Uint::<L>::ONE)
+                .unwrap();
         }
 
         // The chain ended.
@@ -321,7 +330,7 @@ mod tests {
 
     #[test]
     fn corner_cases_generate_prime() {
-        for bits in 2usize..5 {
+        for bits in 2..5 {
             for _ in 0..100 {
                 let p: U64 = generate_prime(Some(bits));
                 let p_word = p.as_words()[0];
@@ -332,7 +341,7 @@ mod tests {
 
     #[test]
     fn corner_cases_generate_safe_prime() {
-        for bits in 3usize..5 {
+        for bits in 3..5 {
             for _ in 0..100 {
                 let p: U64 = generate_safe_prime(Some(bits));
                 let p_word = p.as_words()[0];
@@ -347,7 +356,7 @@ mod tests {
 mod tests_openssl {
     use alloc::format;
 
-    use crypto_bigint::U128;
+    use crypto_bigint::{Odd, U128};
     use openssl::bn::{BigNum, BigNumContext};
     use rand_core::OsRng;
 
@@ -390,7 +399,7 @@ mod tests_openssl {
 
         // Generate random numbers, check if our test agrees with OpenSSL
         for _ in 0..100 {
-            let p: U128 = random_odd_uint(&mut OsRng, 128);
+            let p: Odd<U128> = random_odd_uint(&mut OsRng, 128);
             let actual = is_prime(&p);
             let p_bn = to_openssl(&p);
             let expected = openssl_is_prime(&p_bn, &mut ctx);
@@ -405,7 +414,7 @@ mod tests_openssl {
 #[cfg(test)]
 #[cfg(feature = "tests-gmp")]
 mod tests_gmp {
-    use crypto_bigint::U128;
+    use crypto_bigint::{Odd, U128};
     use rand_core::OsRng;
     use rug::{
         integer::{IsPrime, Order},
@@ -438,7 +447,7 @@ mod tests_gmp {
 
         // Generate primes with GMP, check them
         for _ in 0..100 {
-            let start: U128 = random_odd_uint(&mut OsRng, 128);
+            let start: Odd<U128> = random_odd_uint(&mut OsRng, 128);
             let start_bn = to_gmp(&start);
             let p_bn = start_bn.next_prime();
             let p = from_gmp(&p_bn);
@@ -447,7 +456,7 @@ mod tests_gmp {
 
         // Generate random numbers, check if our test agrees with GMP
         for _ in 0..100 {
-            let p: U128 = random_odd_uint(&mut OsRng, 128);
+            let p: Odd<U128> = random_odd_uint(&mut OsRng, 128);
             let actual = is_prime(&p);
             let p_bn = to_gmp(&p);
             let expected = gmp_is_prime(&p_bn);
