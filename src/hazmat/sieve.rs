@@ -37,7 +37,7 @@ pub fn random_odd_uint<const L: usize>(
     random |= Uint::<L>::ONE;
 
     // Make sure it's the correct bit size
-    random |= Uint::<L>::ONE << (bit_length - 1);
+    random |= Uint::<L>::ONE.wrapping_shl_vartime(bit_length - 1);
 
     Odd::new(random).expect("ensured to be odd")
 }
@@ -96,7 +96,7 @@ impl<const L: usize> Sieve<L> {
         // If we are targeting safe primes, iterate over the corresponding
         // possible Germain primes (`n/2`), reducing the task to that with `safe_primes = false`.
         let (max_bit_length, base) = if safe_primes {
-            (max_bit_length - 1, start >> 1)
+            (max_bit_length - 1, start.wrapping_shr_vartime(1))
         } else {
             (max_bit_length, *start)
         };
@@ -225,10 +225,10 @@ impl<const L: usize> Sieve<L> {
             // The overflow should never happen here since `incr`
             // is never greater than `incr_limit`, and the latter is chosen such that
             // it does not overflow when added to `base` (see `update_residues()`).
-            let mut num =
+            let mut num: Uint<L> =
                 Option::from(self.base.checked_add(&self.incr.into())).expect("Integer overflow");
             if self.safe_primes {
-                num = (num << 1) | Uint::<L>::ONE;
+                num = num.wrapping_shl_vartime(1) | Uint::<L>::ONE;
             }
             Some(num)
         };

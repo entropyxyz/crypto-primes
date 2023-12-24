@@ -42,8 +42,8 @@ impl<const L: usize> MillerRabin<L> {
             (0, Uint::ONE)
         } else {
             let candidate_minus_one = candidate.wrapping_sub(&Uint::ONE);
-            let s = candidate_minus_one.trailing_zeros();
-            let d = candidate_minus_one.shr(s);
+            let s = candidate_minus_one.trailing_zeros_vartime();
+            let d = candidate_minus_one.wrapping_shr_vartime(s);
             (s, d)
         };
 
