@@ -43,7 +43,10 @@ impl<const L: usize> MillerRabin<L> {
         } else {
             let candidate_minus_one = candidate.wrapping_sub(&Uint::ONE);
             let s = candidate_minus_one.trailing_zeros_vartime();
-            let d = candidate_minus_one.wrapping_shr_vartime(s);
+            // Will not overflow because `candidate` is odd and greater than 1.
+            let d = candidate_minus_one
+                .overflowing_shr_vartime(s)
+                .expect("shift within range");
             (s, d)
         };
 

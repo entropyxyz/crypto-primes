@@ -187,9 +187,12 @@ fn decompose<const L: usize>(n: &Odd<Uint<L>>) -> (u32, Odd<Uint<L>>) {
 
     let s = n.trailing_ones();
     let d = if s < n.bits_precision() {
-        // This won't overflow since the original `n` was odd, so we right-shifted at least once.
+        // The shift won't overflow because of the check above.
+        // The addition won't overflow since the original `n` was odd,
+        // so we right-shifted at least once.
         n.as_ref()
-            .wrapping_shr(s)
+            .overflowing_shr(s)
+            .expect("shift within range")
             .checked_add(&Uint::ONE)
             .expect("Integer overflow")
     } else {

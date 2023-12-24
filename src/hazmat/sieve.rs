@@ -37,7 +37,10 @@ pub fn random_odd_uint<const L: usize>(
     random |= Uint::<L>::ONE;
 
     // Make sure it's the correct bit size
-    random |= Uint::<L>::ONE.wrapping_shl_vartime(bit_length - 1);
+    // Will not overflow since `bit_length` is ensured to be within the size of the integer.
+    random |= Uint::<L>::ONE
+        .overflowing_shl_vartime(bit_length - 1)
+        .expect("shift within range");
 
     Odd::new(random).expect("ensured to be odd")
 }
