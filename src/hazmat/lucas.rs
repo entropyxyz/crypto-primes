@@ -5,8 +5,8 @@ use crypto_bigint::{
 };
 
 use super::{
-    gcd::gcd,
-    jacobi::{jacobi_symbol, JacobiSymbol},
+    gcd::gcd_vartime,
+    jacobi::{jacobi_symbol_vartime, JacobiSymbol},
     Primality,
 };
 
@@ -66,7 +66,7 @@ impl LucasBase for SelfridgeBase {
                 }
             }
 
-            let j = jacobi_symbol(abs_d, d_is_negative, n);
+            let j = jacobi_symbol_vartime(abs_d, d_is_negative, n);
 
             if j == JacobiSymbol::MinusOne {
                 break;
@@ -153,7 +153,7 @@ impl LucasBase for BruteForceBase {
             }
 
             // Can unwrap here since `p` is always small (see the condition above).
-            let j = jacobi_symbol(p * p - 4, false, n);
+            let j = jacobi_symbol_vartime(p * p - 4, false, n);
 
             if j == JacobiSymbol::MinusOne {
                 break;
@@ -335,7 +335,7 @@ pub fn lucas_test<const L: usize>(
     // But in order to avoid an implicit assumption that a sieve has been run,
     // we check that gcd(n, Q) = 1 anyway - again, since `Q` is small,
     // it does not noticeably affect the performance.
-    if abs_q != 1 && gcd(candidate, abs_q) != 1 && candidate > &Uint::<L>::from(abs_q) {
+    if abs_q != 1 && gcd_vartime(candidate, abs_q) != 1 && candidate > &Uint::<L>::from(abs_q) {
         return Primality::Composite;
     }
 

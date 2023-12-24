@@ -73,7 +73,7 @@ fn swap<T: SmallMod, V: SmallMod>(j: JacobiSymbol, a: T, p: V) -> (JacobiSymbol,
 }
 
 /// Returns the Jacobi symbol `(a/p)` given an odd `p`.
-pub(crate) fn jacobi_symbol<const L: usize>(
+pub(crate) fn jacobi_symbol_vartime<const L: usize>(
     abs_a: Word,
     a_is_negative: bool,
     p_long: &Odd<Uint<L>>,
@@ -154,7 +154,7 @@ mod tests {
     use num_modular::ModularSymbols;
     use proptest::prelude::*;
 
-    use super::{jacobi_symbol, JacobiSymbol};
+    use super::{jacobi_symbol_vartime, JacobiSymbol};
 
     #[test]
     fn jacobi_symbol_derived_traits() {
@@ -196,7 +196,7 @@ mod tests {
                 for p in (1u32..31).step_by(2) {
                     let p_long = Odd::new(U128::from(p)).unwrap();
                     let j_ref = jacobi_symbol_ref(a, a_is_negative, &p_long);
-                    let j = jacobi_symbol(a, a_is_negative, &p_long);
+                    let j = jacobi_symbol_vartime(a, a_is_negative, &p_long);
                     assert_eq!(j, j_ref);
                 }
             }
@@ -208,20 +208,23 @@ mod tests {
         // a = x, p = x * y, where x and y are big primes. Should give 0.
         let a = 2147483647; // 2^31 - 1, a prime
         let p = Odd::new(U128::from_be_hex("000000007ffffffeffffffe28000003b")).unwrap(); // (2^31 - 1) * (2^64 - 59)
-        assert_eq!(jacobi_symbol(a, false, &p), JacobiSymbol::Zero);
+        assert_eq!(jacobi_symbol_vartime(a, false, &p), JacobiSymbol::Zero);
         assert_eq!(jacobi_symbol_ref(a, false, &p), JacobiSymbol::Zero);
 
         // a = x^2 mod p, should give 1.
         let a = 659456; // Obtained from x = 2^70
         let p = Odd::new(U128::from_be_hex("ffffffffffffffffffffffffffffff5f")).unwrap(); // 2^128 - 161 - not a prime
-        assert_eq!(jacobi_symbol(a, false, &p), JacobiSymbol::One);
+        assert_eq!(jacobi_symbol_vartime(a, false, &p), JacobiSymbol::One);
         assert_eq!(jacobi_symbol_ref(a, false, &p), JacobiSymbol::One);
 
         // -2^31
         let a = 2147483648;
         let a_is_negative = true;
         let p = Odd::new(U128::from_be_hex("000000007ffffffeffffffe28000003b")).unwrap(); // (2^31 - 1) * (2^64 - 59)
-        assert_eq!(jacobi_symbol(a, a_is_negative, &p), JacobiSymbol::One);
+        assert_eq!(
+            jacobi_symbol_vartime(a, a_is_negative, &p),
+            JacobiSymbol::One
+        );
         assert_eq!(jacobi_symbol_ref(a, a_is_negative, &p), JacobiSymbol::One);
     }
 
@@ -235,7 +238,7 @@ mod tests {
         #[test]
         fn fuzzy(abs_a in any::<Word>(), a_is_negative in any::<bool>(), p in odd_uint()) {
             let j_ref = jacobi_symbol_ref(abs_a, a_is_negative, &p);
-            let j = jacobi_symbol(abs_a, a_is_negative, &p);
+            let j = jacobi_symbol_vartime(abs_a, a_is_negative, &p);
             assert_eq!(j, j_ref);
         }
     }
