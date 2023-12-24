@@ -3,10 +3,8 @@ use crypto_bigint::{Limb, Reciprocal, Word};
 /// The type that fits any small prime from the table.
 pub(crate) type SmallPrime = u16;
 
-const SMALL_PRIMES_SIZE: usize = 2047;
-
 /// The list of 2nd to 2048th primes (The 1st one, 2, is not included).
-pub(crate) const SMALL_PRIMES: [SmallPrime; SMALL_PRIMES_SIZE] = [
+pub(crate) const SMALL_PRIMES: [SmallPrime; 2047] = [
     3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97,
     101, 103, 107, 109, 113, 127, 131, 137, 139, 149, 151, 157, 163, 167, 173, 179, 181, 191, 193,
     197, 199, 211, 223, 227, 229, 233, 239, 241, 251, 257, 263, 269, 271, 277, 281, 283, 293, 307,
@@ -147,10 +145,10 @@ pub(crate) const SMALL_PRIMES: [SmallPrime; SMALL_PRIMES_SIZE] = [
     17747, 17749, 17761, 17783, 17789, 17791, 17807, 17827, 17837, 17839, 17851, 17863,
 ];
 
-const fn create_reciprocals() -> [Reciprocal; SMALL_PRIMES_SIZE] {
-    let mut arr = [Reciprocal::default(); SMALL_PRIMES_SIZE];
+const fn create_reciprocals() -> [Reciprocal; SMALL_PRIMES.len()] {
+    let mut arr = [Reciprocal::default(); SMALL_PRIMES.len()];
     let mut i = 0;
-    while i < SMALL_PRIMES_SIZE {
+    while i < SMALL_PRIMES.len() {
         arr[i] = Reciprocal::new(
             Limb(SMALL_PRIMES[i] as Word)
                 .to_nz()
@@ -161,4 +159,28 @@ const fn create_reciprocals() -> [Reciprocal; SMALL_PRIMES_SIZE] {
     arr
 }
 
-pub(crate) const RECIPROCALS: [Reciprocal; SMALL_PRIMES_SIZE] = create_reciprocals();
+pub(crate) const RECIPROCALS: [Reciprocal; SMALL_PRIMES.len()] = create_reciprocals();
+
+#[cfg(test)]
+mod tests {
+    use crypto_bigint::{NonZero, Random, U256};
+    use rand_core::OsRng;
+
+    use super::{create_reciprocals, SMALL_PRIMES};
+
+    #[test]
+    fn correctness() {
+        let reciprocals = create_reciprocals();
+
+        assert_eq!(reciprocals.len(), SMALL_PRIMES.len());
+
+        for (reciprocal, prime) in reciprocals.iter().zip(SMALL_PRIMES.iter()) {
+            for _ in 0..10 {
+                let x = U256::random(&mut OsRng);
+                let r_ref = (x % NonZero::new(U256::from(*prime)).unwrap()).as_limbs()[0];
+                let r_test = x.rem_limb_with_reciprocal(reciprocal);
+                assert_eq!(r_ref, r_test);
+            }
+        }
+    }
+}
