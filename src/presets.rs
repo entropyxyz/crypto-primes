@@ -163,7 +163,7 @@ fn _is_prime_with_rng<const L: usize>(rng: &mut impl CryptoRngCore, num: &Odd<Ui
         return false;
     }
 
-    match lucas_test(num.as_ref(), AStarBase, LucasCheck::Strong) {
+    match lucas_test(num, AStarBase, LucasCheck::Strong) {
         Primality::Composite => return false,
         Primality::Prime => return true,
         _ => {}

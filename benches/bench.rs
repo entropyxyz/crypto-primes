@@ -171,12 +171,13 @@ fn bench_lucas(c: &mut Criterion) {
     // - V_{d * 2^t} checked for t == 0..s-1, but no V = 0 found
     // - s = 5, so the previous step has multiple checks
     // - Q != 1 (since we're using Selfridge base)
-    let slow_path = U1024::from_be_hex(concat![
+    let slow_path = Odd::new(U1024::from_be_hex(concat![
         "D1CB9F1B6F3414A4B40A7E51C53C6AE4689DFCDC49FF875E7066A229D704EA8E",
         "6B674231D8C5974001673C3CE7FF9D377C8564E5182165A23434BC7B7E6C0419",
         "FD25C9921B0E9C90AF2570DB0772E1A9C82ACABBC8FC0F0864CE8A12124FA29B",
         "7F870924041DFA13EE5F5541C1BF96CA679EFAE2C96F5F4E9DF6007185198F5F"
-    ]);
+    ]))
+    .unwrap();
 
     group.bench_function("(U1024) Selfridge base, strong check, slow path", |b| {
         b.iter(|| {
