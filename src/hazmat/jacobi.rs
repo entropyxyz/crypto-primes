@@ -1,6 +1,6 @@
 //! Jacobi symbol calculation.
 
-use crypto_bigint::{Integer, Limb, NonZero, Uint, Word};
+use crypto_bigint::{Limb, NonZero, Odd, Uint, Word};
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub(crate) enum JacobiSymbol {
@@ -72,16 +72,12 @@ fn swap<T: SmallMod, V: SmallMod>(j: JacobiSymbol, a: T, p: V) -> (JacobiSymbol,
     (j, p, a)
 }
 
-/// Returns the Jacobi symbol `(a/p)` given an odd `p`. Panics on even `p`.
+/// Returns the Jacobi symbol `(a/p)` given an odd `p`.
 pub(crate) fn jacobi_symbol<const L: usize>(
     abs_a: Word,
     a_is_negative: bool,
-    p_long: &Uint<L>,
+    p_long: &Odd<Uint<L>>,
 ) -> JacobiSymbol {
-    if p_long.is_even().into() {
-        panic!("`p_long` must be an odd integer, but got {}", p_long);
-    }
-
     let result = JacobiSymbol::One; // Keep track of all the sign flips here.
 
     // Deal with a negative `a` first:
@@ -95,7 +91,7 @@ pub(crate) fn jacobi_symbol<const L: usize>(
     };
 
     // A degenerate case.
-    if abs_a == 1 || p_long == &Uint::<L>::ONE {
+    if abs_a == 1 || p_long.as_ref() == &Uint::<L>::ONE {
         return result;
     }
 
@@ -107,11 +103,11 @@ pub(crate) fn jacobi_symbol<const L: usize>(
         let p = p_long.as_limbs()[0].0;
         (result, a % p, p)
     } else {
-        let (result, a) = reduce_numerator(result, a_limb.0, p_long);
+        let (result, a) = reduce_numerator(result, a_limb.0, p_long.as_ref());
         if a == 1 {
             return result;
         }
-        let (result, a_long, p) = swap(result, a, *p_long);
+        let (result, a_long, p) = swap(result, a, p_long.get());
         // Can unwrap here, since `p` is swapped with `a`,
         // and `a` would be odd after `reduce_numerator()`.
         let (_, a) =
@@ -153,7 +149,7 @@ mod tests {
 
     use alloc::format;
 
-    use crypto_bigint::{Word, U128};
+    use crypto_bigint::{Odd, Word, U128};
     use num_bigint::{BigInt, Sign};
     use num_modular::ModularSymbols;
     use proptest::prelude::*;
@@ -173,14 +169,6 @@ mod tests {
         // This does not happen during normal operation, since we return zero as soon as we get it.
         // So just covering it for the completness' sake.
         assert_eq!(-JacobiSymbol::Zero, JacobiSymbol::Zero);
-    }
-
-    #[test]
-    #[should_panic(
-        expected = "`p_long` must be an odd integer, but got 00000000000000000000000000000004"
-    )]
-    fn jacobi_symbol_p_is_even() {
-        let _j = jacobi_symbol(1, false, &U128::from(4u32));
     }
 
     // Reference from `num-modular` - supports long `p`, but only positive `a`.
@@ -206,7 +194,7 @@ mod tests {
         for a in 0..31 {
             for a_is_negative in [true, false] {
                 for p in (1u32..31).step_by(2) {
-                    let p_long = U128::from(p);
+                    let p_long = Odd::new(U128::from(p)).unwrap();
                     let j_ref = jacobi_symbol_ref(a, a_is_negative, &p_long);
                     let j = jacobi_symbol(a, a_is_negative, &p_long);
                     assert_eq!(j, j_ref);
@@ -219,27 +207,27 @@ mod tests {
     fn big_values() {
         // a = x, p = x * y, where x and y are big primes. Should give 0.
         let a = 2147483647; // 2^31 - 1, a prime
-        let p = U128::from_be_hex("000000007ffffffeffffffe28000003b"); // (2^31 - 1) * (2^64 - 59)
+        let p = Odd::new(U128::from_be_hex("000000007ffffffeffffffe28000003b")).unwrap(); // (2^31 - 1) * (2^64 - 59)
         assert_eq!(jacobi_symbol(a, false, &p), JacobiSymbol::Zero);
         assert_eq!(jacobi_symbol_ref(a, false, &p), JacobiSymbol::Zero);
 
         // a = x^2 mod p, should give 1.
         let a = 659456; // Obtained from x = 2^70
-        let p = U128::from_be_hex("ffffffffffffffffffffffffffffff5f"); // 2^128 - 161 - not a prime
+        let p = Odd::new(U128::from_be_hex("ffffffffffffffffffffffffffffff5f")).unwrap(); // 2^128 - 161 - not a prime
         assert_eq!(jacobi_symbol(a, false, &p), JacobiSymbol::One);
         assert_eq!(jacobi_symbol_ref(a, false, &p), JacobiSymbol::One);
 
         // -2^31
         let a = 2147483648;
         let a_is_negative = true;
-        let p = U128::from_be_hex("000000007ffffffeffffffe28000003b"); // (2^31 - 1) * (2^64 - 59)
+        let p = Odd::new(U128::from_be_hex("000000007ffffffeffffffe28000003b")).unwrap(); // (2^31 - 1) * (2^64 - 59)
         assert_eq!(jacobi_symbol(a, a_is_negative, &p), JacobiSymbol::One);
         assert_eq!(jacobi_symbol_ref(a, a_is_negative, &p), JacobiSymbol::One);
     }
 
     prop_compose! {
-        fn odd_uint()(bytes in any::<[u8; 16]>()) -> U128 {
-            U128::from_le_slice(&bytes) | U128::ONE
+        fn odd_uint()(bytes in any::<[u8; 16]>()) -> Odd<U128> {
+            Odd::new(U128::from_le_slice(&bytes) | U128::ONE).unwrap()
         }
     }
 
