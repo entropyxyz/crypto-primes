@@ -812,6 +812,22 @@ mod tests {
         }
     }
 
+    #[test]
+    fn corner_cases() {
+        // Test 1 and 2 specifically
+
+        // By convention, 1 is composite. That's what `num-prime` returns.
+        let res = lucas_test(&U64::ONE, BruteForceBase, LucasCheck::AlmostExtraStrong);
+        assert_eq!(res, Primality::Composite);
+
+        let res = lucas_test(
+            &U64::from(2u32),
+            BruteForceBase,
+            LucasCheck::AlmostExtraStrong,
+        );
+        assert_eq!(res, Primality::Prime);
+    }
+
     #[cfg(feature = "tests-exhaustive")]
     #[test]
     fn exhaustive() {
