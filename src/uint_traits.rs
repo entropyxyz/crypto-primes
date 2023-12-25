@@ -78,9 +78,9 @@ impl<const L: usize> UintLike for Uint<L> {
 impl UintLike for BoxedUint {
     fn set_bit_vartime(&mut self, index: u32, value: bool) {
         if value {
-            *self |= Self::one() << index
+            *self |= Self::one_with_precision(self.bits_precision()) << index
         } else {
-            *self &= (Self::one() << index).not()
+            *self &= (Self::one_with_precision(self.bits_precision()) << index).not()
         }
     }
 
