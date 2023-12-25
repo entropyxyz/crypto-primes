@@ -14,7 +14,7 @@ pub trait UintLike: Integer + RandomMod {
     fn overflowing_shr_vartime(&self, shift: u32) -> CtOption<Self>;
     fn wrapping_shl_vartime(&self, shift: u32) -> Self;
     fn wrapping_shr_vartime(&self, shift: u32) -> Self;
-    fn random_bits(rng: &mut impl CryptoRngCore, bit_length: u32) -> Self;
+    fn random_bits(rng: &mut impl CryptoRngCore, bit_length: u32, bits_precision: u32) -> Self;
 }
 
 // Uint<L> impls
@@ -60,7 +60,13 @@ impl<const L: usize> UintLike for Uint<L> {
         Self::wrapping_shr_vartime(self, shift)
     }
 
-    fn random_bits(rng: &mut impl CryptoRngCore, bit_length: u32) -> Self {
+    /// TODO: bits_precision is required because BoxedUint::random requires bits_precision
+    ///   we can require the user to input the correct precision:
+    ///   in this case the documentation will need to communicate to the users about this
+    ///   requirement, and we could put an assert statement to check
+    ///
+    /// We can also accept whatever value and just ignore it.
+    fn random_bits(rng: &mut impl CryptoRngCore, bit_length: u32, _bits_precision: u32) -> Self {
         if bit_length > Self::BITS {
             panic!("The requested bit length ({bit_length}) is larger than the chosen Uint size");
         }
@@ -112,9 +118,11 @@ impl UintLike for BoxedUint {
         Self::wrapping_shr_vartime(self, shift)
     }
 
-    fn random_bits(rng: &mut impl CryptoRngCore, bit_length: u32) -> Self {
-        let random = Self::random(rng, bit_length);
-        let bits_precision = random.bits_precision();
+    fn random_bits(rng: &mut impl CryptoRngCore, bit_length: u32, bits_precision: u32) -> Self {
+        if bit_length > bits_precision {
+            panic!("The requested bit length ({bit_length}) is larger than the chosen Uint size");
+        }
+        let random = Self::random(rng, bits_precision);
         random >> (bits_precision - bit_length)
     }
 }

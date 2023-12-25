@@ -192,7 +192,7 @@ mod tests {
     #[test]
     fn trivial() {
         let mut rng = ChaCha8Rng::from_seed(*b"01234567890123456789012345678901");
-        let start = random_odd_uint::<U1024>(&mut rng, 1024);
+        let start = random_odd_uint::<U1024>(&mut rng, 1024, U1024::BITS);
         for num in Sieve::new(start.as_ref(), 1024, false).take(10) {
             let mr = MillerRabin::new(Odd::new(num).unwrap());
 

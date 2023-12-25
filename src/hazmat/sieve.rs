@@ -15,7 +15,11 @@ use crate::{
 /// (that is, with both `0` and `bit_length-1` bits set).
 ///
 /// Panics if `bit_length` is 0 or is greater than the bit size of the target `Uint`.
-pub fn random_odd_uint<T: UintLike>(rng: &mut impl CryptoRngCore, bit_length: u32) -> Odd<T> {
+pub fn random_odd_uint<T: UintLike>(
+    rng: &mut impl CryptoRngCore,
+    bit_length: u32,
+    bits_precision: u32,
+) -> Odd<T> {
     if bit_length == 0 {
         panic!("Bit length must be non-zero");
     }
@@ -30,7 +34,7 @@ pub fn random_odd_uint<T: UintLike>(rng: &mut impl CryptoRngCore, bit_length: u3
     }*/
 
     // TODO: not particularly efficient, can be improved by zeroing high bits instead of shifting
-    let mut random = T::random_bits(rng, bit_length);
+    let mut random = T::random_bits(rng, bit_length, bits_precision);
 
     // Make it odd
     random.set_bit_vartime(0, true);
@@ -293,7 +297,7 @@ mod tests {
         let max_prime = SMALL_PRIMES[SMALL_PRIMES.len() - 1];
 
         let mut rng = ChaCha8Rng::from_seed(*b"01234567890123456789012345678901");
-        let start = random_odd_uint::<U64>(&mut rng, 32).get();
+        let start = random_odd_uint::<U64>(&mut rng, 32, U64::BITS).get();
         for num in Sieve::new(&start, 32, false).take(100) {
             let num_u64 = u64::from(num);
             assert!(num_u64.leading_zeros() == 32);
@@ -373,7 +377,7 @@ mod tests {
     #[test]
     fn random_below_max_length() {
         for _ in 0..10 {
-            let r = random_odd_uint::<U64>(&mut OsRng, 50).get();
+            let r = random_odd_uint::<U64>(&mut OsRng, 50, U64::BITS).get();
             assert_eq!(r.bits(), 50);
         }
     }
@@ -381,13 +385,13 @@ mod tests {
     #[test]
     #[should_panic(expected = "Bit length must be non-zero")]
     fn random_odd_uint_0bits() {
-        let _p = random_odd_uint::<U64>(&mut OsRng, 0);
+        let _p = random_odd_uint::<U64>(&mut OsRng, 0, U64::BITS);
     }
 
     #[test]
     #[should_panic(expected = "The requested bit length (65) is larger than the chosen Uint size")]
     fn random_odd_uint_too_many_bits() {
-        let _p = random_odd_uint::<U64>(&mut OsRng, 65);
+        let _p = random_odd_uint::<U64>(&mut OsRng, 65, U64::BITS);
     }
 
     #[test]
