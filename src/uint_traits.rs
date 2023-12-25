@@ -15,6 +15,9 @@ pub trait UintLike: Integer + RandomMod {
     fn wrapping_shl_vartime(&self, shift: u32) -> Self;
     fn wrapping_shr_vartime(&self, shift: u32) -> Self;
     fn random_bits(rng: &mut impl CryptoRngCore, bit_length: u32, bits_precision: u32) -> Self;
+    fn one_with_precision(bits_precision: u32) -> Self;
+    fn zero_with_precision(bits_precision: u32) -> Self;
+    fn widen(&self, bits_precision: u32) -> Self;
 }
 
 // Uint<L> impls
@@ -73,6 +76,18 @@ impl<const L: usize> UintLike for Uint<L> {
         let random = Self::random(rng);
         random >> (Self::BITS - bit_length)
     }
+
+    fn one_with_precision(_bits_precision: u32) -> Self {
+        Self::ONE
+    }
+
+    fn zero_with_precision(_bits_precision: u32) -> Self {
+        Self::ZERO
+    }
+
+    fn widen(&self, _bits_precision: u32) -> Self {
+        *self
+    }
 }
 
 impl UintLike for BoxedUint {
@@ -101,13 +116,13 @@ impl UintLike for BoxedUint {
     }
 
     fn overflowing_shl_vartime(&self, shift: u32) -> CtOption<Self> {
-        let (res, is_some) = Self::overflowing_shl(self, shift);
-        CtOption::new(res, is_some)
+        let (res, overflow) = Self::overflowing_shl(self, shift);
+        CtOption::new(res, !overflow)
     }
 
     fn overflowing_shr_vartime(&self, shift: u32) -> CtOption<Self> {
-        let (res, is_some) = Self::overflowing_shr(self, shift);
-        CtOption::new(res, is_some)
+        let (res, overflow) = Self::overflowing_shr(self, shift);
+        CtOption::new(res, !overflow)
     }
 
     fn wrapping_shl_vartime(&self, shift: u32) -> Self {
@@ -124,5 +139,17 @@ impl UintLike for BoxedUint {
         }
         let random = Self::random(rng, bits_precision);
         random >> (bits_precision - bit_length)
+    }
+
+    fn zero_with_precision(bits_precision: u32) -> Self {
+        Self::zero_with_precision(bits_precision)
+    }
+
+    fn one_with_precision(bits_precision: u32) -> Self {
+        Self::one_with_precision(bits_precision)
+    }
+
+    fn widen(&self, bits_precision: u32) -> Self {
+        self.widen(bits_precision)
     }
 }

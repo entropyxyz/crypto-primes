@@ -352,7 +352,10 @@ pub fn lucas_test<T: UintLike>(
     let q = if q_is_one {
         one.clone()
     } else {
-        let abs_q = <T as Integer>::Monty::new(T::from(abs_q), params.clone());
+        let abs_q = <T as Integer>::Monty::new(
+            T::from(abs_q).widen(candidate.bits_precision()),
+            params.clone(),
+        );
         if q_is_negative {
             -abs_q
         } else {
@@ -365,7 +368,7 @@ pub fn lucas_test<T: UintLike>(
     let p = if p_is_one {
         one.clone()
     } else {
-        <T as Integer>::Monty::new(T::from(p), params.clone())
+        <T as Integer>::Monty::new(T::from(p).widen(candidate.bits_precision()), params.clone())
     };
 
     // Compute d-th element of Lucas sequence (U_d(P, Q), V_d(P, Q)), where:
@@ -388,7 +391,8 @@ pub fn lucas_test<T: UintLike>(
     let mut qk = one.clone(); // keeps Q^k
 
     // D in Montgomery representation - note that it can be negative.
-    let abs_d = <T as Integer>::Monty::new(T::from(abs_d), params);
+    let abs_d =
+        <T as Integer>::Monty::new(T::from(abs_d).widen(candidate.bits_precision()), params);
     let d_m = if d_is_negative { -abs_d } else { abs_d };
 
     for i in (0..d.bits_vartime()).rev() {

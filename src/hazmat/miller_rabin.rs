@@ -33,10 +33,11 @@ impl<T: UintLike> MillerRabin<T> {
         let minus_one = -one.clone();
 
         // Find `s` and odd `d` such that `candidate - 1 == 2^s * d`.
-        let (s, d) = if candidate.as_ref() == &T::one() {
-            (0, T::one())
+        let (s, d) = if candidate.as_ref() == &T::one_with_precision(candidate.bits_precision()) {
+            (0, T::one_with_precision(candidate.bits_precision()))
         } else {
-            let candidate_minus_one = candidate.wrapping_sub(&T::one());
+            let candidate_minus_one =
+                candidate.wrapping_sub(&T::one_with_precision(candidate.bits_precision()));
             let s = candidate_minus_one.trailing_zeros_vartime();
             // Will not overflow because `candidate` is odd and greater than 1.
             let d = candidate_minus_one
@@ -86,7 +87,7 @@ impl<T: UintLike> MillerRabin<T> {
 
     /// Perform a Miller-Rabin check with base 2.
     pub fn test_base_two(&self) -> Primality {
-        self.test(&T::from(2u32))
+        self.test(&T::from(2u32).widen(self.candidate.bits_precision()))
     }
 
     /// Perform a Miller-Rabin check with a random base (in the range `[3, candidate-2]`)
