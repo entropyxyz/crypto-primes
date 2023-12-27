@@ -2,34 +2,21 @@
 //! before proceeding with slower tests.
 
 use alloc::{vec, vec::Vec};
+use core::num::NonZeroU32;
 
-use crypto_bigint::Odd;
+use crypto_bigint::{Integer, Odd, RandomBits};
 use rand_core::CryptoRngCore;
 
-use crate::{
-    hazmat::precomputed::{SmallPrime, RECIPROCALS, SMALL_PRIMES},
-    UintLike,
-};
+use crate::hazmat::precomputed::{SmallPrime, RECIPROCALS, SMALL_PRIMES};
 
 /// Returns a random odd integer with given bit length
 /// (that is, with both `0` and `bit_length-1` bits set).
-///
-/// Panics if `bit_length` is 0 or is greater than the bit size of the target `Uint`.
-pub fn random_odd_uint<T: UintLike>(rng: &mut impl CryptoRngCore, bit_length: u32) -> Odd<T> {
-    if bit_length == 0 {
-        panic!("Bit length must be non-zero");
-    }
+pub fn random_odd_integer<T: Integer + RandomBits>(
+    rng: &mut impl CryptoRngCore,
+    bit_length: NonZeroU32,
+) -> Odd<T> {
+    let bit_length = bit_length.get();
 
-    // TODO: what do we do here if `bit_length` is greater than Uint<L>::BITS?
-    // assume that the user knows what he's doing since it is a hazmat function?
-    /*if bit_length > Uint::<L>::BITS {
-        panic!(
-            "The requested bit length ({}) is larger than the chosen Uint size",
-            bit_length
-        );
-    }*/
-
-    // TODO: not particularly efficient, can be improved by zeroing high bits instead of shifting
     let mut random = T::random_bits(rng, bit_length);
 
     // Make it odd
@@ -53,7 +40,7 @@ const INCR_LIMIT: Residue = Residue::MAX - SMALL_PRIMES[SMALL_PRIMES.len() - 1] 
 /// An iterator returning numbers with up to and including given bit length,
 /// starting from a given number, that are not multiples of the first 2048 small primes.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Sieve<T: UintLike> {
+pub struct Sieve<T: Integer> {
     // Instead of dividing a big integer by small primes every time (which is slow),
     // we keep a "base" and a small increment separately,
     // so that we can only calculate the residues of the increment.
@@ -68,7 +55,7 @@ pub struct Sieve<T: UintLike> {
     last_round: bool,
 }
 
-impl<T: UintLike> Sieve<T> {
+impl<T: Integer> Sieve<T> {
     /// Creates a new sieve, iterating from `start` and
     /// until the last number with `max_bit_length` bits,
     /// producing numbers that are not non-trivial multiples
@@ -78,17 +65,15 @@ impl<T: UintLike> Sieve<T> {
     /// Note that `start` is adjusted to `2`, or the next `1 mod 2` number (`safe_primes = false`);
     /// and `5`, or `3 mod 4` number (`safe_primes = true`).
     ///
-    /// Panics if `max_bit_length` is zero or greater than the size of the target `Uint`.
+    /// Panics if `max_bit_length` greater than the precision of `start`.
     ///
     /// If `safe_primes` is `true`, both the returned `n` and `n/2` are sieved.
-    pub fn new(start: &T, max_bit_length: u32, safe_primes: bool) -> Self {
-        if max_bit_length == 0 {
-            panic!("The requested bit length cannot be zero");
-        }
+    pub fn new(start: &T, max_bit_length: NonZeroU32, safe_primes: bool) -> Self {
+        let max_bit_length = max_bit_length.get();
 
         if max_bit_length > start.bits_precision() {
             panic!(
-                "The requested bit length ({}) is larger than the chosen Uint size",
+                "The requested bit length ({}) is larger than the precision of `start`",
                 max_bit_length
             );
         }
@@ -266,7 +251,7 @@ impl<T: UintLike> Sieve<T> {
     }
 }
 
-impl<T: UintLike> Iterator for Sieve<T> {
+impl<T: Integer> Iterator for Sieve<T> {
     type Item = T;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -279,13 +264,14 @@ mod tests {
 
     use alloc::format;
     use alloc::vec::Vec;
+    use core::num::NonZeroU32;
 
     use crypto_bigint::U64;
     use num_prime::nt_funcs::factorize64;
     use rand_chacha::ChaCha8Rng;
     use rand_core::{OsRng, SeedableRng};
 
-    use super::{random_odd_uint, Sieve};
+    use super::{random_odd_integer, Sieve};
     use crate::hazmat::precomputed::SMALL_PRIMES;
 
     #[test]
@@ -293,8 +279,8 @@ mod tests {
         let max_prime = SMALL_PRIMES[SMALL_PRIMES.len() - 1];
 
         let mut rng = ChaCha8Rng::from_seed(*b"01234567890123456789012345678901");
-        let start = random_odd_uint::<U64>(&mut rng, 32).get();
-        for num in Sieve::new(&start, 32, false).take(100) {
+        let start = random_odd_integer::<U64>(&mut rng, NonZeroU32::new(32).unwrap()).get();
+        for num in Sieve::new(&start, NonZeroU32::new(32).unwrap(), false).take(100) {
             let num_u64 = u64::from(num);
             assert!(num_u64.leading_zeros() == 32);
 
@@ -306,7 +292,12 @@ mod tests {
     }
 
     fn check_sieve(start: u32, bit_length: u32, safe_prime: bool, reference: &[u32]) {
-        let test = Sieve::new(&U64::from(start), bit_length, safe_prime).collect::<Vec<_>>();
+        let test = Sieve::new(
+            &U64::from(start),
+            NonZeroU32::new(bit_length).unwrap(),
+            safe_prime,
+        )
+        .collect::<Vec<_>>();
         assert_eq!(test.len(), reference.len());
         for (x, y) in test.iter().zip(reference.iter()) {
             assert_eq!(x, &U64::from(*y));
@@ -359,40 +350,32 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "The requested bit length cannot be zero")]
-    fn sieve_zero_bits() {
-        let _sieve = Sieve::new(&U64::ONE, 0, false);
-    }
-
-    #[test]
-    #[should_panic(expected = "The requested bit length (65) is larger than the chosen Uint size")]
+    #[should_panic(
+        expected = "The requested bit length (65) is larger than the precision of `start`"
+    )]
     fn sieve_too_many_bits() {
-        let _sieve = Sieve::new(&U64::ONE, 65, false);
+        let _sieve = Sieve::new(&U64::ONE, NonZeroU32::new(65).unwrap(), false);
     }
 
     #[test]
     fn random_below_max_length() {
         for _ in 0..10 {
-            let r = random_odd_uint::<U64>(&mut OsRng, 50).get();
+            let r = random_odd_integer::<U64>(&mut OsRng, NonZeroU32::new(50).unwrap()).get();
             assert_eq!(r.bits(), 50);
         }
     }
 
     #[test]
-    #[should_panic(expected = "Bit length must be non-zero")]
-    fn random_odd_uint_0bits() {
-        let _p = random_odd_uint::<U64>(&mut OsRng, 0);
-    }
-
-    #[test]
-    #[should_panic(expected = "The requested bit length (65) is larger than the chosen Uint size")]
+    #[should_panic(
+        expected = "try_random_bits() failed: BitLengthTooLarge { bit_length: 65, bits_precision: 64 }"
+    )]
     fn random_odd_uint_too_many_bits() {
-        let _p = random_odd_uint::<U64>(&mut OsRng, 65);
+        let _p = random_odd_integer::<U64>(&mut OsRng, NonZeroU32::new(65).unwrap());
     }
 
     #[test]
     fn sieve_derived_traits() {
-        let s = Sieve::new(&U64::ONE, 10, false);
+        let s = Sieve::new(&U64::ONE, NonZeroU32::new(10).unwrap(), false);
         assert!(format!("{s:?}").starts_with("Sieve"));
         assert_eq!(s.clone(), s);
     }

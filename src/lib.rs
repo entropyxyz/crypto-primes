@@ -18,7 +18,6 @@ extern crate alloc;
 pub mod hazmat;
 mod presets;
 mod traits;
-mod uint_traits;
 
 pub use presets::{
     generate_prime_with_rng, generate_safe_prime_with_rng, is_prime_with_rng,
@@ -28,5 +27,3 @@ pub use traits::RandomPrimeWithRng;
 
 #[cfg(feature = "default-rng")]
 pub use presets::{generate_prime, generate_safe_prime, is_prime, is_safe_prime};
-
-pub use uint_traits::UintLike;

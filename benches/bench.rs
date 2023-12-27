@@ -1,10 +1,12 @@
+use core::num::NonZeroU32;
+
 use criterion::{criterion_group, criterion_main, BatchSize, Criterion};
-use crypto_bigint::{nlimbs, Odd, Uint, U1024};
+use crypto_bigint::{nlimbs, Integer, Odd, RandomBits, Uint, U1024};
 use rand_chacha::ChaCha8Rng;
 use rand_core::{CryptoRngCore, OsRng, SeedableRng};
 
 #[cfg(feature = "tests-gmp")]
-use rug::{integer::Order, Integer};
+use rug::{integer::Order, Integer as GmpInteger};
 
 #[cfg(feature = "tests-openssl")]
 use openssl::bn::BigNum;
@@ -12,7 +14,7 @@ use openssl::bn::BigNum;
 use crypto_primes::{
     generate_prime_with_rng, generate_safe_prime_with_rng,
     hazmat::{
-        lucas_test, random_odd_uint, AStarBase, BruteForceBase, LucasCheck, MillerRabin,
+        lucas_test, random_odd_integer, AStarBase, BruteForceBase, LucasCheck, MillerRabin,
         SelfridgeBase, Sieve,
     },
     is_prime_with_rng, is_safe_prime_with_rng,
@@ -22,9 +24,16 @@ fn make_rng() -> ChaCha8Rng {
     ChaCha8Rng::from_seed(*b"01234567890123456789012345678901")
 }
 
+fn random_odd_uint<T: RandomBits + Integer>(
+    rng: &mut impl CryptoRngCore,
+    bit_length: u32,
+) -> Odd<T> {
+    random_odd_integer::<T>(rng, NonZeroU32::new(bit_length).unwrap())
+}
+
 fn make_sieve<const L: usize>(rng: &mut impl CryptoRngCore) -> Sieve<Uint<L>> {
     let start = random_odd_uint::<Uint<L>>(rng, Uint::<L>::BITS);
-    Sieve::new(&start, Uint::<L>::BITS, false)
+    Sieve::new(&start, NonZeroU32::new(Uint::<L>::BITS).unwrap(), false)
 }
 
 fn make_presieved_num<const L: usize>(rng: &mut impl CryptoRngCore) -> Odd<Uint<L>> {
@@ -42,7 +51,7 @@ fn bench_sieve(c: &mut Criterion) {
     group.bench_function("(U128) creation", |b| {
         b.iter_batched(
             || random_odd_uint::<Uint<{ nlimbs!(128) }>>(&mut OsRng, 128),
-            |start| Sieve::new(start.as_ref(), 128, false),
+            |start| Sieve::new(start.as_ref(), NonZeroU32::new(128).unwrap(), false),
             BatchSize::SmallInput,
         )
     });
@@ -63,7 +72,7 @@ fn bench_sieve(c: &mut Criterion) {
     group.bench_function("(U1024) creation", |b| {
         b.iter_batched(
             || random_odd_uint::<Uint<{ nlimbs!(1024) }>>(&mut OsRng, 1024),
-            |start| Sieve::new(start.as_ref(), 1024, false),
+            |start| Sieve::new(start.as_ref(), NonZeroU32::new(1024).unwrap(), false),
             BatchSize::SmallInput,
         )
     });
@@ -257,9 +266,9 @@ fn bench_presets(c: &mut Criterion) {
 fn bench_gmp(c: &mut Criterion) {
     let mut group = c.benchmark_group("GMP");
 
-    fn random<const L: usize>(rng: &mut impl CryptoRngCore) -> Integer {
+    fn random<const L: usize>(rng: &mut impl CryptoRngCore) -> GmpInteger {
         let num = random_odd_uint::<Uint<L>>(rng, Uint::<L>::BITS).get();
-        Integer::from_digits(num.as_words(), Order::Lsf)
+        GmpInteger::from_digits(num.as_words(), Order::Lsf)
     }
 
     group.bench_function("(U128) Random prime", |b| {

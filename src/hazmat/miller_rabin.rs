@@ -1,10 +1,9 @@
 //! Miller-Rabin primality test.
 
-use crypto_bigint::{Integer, Monty, NonZero, Odd, PowBoundedExp, Square};
+use crypto_bigint::{Integer, Monty, NonZero, Odd, PowBoundedExp, RandomMod, Square};
 use rand_core::CryptoRngCore;
 
 use super::Primality;
-use crate::UintLike;
 
 /// Precomputed data used to perform Miller-Rabin primality test[^Pomerance1980].
 /// The numbers that pass it are commonly called "strong probable primes"
@@ -15,7 +14,7 @@ use crate::UintLike;
 ///   Math. Comp. 35 1003-1026 (1980),
 ///   DOI: [10.2307/2006210](https://dx.doi.org/10.2307/2006210)
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct MillerRabin<T: UintLike> {
+pub struct MillerRabin<T: Integer> {
     candidate: T,
     bit_length: u32,
     montgomery_params: <<T as Integer>::Monty as Monty>::Params,
@@ -25,10 +24,10 @@ pub struct MillerRabin<T: UintLike> {
     d: T,
 }
 
-impl<T: UintLike> MillerRabin<T> {
+impl<T: Integer + RandomMod> MillerRabin<T> {
     /// Initializes a Miller-Rabin test for `candidate`.
     pub fn new(candidate: Odd<T>) -> Self {
-        let params = <T as Integer>::Monty::new_params(candidate.clone());
+        let params = <T as Integer>::Monty::new_params_vartime(candidate.clone());
         let one = <T as Integer>::Monty::one(params.clone());
         let minus_one = -one.clone();
 
@@ -118,8 +117,9 @@ impl<T: UintLike> MillerRabin<T> {
 mod tests {
 
     use alloc::format;
+    use core::num::NonZeroU32;
 
-    use crypto_bigint::{Odd, Uint, U1024, U128, U1536, U64};
+    use crypto_bigint::{Integer, Odd, RandomMod, Uint, U1024, U128, U1536, U64};
     use rand_chacha::ChaCha8Rng;
     use rand_core::{CryptoRngCore, OsRng, SeedableRng};
 
@@ -127,10 +127,7 @@ mod tests {
     use num_prime::nt_funcs::is_prime64;
 
     use super::MillerRabin;
-    use crate::{
-        hazmat::{primes, pseudoprimes, random_odd_uint, Sieve},
-        UintLike,
-    };
+    use crate::hazmat::{primes, pseudoprimes, random_odd_integer, Sieve};
 
     #[test]
     fn miller_rabin_derived_traits() {
@@ -152,7 +149,7 @@ mod tests {
         pseudoprimes::STRONG_BASE_2.iter().any(|x| *x == num)
     }
 
-    fn random_checks<T: UintLike>(
+    fn random_checks<T: Integer + RandomMod>(
         rng: &mut impl CryptoRngCore,
         mr: &MillerRabin<T>,
         count: usize,
@@ -192,8 +189,8 @@ mod tests {
     #[test]
     fn trivial() {
         let mut rng = ChaCha8Rng::from_seed(*b"01234567890123456789012345678901");
-        let start = random_odd_uint::<U1024>(&mut rng, 1024);
-        for num in Sieve::new(start.as_ref(), 1024, false).take(10) {
+        let start = random_odd_integer::<U1024>(&mut rng, NonZeroU32::new(1024).unwrap());
+        for num in Sieve::new(start.as_ref(), NonZeroU32::new(1024).unwrap(), false).take(10) {
             let mr = MillerRabin::new(Odd::new(num).unwrap());
 
             // Trivial tests, must always be true.

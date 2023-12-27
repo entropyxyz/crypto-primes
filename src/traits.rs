@@ -1,4 +1,4 @@
-use crypto_bigint::Uint;
+use crypto_bigint::{Integer, RandomBits, RandomMod};
 use rand_core::CryptoRngCore;
 
 use crate::{
@@ -37,7 +37,7 @@ pub trait RandomPrimeWithRng {
     fn is_safe_prime_with_rng(&self, rng: &mut impl CryptoRngCore) -> bool;
 }
 
-impl<const L: usize> RandomPrimeWithRng for Uint<L> {
+impl<T: Integer + RandomBits + RandomMod> RandomPrimeWithRng for T {
     fn generate_prime_with_rng(rng: &mut impl CryptoRngCore, bit_length: u32) -> Self {
         generate_prime_with_rng(rng, bit_length)
     }

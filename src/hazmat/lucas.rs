@@ -6,7 +6,6 @@ use super::{
     jacobi::{jacobi_symbol_vartime, JacobiSymbol},
     Primality,
 };
-use crate::UintLike;
 
 /// The maximum number of attempts to find `D` such that `(D/n) == -1`.
 // This is widely believed to be impossible.
@@ -28,7 +27,7 @@ pub trait LucasBase {
     /// Given an odd integer, returns `Ok((P, abs(Q), is_negative(Q)))` on success,
     /// or `Err(Primality)` if the primality for the given integer was discovered
     /// during the search for a base.
-    fn generate<T: UintLike>(&self, n: &Odd<T>) -> Result<(Word, Word, bool), Primality>;
+    fn generate<T: Integer>(&self, n: &Odd<T>) -> Result<(Word, Word, bool), Primality>;
 }
 
 /// "Method A" for selecting the base given in Baillie & Wagstaff[^Baillie1980],
@@ -46,7 +45,7 @@ pub trait LucasBase {
 pub struct SelfridgeBase;
 
 impl LucasBase for SelfridgeBase {
-    fn generate<T: UintLike>(&self, n: &Odd<T>) -> Result<(Word, Word, bool), Primality> {
+    fn generate<T: Integer>(&self, n: &Odd<T>) -> Result<(Word, Word, bool), Primality> {
         let mut abs_d = 5;
         let mut d_is_negative = false;
         let n_is_small = n.bits_vartime() < Word::BITS; // if true, `n` fits into one `Word`
@@ -111,7 +110,7 @@ impl LucasBase for SelfridgeBase {
 pub struct AStarBase;
 
 impl LucasBase for AStarBase {
-    fn generate<T: UintLike>(&self, n: &Odd<T>) -> Result<(Word, Word, bool), Primality> {
+    fn generate<T: Integer>(&self, n: &Odd<T>) -> Result<(Word, Word, bool), Primality> {
         SelfridgeBase.generate(n).map(|(p, abs_q, q_is_negative)| {
             if abs_q == 1 && q_is_negative {
                 (5, 5, false)
@@ -134,7 +133,7 @@ impl LucasBase for AStarBase {
 pub struct BruteForceBase;
 
 impl LucasBase for BruteForceBase {
-    fn generate<T: UintLike>(&self, n: &Odd<T>) -> Result<(Word, Word, bool), Primality> {
+    fn generate<T: Integer>(&self, n: &Odd<T>) -> Result<(Word, Word, bool), Primality> {
         let mut p = 3;
         let mut attempts = 0;
 
@@ -179,7 +178,7 @@ impl LucasBase for BruteForceBase {
 }
 
 /// For the given odd `n`, finds `s` and odd `d` such that `n + 1 == 2^s * d`.
-fn decompose<T: UintLike>(n: &Odd<T>) -> (u32, Odd<T>) {
+fn decompose<T: Integer>(n: &Odd<T>) -> (u32, Odd<T>) {
     // Need to be careful here since `n + 1` can overflow.
     // Instead of adding 1 and counting trailing 0s, we count trailing ones on the original `n`.
 
@@ -283,7 +282,7 @@ pub enum LucasCheck {
 /// Performs the primality test based on Lucas sequence.
 /// See [`LucasCheck`] for possible checks, and the implementors of [`LucasBase`]
 /// for the corresponding bases.
-pub fn lucas_test<T: UintLike>(
+pub fn lucas_test<T: Integer>(
     candidate: &Odd<T>,
     base: impl LucasBase,
     check: LucasCheck,
@@ -340,7 +339,7 @@ pub fn lucas_test<T: UintLike>(
 
     // Some constants in Montgomery form
 
-    let params = <T as Integer>::Monty::new_params(candidate.clone());
+    let params = <T as Integer>::Monty::new_params_vartime(candidate.clone());
 
     let zero = <T as Integer>::Monty::zero(params.clone());
     let one = <T as Integer>::Monty::one(params.clone());
@@ -501,7 +500,7 @@ mod tests {
 
     use alloc::format;
 
-    use crypto_bigint::{Odd, Uint, Word, U128, U64};
+    use crypto_bigint::{Integer, Odd, Uint, Word, U128, U64};
 
     #[cfg(feature = "tests-exhaustive")]
     use num_prime::nt_funcs::is_prime64;
@@ -509,10 +508,7 @@ mod tests {
     use super::{
         decompose, lucas_test, AStarBase, BruteForceBase, LucasBase, LucasCheck, SelfridgeBase,
     };
-    use crate::{
-        hazmat::{primes, pseudoprimes, Primality},
-        UintLike,
-    };
+    use crate::hazmat::{primes, pseudoprimes, Primality};
 
     #[test]
     fn bases_derived_traits() {
@@ -557,7 +553,7 @@ mod tests {
         struct TestBase;
 
         impl LucasBase for TestBase {
-            fn generate<T: UintLike>(&self, _n: &Odd<T>) -> Result<(Word, Word, bool), Primality> {
+            fn generate<T: Integer>(&self, _n: &Odd<T>) -> Result<(Word, Word, bool), Primality> {
                 Ok((5, 5, false))
             }
         }
