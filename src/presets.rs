@@ -162,7 +162,7 @@ pub fn is_safe_prime_with_rng<T: Integer + RandomMod>(
 
 /// Checks for primality assuming that `num` is odd.
 fn _is_prime_with_rng<T: Integer + RandomMod>(rng: &mut impl CryptoRngCore, num: &Odd<T>) -> bool {
-    let mr = MillerRabin::new(num.clone());
+    let mr = MillerRabin::new(num);
 
     if !mr.test_base_two().is_probably_prime() {
         return false;
