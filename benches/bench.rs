@@ -1,10 +1,12 @@
+use core::num::NonZeroU32;
+
 use criterion::{criterion_group, criterion_main, BatchSize, Criterion};
-use crypto_bigint::{nlimbs, Odd, Uint, U1024};
+use crypto_bigint::{nlimbs, Integer, Odd, RandomBits, Uint, U1024, U128, U256};
 use rand_chacha::ChaCha8Rng;
 use rand_core::{CryptoRngCore, OsRng, SeedableRng};
 
 #[cfg(feature = "tests-gmp")]
-use rug::{integer::Order, Integer};
+use rug::{integer::Order, Integer as GmpInteger};
 
 #[cfg(feature = "tests-openssl")]
 use openssl::bn::BigNum;
@@ -12,7 +14,7 @@ use openssl::bn::BigNum;
 use crypto_primes::{
     generate_prime_with_rng, generate_safe_prime_with_rng,
     hazmat::{
-        lucas_test, random_odd_uint, AStarBase, BruteForceBase, LucasCheck, MillerRabin,
+        lucas_test, random_odd_integer, AStarBase, BruteForceBase, LucasCheck, MillerRabin,
         SelfridgeBase, Sieve,
     },
     is_prime_with_rng, is_safe_prime_with_rng,
@@ -22,9 +24,16 @@ fn make_rng() -> ChaCha8Rng {
     ChaCha8Rng::from_seed(*b"01234567890123456789012345678901")
 }
 
-fn make_sieve<const L: usize>(rng: &mut impl CryptoRngCore) -> Sieve<L> {
-    let start = random_odd_uint::<L>(rng, Uint::<L>::BITS);
-    Sieve::new(&start, Uint::<L>::BITS, false)
+fn random_odd_uint<T: RandomBits + Integer>(
+    rng: &mut impl CryptoRngCore,
+    bit_length: u32,
+) -> Odd<T> {
+    random_odd_integer::<T>(rng, NonZeroU32::new(bit_length).unwrap())
+}
+
+fn make_sieve<const L: usize>(rng: &mut impl CryptoRngCore) -> Sieve<Uint<L>> {
+    let start = random_odd_uint::<Uint<L>>(rng, Uint::<L>::BITS);
+    Sieve::new(&start, NonZeroU32::new(Uint::<L>::BITS).unwrap(), false)
 }
 
 fn make_presieved_num<const L: usize>(rng: &mut impl CryptoRngCore) -> Odd<Uint<L>> {
@@ -36,13 +45,13 @@ fn bench_sieve(c: &mut Criterion) {
     let mut group = c.benchmark_group("Sieve");
 
     group.bench_function("(U128) random start", |b| {
-        b.iter(|| random_odd_uint::<{ nlimbs!(128) }>(&mut OsRng, 128))
+        b.iter(|| random_odd_uint::<U128>(&mut OsRng, 128))
     });
 
     group.bench_function("(U128) creation", |b| {
         b.iter_batched(
-            || random_odd_uint::<{ nlimbs!(128) }>(&mut OsRng, 128),
-            |start| Sieve::new(&start, 128, false),
+            || random_odd_uint::<U128>(&mut OsRng, 128),
+            |start| Sieve::new(start.as_ref(), NonZeroU32::new(128).unwrap(), false),
             BatchSize::SmallInput,
         )
     });
@@ -57,13 +66,13 @@ fn bench_sieve(c: &mut Criterion) {
     });
 
     group.bench_function("(U1024) random start", |b| {
-        b.iter(|| random_odd_uint::<{ nlimbs!(1024) }>(&mut OsRng, 1024))
+        b.iter(|| random_odd_uint::<U1024>(&mut OsRng, 1024))
     });
 
     group.bench_function("(U1024) creation", |b| {
         b.iter_batched(
-            || random_odd_uint::<{ nlimbs!(1024) }>(&mut OsRng, 1024),
-            |start| Sieve::new(&start, 1024, false),
+            || random_odd_uint::<U1024>(&mut OsRng, 1024),
+            |start| Sieve::new(start.as_ref(), NonZeroU32::new(1024).unwrap(), false),
             BatchSize::SmallInput,
         )
     });
@@ -84,15 +93,15 @@ fn bench_miller_rabin(c: &mut Criterion) {
 
     group.bench_function("(U128) creation", |b| {
         b.iter_batched(
-            || random_odd_uint::<{ nlimbs!(128) }>(&mut OsRng, 128),
-            MillerRabin::new,
+            || random_odd_uint::<U128>(&mut OsRng, 128),
+            |n| MillerRabin::new(&n),
             BatchSize::SmallInput,
         )
     });
 
     group.bench_function("(U128) random base test (pre-sieved)", |b| {
         b.iter_batched(
-            || MillerRabin::new(make_presieved_num::<{ nlimbs!(128) }>(&mut OsRng)),
+            || MillerRabin::new(&make_presieved_num::<{ nlimbs!(128) }>(&mut OsRng)),
             |mr| mr.test_random_base(&mut OsRng),
             BatchSize::SmallInput,
         )
@@ -100,15 +109,15 @@ fn bench_miller_rabin(c: &mut Criterion) {
 
     group.bench_function("(U1024) creation", |b| {
         b.iter_batched(
-            || random_odd_uint::<{ nlimbs!(1024) }>(&mut OsRng, 1024),
-            MillerRabin::new,
+            || random_odd_uint::<U1024>(&mut OsRng, 1024),
+            |n| MillerRabin::new(&n),
             BatchSize::SmallInput,
         )
     });
 
     group.bench_function("(U1024) random base test (pre-sieved)", |b| {
         b.iter_batched(
-            || MillerRabin::new(make_presieved_num::<{ nlimbs!(1024) }>(&mut OsRng)),
+            || MillerRabin::new(&make_presieved_num::<{ nlimbs!(1024) }>(&mut OsRng)),
             |mr| mr.test_random_base(&mut OsRng),
             BatchSize::SmallInput,
         )
@@ -193,39 +202,39 @@ fn bench_presets(c: &mut Criterion) {
 
     group.bench_function("(U128) Prime test", |b| {
         b.iter_batched(
-            || random_odd_uint::<{ nlimbs!(128) }>(&mut OsRng, 128),
-            |num| is_prime_with_rng(&mut OsRng, &num),
+            || random_odd_uint::<U128>(&mut OsRng, 128),
+            |num| is_prime_with_rng(&mut OsRng, num.as_ref()),
             BatchSize::SmallInput,
         )
     });
 
     group.bench_function("(U128) Safe prime test", |b| {
         b.iter_batched(
-            || random_odd_uint::<{ nlimbs!(128) }>(&mut OsRng, 128),
-            |num| is_safe_prime_with_rng(&mut OsRng, &num),
+            || random_odd_uint::<U128>(&mut OsRng, 128),
+            |num| is_safe_prime_with_rng(&mut OsRng, num.as_ref()),
             BatchSize::SmallInput,
         )
     });
 
     let mut rng = make_rng();
     group.bench_function("(U128) Random prime", |b| {
-        b.iter(|| generate_prime_with_rng::<{ nlimbs!(128) }>(&mut rng, None))
+        b.iter(|| generate_prime_with_rng::<U128>(&mut rng, 128))
     });
 
     let mut rng = make_rng();
     group.bench_function("(U1024) Random prime", |b| {
-        b.iter(|| generate_prime_with_rng::<{ nlimbs!(1024) }>(&mut rng, None))
+        b.iter(|| generate_prime_with_rng::<U1024>(&mut rng, 1024))
     });
 
     let mut rng = make_rng();
     group.bench_function("(U128) Random safe prime", |b| {
-        b.iter(|| generate_safe_prime_with_rng::<{ nlimbs!(128) }>(&mut rng, None))
+        b.iter(|| generate_safe_prime_with_rng::<U128>(&mut rng, 128))
     });
 
     group.sample_size(20);
     let mut rng = make_rng();
     group.bench_function("(U1024) Random safe prime", |b| {
-        b.iter(|| generate_safe_prime_with_rng::<{ nlimbs!(1024) }>(&mut rng, None))
+        b.iter(|| generate_safe_prime_with_rng::<U1024>(&mut rng, 1024))
     });
 
     group.finish();
@@ -235,19 +244,19 @@ fn bench_presets(c: &mut Criterion) {
 
     let mut rng = make_rng();
     group.bench_function("(U128) Random safe prime", |b| {
-        b.iter(|| generate_safe_prime_with_rng::<{ nlimbs!(128) }>(&mut rng, None))
+        b.iter(|| generate_safe_prime_with_rng::<U128>(&mut rng, 128))
     });
 
     // The performance should scale with the prime size, not with the Uint size.
     // So we should strive for this test's result to be as close as possible
     // to that of the previous one and as far away as possible from the next one.
     group.bench_function("(U256) Random 128 bit safe prime", |b| {
-        b.iter(|| generate_safe_prime_with_rng::<{ nlimbs!(256) }>(&mut rng, Some(128)))
+        b.iter(|| generate_safe_prime_with_rng::<U256>(&mut rng, 128))
     });
 
     // The upper bound for the previous test.
     group.bench_function("(U256) Random 256 bit safe prime", |b| {
-        b.iter(|| generate_safe_prime_with_rng::<{ nlimbs!(256) }>(&mut rng, None))
+        b.iter(|| generate_safe_prime_with_rng::<U256>(&mut rng, 256))
     });
 
     group.finish();
@@ -257,9 +266,9 @@ fn bench_presets(c: &mut Criterion) {
 fn bench_gmp(c: &mut Criterion) {
     let mut group = c.benchmark_group("GMP");
 
-    fn random<const L: usize>(rng: &mut impl CryptoRngCore) -> Integer {
-        let num = random_odd_uint::<L>(rng, Uint::<L>::BITS);
-        Integer::from_digits(num.as_words(), Order::Lsf)
+    fn random<const L: usize>(rng: &mut impl CryptoRngCore) -> GmpInteger {
+        let num = random_odd_uint::<Uint<L>>(rng, Uint::<L>::BITS).get();
+        GmpInteger::from_digits(num.as_words(), Order::Lsf)
     }
 
     group.bench_function("(U128) Random prime", |b| {
