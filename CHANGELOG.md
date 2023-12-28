@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `random_odd_uint()` is renamed to `random_odd_integer()`, takes a `NonZeroU32` for `bit_length`. ([#38])
 - All bit length-type parameters take `u32` instead of `usize`. ([#36])
 - All the API is based on the `Integer` trait instead of `Uint` specifically. ([#38])
+- High-level generation/checking functions take an additional `bits_precision` argument. ([#40])
 
 
 [#36]: https://github.com/entropyxyz/crypto-primes/pull/36

@@ -84,7 +84,7 @@ pub(crate) fn jacobi_symbol_vartime<T: Integer>(
     };
 
     // A degenerate case.
-    if abs_a == 1 || p_long.as_ref() == &T::one() {
+    if abs_a == 1 || p_long.as_ref() == &T::one_like(p_long) {
         return result;
     }
 

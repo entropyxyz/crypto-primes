@@ -1,5 +1,5 @@
 //! Lucas primality test.
-use crypto_bigint::{Integer, Monty, Odd, Square, Word};
+use crypto_bigint::{Integer, Limb, Monty, Odd, Square, Word};
 
 use super::{
     gcd::gcd_vartime,
@@ -161,7 +161,7 @@ impl LucasBase for BruteForceBase {
                 // Since the loop proceeds in increasing P and starts with P - 2 == 1,
                 // the shared prime factor must be P + 2.
                 // If P + 2 == n, then n is prime; otherwise P + 2 is a proper factor of n.
-                let primality = if n.as_ref() == &T::from(p + 2) {
+                let primality = if n.as_ref() == &T::from_limb_like(Limb::from(p + 2), n.as_ref()) {
                     Primality::Prime
                 } else {
                     Primality::Composite
@@ -182,6 +182,7 @@ fn decompose<T: Integer>(n: &Odd<T>) -> (u32, Odd<T>) {
     // Need to be careful here since `n + 1` can overflow.
     // Instead of adding 1 and counting trailing 0s, we count trailing ones on the original `n`.
 
+    let one = T::one_like(n);
     let s = n.trailing_ones_vartime();
     let d = if s < n.bits_precision() {
         // The shift won't overflow because of the check above.
@@ -190,10 +191,10 @@ fn decompose<T: Integer>(n: &Odd<T>) -> (u32, Odd<T>) {
         n.as_ref()
             .overflowing_shr_vartime(s)
             .expect("shift should be within range by construction")
-            .checked_add(&T::one())
+            .checked_add(&one)
             .expect("addition should not overflow by construction")
     } else {
-        T::one()
+        one
     };
 
     (s, Odd::new(d).expect("`d` should be odd by construction"))
@@ -293,6 +294,9 @@ pub fn lucas_test<T: Integer>(
     //   R. Crandall, C. Pomerance, "Prime numbers: a computational perspective",
     //   2nd ed., Springer (2005) (ISBN: 0-387-25282-7, 978-0387-25282-7)
 
+    // A word-to-big integer conversion helper
+    let to_integer = |x: Word| T::from_limb_like(Limb::from(x), candidate.as_ref());
+
     // Find the base for the Lucas sequence.
     let (p, abs_q, q_is_negative) = match base.generate(candidate) {
         Ok(pq) => pq,
@@ -328,7 +332,7 @@ pub fn lucas_test<T: Integer>(
     // it does not noticeably affect the performance.
     if abs_q != 1
         && gcd_vartime(candidate.as_ref(), abs_q) != 1
-        && candidate.as_ref() > &T::from(abs_q)
+        && candidate.as_ref() > &to_integer(abs_q)
     {
         return Primality::Composite;
     }
@@ -351,7 +355,7 @@ pub fn lucas_test<T: Integer>(
     let q = if q_is_one {
         one.clone()
     } else {
-        let abs_q = <T as Integer>::Monty::new(T::from(abs_q), params.clone());
+        let abs_q = <T as Integer>::Monty::new(to_integer(abs_q), params.clone());
         if q_is_negative {
             -abs_q
         } else {
@@ -364,7 +368,7 @@ pub fn lucas_test<T: Integer>(
     let p = if p_is_one {
         one.clone()
     } else {
-        <T as Integer>::Monty::new(T::from(p), params.clone())
+        <T as Integer>::Monty::new(to_integer(p), params.clone())
     };
 
     // Compute d-th element of Lucas sequence (U_d(P, Q), V_d(P, Q)), where:
@@ -387,7 +391,7 @@ pub fn lucas_test<T: Integer>(
     let mut qk = one.clone(); // keeps Q^k
 
     // D in Montgomery representation - note that it can be negative.
-    let abs_d = <T as Integer>::Monty::new(T::from(abs_d), params);
+    let abs_d = <T as Integer>::Monty::new(to_integer(abs_d), params);
     let d_m = if d_is_negative { -abs_d } else { abs_d };
 
     for i in (0..d.bits_vartime()).rev() {

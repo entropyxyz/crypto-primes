@@ -14,11 +14,12 @@ use crate::hazmat::precomputed::{SmallPrime, RECIPROCALS, SMALL_PRIMES};
 pub fn random_odd_integer<T: Integer + RandomBits>(
     rng: &mut impl CryptoRngCore,
     bit_length: NonZeroU32,
+    bits_precision: u32,
 ) -> Odd<T> {
     let bit_length = bit_length.get();
 
-    let mut random = T::random_bits(rng, bit_length);
-
+    let mut random = T::random_bits_with_precision(rng, bit_length, bits_precision);
+    assert!(random.bits_precision() == bits_precision);
     // Make it odd
     random.set_bit_vartime(0, true);
 
@@ -99,7 +100,7 @@ impl<T: Integer> Sieve<T> {
             base = T::from(3u32);
         } else {
             // Adjust the base so that we hit odd numbers when incrementing it by 2.
-            base |= T::one();
+            base |= T::one_like(start);
         }
 
         // Only calculate residues by primes up to and not including `base`,
@@ -157,9 +158,12 @@ impl<T: Integer> Sieve<T> {
         }
 
         // Find the increment limit.
-        let max_value = match T::one().overflowing_shl_vartime(self.max_bit_length).into() {
+        let max_value = match T::one_like(&self.base)
+            .overflowing_shl_vartime(self.max_bit_length)
+            .into()
+        {
             Some(val) => val,
-            None => T::one(),
+            None => T::one_like(&self.base),
         };
         let incr_limit = max_value.wrapping_sub(&self.base);
         self.incr_limit = if incr_limit > T::from(INCR_LIMIT) {
@@ -218,7 +222,7 @@ impl<T: Integer> Sieve<T> {
                 .checked_add(&self.incr.into())
                 .expect("addition should not overflow by construction");
             if self.safe_primes {
-                num = num.wrapping_shl_vartime(1) | T::one();
+                num = num.wrapping_shl_vartime(1) | T::one_like(&self.base);
             }
             Some(num)
         };
@@ -279,7 +283,8 @@ mod tests {
         let max_prime = SMALL_PRIMES[SMALL_PRIMES.len() - 1];
 
         let mut rng = ChaCha8Rng::from_seed(*b"01234567890123456789012345678901");
-        let start = random_odd_integer::<U64>(&mut rng, NonZeroU32::new(32).unwrap()).get();
+        let start =
+            random_odd_integer::<U64>(&mut rng, NonZeroU32::new(32).unwrap(), U64::BITS).get();
         for num in Sieve::new(&start, NonZeroU32::new(32).unwrap(), false).take(100) {
             let num_u64 = u64::from(num);
             assert!(num_u64.leading_zeros() == 32);
@@ -360,17 +365,18 @@ mod tests {
     #[test]
     fn random_below_max_length() {
         for _ in 0..10 {
-            let r = random_odd_integer::<U64>(&mut OsRng, NonZeroU32::new(50).unwrap()).get();
+            let r = random_odd_integer::<U64>(&mut OsRng, NonZeroU32::new(50).unwrap(), U64::BITS)
+                .get();
             assert_eq!(r.bits(), 50);
         }
     }
 
     #[test]
     #[should_panic(
-        expected = "try_random_bits() failed: BitLengthTooLarge { bit_length: 65, bits_precision: 64 }"
+        expected = "try_random_bits_with_precision() failed: BitLengthTooLarge { bit_length: 65, bits_precision: 64 }"
     )]
     fn random_odd_uint_too_many_bits() {
-        let _p = random_odd_integer::<U64>(&mut OsRng, NonZeroU32::new(65).unwrap());
+        let _p = random_odd_integer::<U64>(&mut OsRng, NonZeroU32::new(65).unwrap(), U64::BITS);
     }
 
     #[test]

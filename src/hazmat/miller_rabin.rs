@@ -1,6 +1,6 @@
 //! Miller-Rabin primality test.
 
-use crypto_bigint::{Integer, Monty, NonZero, Odd, PowBoundedExp, RandomMod, Square};
+use crypto_bigint::{Integer, Limb, Monty, NonZero, Odd, PowBoundedExp, RandomMod, Square};
 use rand_core::CryptoRngCore;
 
 use super::Primality;
@@ -28,14 +28,16 @@ impl<T: Integer + RandomMod> MillerRabin<T> {
     /// Initializes a Miller-Rabin test for `candidate`.
     pub fn new(candidate: &Odd<T>) -> Self {
         let params = <T as Integer>::Monty::new_params_vartime(candidate.clone());
-        let one = <T as Integer>::Monty::one(params.clone());
-        let minus_one = -one.clone();
+        let m_one = <T as Integer>::Monty::one(params.clone());
+        let m_minus_one = -m_one.clone();
+
+        let one = T::one_like(candidate.as_ref());
 
         // Find `s` and odd `d` such that `candidate - 1 == 2^s * d`.
-        let (s, d) = if candidate.as_ref() == &T::one() {
-            (0, T::one())
+        let (s, d) = if candidate.as_ref() == &one {
+            (0, one)
         } else {
-            let candidate_minus_one = candidate.wrapping_sub(&T::one());
+            let candidate_minus_one = candidate.wrapping_sub(&one);
             let s = candidate_minus_one.trailing_zeros_vartime();
             // Will not overflow because `candidate` is odd and greater than 1.
             let d = candidate_minus_one
@@ -48,8 +50,8 @@ impl<T: Integer + RandomMod> MillerRabin<T> {
             candidate: candidate.as_ref().clone(),
             bit_length: candidate.bits_vartime(),
             montgomery_params: params,
-            one,
-            minus_one,
+            one: m_one,
+            minus_one: m_minus_one,
             s,
             d,
         }
@@ -85,7 +87,7 @@ impl<T: Integer + RandomMod> MillerRabin<T> {
 
     /// Perform a Miller-Rabin check with base 2.
     pub fn test_base_two(&self) -> Primality {
-        self.test(&T::from(2u32))
+        self.test(&T::from_limb_like(Limb::from(2u32), &self.candidate))
     }
 
     /// Perform a Miller-Rabin check with a random base (in the range `[3, candidate-2]`)
@@ -189,7 +191,8 @@ mod tests {
     #[test]
     fn trivial() {
         let mut rng = ChaCha8Rng::from_seed(*b"01234567890123456789012345678901");
-        let start = random_odd_integer::<U1024>(&mut rng, NonZeroU32::new(1024).unwrap());
+        let start =
+            random_odd_integer::<U1024>(&mut rng, NonZeroU32::new(1024).unwrap(), U1024::BITS);
         for num in Sieve::new(start.as_ref(), NonZeroU32::new(1024).unwrap(), false).take(10) {
             let mr = MillerRabin::new(&Odd::new(num).unwrap());
 
