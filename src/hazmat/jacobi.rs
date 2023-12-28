@@ -1,6 +1,6 @@
 //! Jacobi symbol calculation.
 
-use crypto_bigint::{Limb, NonZero, Odd, Uint, Word};
+use crypto_bigint::{Integer, Limb, NonZero, Odd, Word};
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub(crate) enum JacobiSymbol {
@@ -20,37 +20,13 @@ impl core::ops::Neg for JacobiSymbol {
     }
 }
 
-// A helper trait to generalize some functions over Word and Uint.
-trait SmallMod {
-    fn mod8(&self) -> Word;
-    fn mod4(&self) -> Word;
-}
-
-impl SmallMod for Word {
-    fn mod8(&self) -> Word {
-        self & 7
-    }
-    fn mod4(&self) -> Word {
-        self & 3
-    }
-}
-
-impl<const L: usize> SmallMod for Uint<L> {
-    fn mod8(&self) -> Word {
-        self.as_limbs()[0].0 & 7
-    }
-    fn mod4(&self) -> Word {
-        self.as_limbs()[0].0 & 3
-    }
-}
-
 /// Transforms `(a/p)` -> `(r/p)` for odd `p`, where the resulting `r` is odd, and `a = r * 2^s`.
 /// Takes a Jacobi symbol value, and returns `r` and the new Jacobi symbol,
 /// negated if the transformation changes parity.
 ///
 /// Note that the returned `r` is odd.
-fn reduce_numerator<V: SmallMod>(j: JacobiSymbol, a: Word, p: &V) -> (JacobiSymbol, Word) {
-    let p_mod_8 = p.mod8();
+fn apply_reduce_numerator(j: JacobiSymbol, a: Word, p: Word) -> (JacobiSymbol, Word) {
+    let p_mod_8 = p & 7;
     let s = a.trailing_zeros();
     let j = if (s & 1) == 1 && (p_mod_8 == 3 || p_mod_8 == 5) {
         -j
@@ -60,23 +36,40 @@ fn reduce_numerator<V: SmallMod>(j: JacobiSymbol, a: Word, p: &V) -> (JacobiSymb
     (j, a >> s)
 }
 
+fn reduce_numerator_long<T: Integer>(j: JacobiSymbol, a: Word, p: &T) -> (JacobiSymbol, Word) {
+    apply_reduce_numerator(j, a, p.as_ref()[0].0)
+}
+
+fn reduce_numerator_short(j: JacobiSymbol, a: Word, p: Word) -> (JacobiSymbol, Word) {
+    apply_reduce_numerator(j, a, p)
+}
+
 /// Transforms `(a/p)` -> `(p/a)` for odd and coprime `a` and `p`.
 /// Takes a Jacobi symbol value, and returns the swapped pair and the new Jacobi symbol,
 /// negated if the transformation changes parity.
-fn swap<T: SmallMod, V: SmallMod>(j: JacobiSymbol, a: T, p: V) -> (JacobiSymbol, V, T) {
-    let j = if a.mod4() == 1 || p.mod4() == 1 {
+fn apply_swap(j: JacobiSymbol, a: Word, p: Word) -> JacobiSymbol {
+    if a & 3 == 1 || p & 3 == 1 {
         j
     } else {
         -j
-    };
+    }
+}
+
+fn swap_long<T: Integer>(j: JacobiSymbol, a: Word, p: &Odd<T>) -> (JacobiSymbol, &Odd<T>, Word) {
+    let j = apply_swap(j, a, p.as_ref().as_ref()[0].0);
+    (j, p, a)
+}
+
+fn swap_short(j: JacobiSymbol, a: Word, p: Word) -> (JacobiSymbol, Word, Word) {
+    let j = apply_swap(j, a, p);
     (j, p, a)
 }
 
 /// Returns the Jacobi symbol `(a/p)` given an odd `p`.
-pub(crate) fn jacobi_symbol_vartime<const L: usize>(
+pub(crate) fn jacobi_symbol_vartime<T: Integer>(
     abs_a: Word,
     a_is_negative: bool,
-    p_long: &Odd<Uint<L>>,
+    p_long: &Odd<T>,
 ) -> JacobiSymbol {
     let result = JacobiSymbol::One; // Keep track of all the sign flips here.
 
@@ -84,14 +77,14 @@ pub(crate) fn jacobi_symbol_vartime<const L: usize>(
     // (-a/n) = (-1/n) * (a/n)
     //        = (-1)^((n-1)/2) * (a/n)
     //        = (-1 if n = 3 mod 4 else 1) * (a/n)
-    let result = if a_is_negative && p_long.mod4() == 3 {
+    let result = if a_is_negative && p_long.as_ref().as_ref()[0].0 & 3 == 3 {
         -result
     } else {
         result
     };
 
     // A degenerate case.
-    if abs_a == 1 || p_long.as_ref() == &Uint::<L>::ONE {
+    if abs_a == 1 || p_long.as_ref() == &T::one() {
         return result;
     }
 
@@ -100,14 +93,14 @@ pub(crate) fn jacobi_symbol_vartime<const L: usize>(
     // Normalize input: at the end we want `a < p`, `p` odd, and both fitting into a `Word`.
     let (result, a, p): (JacobiSymbol, Word, Word) = if p_long.bits_vartime() <= Limb::BITS {
         let a = a_limb.0;
-        let p = p_long.as_limbs()[0].0;
+        let p = p_long.as_ref().as_ref()[0].0;
         (result, a % p, p)
     } else {
-        let (result, a) = reduce_numerator(result, a_limb.0, p_long.as_ref());
+        let (result, a) = reduce_numerator_long(result, a_limb.0, p_long.as_ref());
         if a == 1 {
             return result;
         }
-        let (result, a_long, p) = swap(result, a, p_long.get());
+        let (result, a_long, p) = swap_long(result, a, p_long);
         // Can unwrap here, since `p` is swapped with `a`,
         // and `a` would be odd after `reduce_numerator()`.
         let a =
@@ -127,7 +120,7 @@ pub(crate) fn jacobi_symbol_vartime<const L: usize>(
         // At this point `p` is odd (either coming from outside of the `loop`,
         // or from the previous iteration, where a previously reduced `a`
         // was swapped into its place), so we can call this.
-        (result, a) = reduce_numerator(result, a, &p);
+        (result, a) = reduce_numerator_short(result, a, p);
 
         if a == 1 {
             return result;
@@ -138,7 +131,7 @@ pub(crate) fn jacobi_symbol_vartime<const L: usize>(
         // Note that technically `swap()` only returns a valid `result` if `a` and `p` are coprime.
         // But if they are not, we will return `Zero` eventually,
         // which is not affected by any sign changes.
-        (result, a, p) = swap(result, a, p);
+        (result, a, p) = swap_short(result, a, p);
 
         a %= p;
     }

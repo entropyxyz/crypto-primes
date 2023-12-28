@@ -1,13 +1,10 @@
 //! Miller-Rabin primality test.
 
+use crypto_bigint::{Integer, Monty, NonZero, Odd, PowBoundedExp, Square};
 use rand_core::CryptoRngCore;
 
-use crypto_bigint::{
-    modular::{MontyForm, MontyParams},
-    CheckedAdd, NonZero, Odd, RandomMod, Uint,
-};
-
 use super::Primality;
+use crate::UintLike;
 
 /// Precomputed data used to perform Miller-Rabin primality test[^Pomerance1980].
 /// The numbers that pass it are commonly called "strong probable primes"
@@ -17,31 +14,29 @@ use super::Primality;
 ///   C. Pomerance, J. L. Selfridge, S. S. Wagstaff "The Pseudoprimes to 25*10^9",
 ///   Math. Comp. 35 1003-1026 (1980),
 ///   DOI: [10.2307/2006210](https://dx.doi.org/10.2307/2006210)
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct MillerRabin<const L: usize> {
-    candidate: Uint<L>,
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct MillerRabin<T: UintLike> {
+    candidate: T,
     bit_length: u32,
-    montgomery_params: MontyParams<L>,
-    one: MontyForm<L>,
-    minus_one: MontyForm<L>,
+    montgomery_params: <<T as Integer>::Monty as Monty>::Params,
+    one: <T as Integer>::Monty,
+    minus_one: <T as Integer>::Monty,
     s: u32,
-    d: Uint<L>,
+    d: T,
 }
 
-impl<const L: usize> MillerRabin<L> {
+impl<T: UintLike> MillerRabin<T> {
     /// Initializes a Miller-Rabin test for `candidate`.
-    ///
-    /// Panics if `candidate` is even.
-    pub fn new(candidate: Odd<Uint<L>>) -> Self {
-        let params = MontyParams::<L>::new(candidate);
-        let one = MontyForm::<L>::one(params);
-        let minus_one = -one;
+    pub fn new(candidate: Odd<T>) -> Self {
+        let params = <T as Integer>::Monty::new_params(candidate.clone());
+        let one = <T as Integer>::Monty::one(params.clone());
+        let minus_one = -one.clone();
 
         // Find `s` and odd `d` such that `candidate - 1 == 2^s * d`.
-        let (s, d) = if candidate.as_ref() == &Uint::ONE {
-            (0, Uint::ONE)
+        let (s, d) = if candidate.as_ref() == &T::one() {
+            (0, T::one())
         } else {
-            let candidate_minus_one = candidate.wrapping_sub(&Uint::ONE);
+            let candidate_minus_one = candidate.wrapping_sub(&T::one());
             let s = candidate_minus_one.trailing_zeros_vartime();
             // Will not overflow because `candidate` is odd and greater than 1.
             let d = candidate_minus_one
@@ -51,7 +46,7 @@ impl<const L: usize> MillerRabin<L> {
         };
 
         Self {
-            candidate: *candidate,
+            candidate: candidate.as_ref().clone(),
             bit_length: candidate.bits_vartime(),
             montgomery_params: params,
             one,
@@ -62,11 +57,11 @@ impl<const L: usize> MillerRabin<L> {
     }
 
     /// Perform a Miller-Rabin check with a given base.
-    pub fn test(&self, base: &Uint<L>) -> Primality {
+    pub fn test(&self, base: &T) -> Primality {
         // TODO: it may be faster to first check that gcd(base, candidate) == 1,
         // otherwise we can return `Composite` right away.
 
-        let base = MontyForm::<L>::new(base, self.montgomery_params);
+        let base = <T as Integer>::Monty::new(base.clone(), self.montgomery_params.clone());
 
         // Implementation detail: bounded exp gets faster every time we decrease the bound
         // by the window length it uses, which is currently 4 bits.
@@ -91,7 +86,7 @@ impl<const L: usize> MillerRabin<L> {
 
     /// Perform a Miller-Rabin check with base 2.
     pub fn test_base_two(&self) -> Primality {
-        self.test(&Uint::<L>::from(2u32))
+        self.test(&T::from(2u32))
     }
 
     /// Perform a Miller-Rabin check with a random base (in the range `[3, candidate-2]`)
@@ -106,14 +101,14 @@ impl<const L: usize> MillerRabin<L> {
             panic!("No suitable random base possible when `candidate == 3`; use the base 2 test.")
         }
 
-        let range = self.candidate.wrapping_sub(&Uint::<L>::from(4u32));
+        let range = self.candidate.wrapping_sub(&T::from(4u32));
         // Can unwrap here since `candidate` is odd, and `candidate >= 4` (as checked above)
         let range_nonzero =
             NonZero::new(range).expect("the range should be non-zero by construction");
         // This should not overflow as long as `random_mod()` behaves according to the contract
         // (that is, returns a number within the given range).
-        let random = Uint::<L>::random_mod(rng, &range_nonzero)
-            .checked_add(&Uint::<L>::from(3u32))
+        let random = T::random_mod(rng, &range_nonzero)
+            .checked_add(&T::from(3u32))
             .expect("addition should not overflow by construction");
         self.test(&random)
     }
@@ -132,7 +127,10 @@ mod tests {
     use num_prime::nt_funcs::is_prime64;
 
     use super::MillerRabin;
-    use crate::hazmat::{primes, pseudoprimes, random_odd_uint, Sieve};
+    use crate::{
+        hazmat::{primes, pseudoprimes, random_odd_uint, Sieve},
+        UintLike,
+    };
 
     #[test]
     fn miller_rabin_derived_traits() {
@@ -154,9 +152,9 @@ mod tests {
         pseudoprimes::STRONG_BASE_2.iter().any(|x| *x == num)
     }
 
-    fn random_checks<const L: usize>(
+    fn random_checks<T: UintLike>(
         rng: &mut impl CryptoRngCore,
-        mr: &MillerRabin<L>,
+        mr: &MillerRabin<T>,
         count: usize,
     ) -> usize {
         (0..count)
@@ -194,8 +192,8 @@ mod tests {
     #[test]
     fn trivial() {
         let mut rng = ChaCha8Rng::from_seed(*b"01234567890123456789012345678901");
-        let start: Odd<U1024> = random_odd_uint(&mut rng, 1024);
-        for num in Sieve::new(&start, 1024, false).take(10) {
+        let start = random_odd_uint::<U1024>(&mut rng, 1024);
+        for num in Sieve::new(start.as_ref(), 1024, false).take(10) {
             let mr = MillerRabin::new(Odd::new(num).unwrap());
 
             // Trivial tests, must always be true.
@@ -209,9 +207,9 @@ mod tests {
         let mut rng = ChaCha8Rng::from_seed(*b"01234567890123456789012345678901");
 
         // Mersenne prime 2^127-1
-        let num = U128::from_be_hex("7fffffffffffffffffffffffffffffff");
+        let num = Odd::new(U128::from_be_hex("7fffffffffffffffffffffffffffffff")).unwrap();
 
-        let mr = MillerRabin::new(Odd::new(num).unwrap());
+        let mr = MillerRabin::new(num);
         assert!(mr.test_base_two().is_probably_prime());
         for _ in 0..10 {
             assert!(mr.test_random_base(&mut rng).is_probably_prime());
