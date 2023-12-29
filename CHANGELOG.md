@@ -4,7 +4,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
-## [0.6.0-pre.0] - Unreleased
+## [0.6.0-pre.0] - 2023-12-29
 
 ### Changed
 
@@ -131,3 +131,4 @@ Initial release.
 [0.4.0]: https://github.com/entropyxyz/crypto-primes/releases/tag/v0.4.0
 [0.4.1]: https://github.com/entropyxyz/crypto-primes/releases/tag/v0.4.1
 [0.5.0]: https://github.com/entropyxyz/crypto-primes/releases/tag/v0.5.0
+[0.6.0-pre.0]: https://github.com/entropyxyz/crypto-primes/releases/tag/v0.6.0-pre.0
