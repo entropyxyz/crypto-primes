@@ -10,12 +10,14 @@ categories = ["cryptography", "no-std"]
 rust-version = "1.73"
 
 [dependencies]
-crypto-bigint = { version = "0.6.0-pre.6", default-features = false, features = ["rand_core"] }
+crypto-bigint = { version = "0.6.0-pre.7", default-features = false, features = ["rand_core"] }
 rand_core = { version = "0.6.4", default-features = false }
 openssl = { version = "0.10.39", optional = true, features = ["vendored"] }
 rug = { version = "1.18", default-features = false, features = ["integer"], optional = true }
 
 [dev-dependencies]
+# need `crypto-bigint` with `alloc` to test `BoxedUint`
+crypto-bigint = { version = "0.6.0-pre.7", default-features = false, features = ["alloc"] }
 rand_chacha = "0.3"
 criterion = { version = "0.4", features = ["html_reports"] }
 num-modular = { version = "0.5", features = ["num-bigint"] }
