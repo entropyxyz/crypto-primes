@@ -1,7 +1,7 @@
 use core::num::NonZeroU32;
 
 use criterion::{criterion_group, criterion_main, BatchSize, Criterion};
-use crypto_bigint::{nlimbs, Integer, Odd, RandomBits, Uint, U1024, U128, U256};
+use crypto_bigint::{nlimbs, BoxedUint, Integer, Odd, RandomBits, Uint, U1024, U128, U256};
 use rand_chacha::ChaCha8Rng;
 use rand_core::{CryptoRngCore, OsRng, SeedableRng};
 
@@ -236,6 +236,17 @@ fn bench_presets(c: &mut Criterion) {
     let mut rng = make_rng();
     group.bench_function("(U1024) Random safe prime", |b| {
         b.iter(|| generate_safe_prime_with_rng::<U1024>(&mut rng, 1024, 1024))
+    });
+
+    let mut rng = make_rng();
+    group.bench_function("(Boxed128) Random safe prime", |b| {
+        b.iter(|| generate_safe_prime_with_rng::<BoxedUint>(&mut rng, 128, 128))
+    });
+
+    group.sample_size(20);
+    let mut rng = make_rng();
+    group.bench_function("(Boxed1024) Random safe prime", |b| {
+        b.iter(|| generate_safe_prime_with_rng::<BoxedUint>(&mut rng, 1024, 1024))
     });
 
     group.finish();
