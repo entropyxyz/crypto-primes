@@ -11,7 +11,6 @@ use crate::hazmat::{
 };
 
 /// Returns a random prime of size `bit_length` using [`OsRng`] as the RNG.
-/// If `bit_length` is `None`, the full size of `Uint<L>` is used.
 ///
 /// See [`is_prime_with_rng`] for details about the performed checks.
 #[cfg(feature = "default-rng")]
@@ -22,9 +21,8 @@ pub fn generate_prime<T: Integer + RandomBits + RandomMod>(
     generate_prime_with_rng(&mut OsRng, bit_length, bits_precision)
 }
 
-/// Returns a random safe prime (that is, such that `(n - 1) / 2` is also prime)
-/// of size `bit_length` using [`OsRng`] as the RNG.
-/// If `bit_length` is `None`, the full size of `Uint<L>` is used.
+/// Returns a random safe prime (that is, such that `(n - 1) / 2` is also prime) of size
+/// `bit_length` using [`OsRng`] as the RNG.
 ///
 /// See [`is_prime_with_rng`] for details about the performed checks.
 #[cfg(feature = "default-rng")]
@@ -35,7 +33,7 @@ pub fn generate_safe_prime<T: Integer + RandomBits + RandomMod>(
     generate_safe_prime_with_rng(&mut OsRng, bit_length, bits_precision)
 }
 
-/// Checks probabilistically if the given number is prime using [`OsRng`] as the RNG.
+/// Probabilistically check if the given number is prime using [`OsRng`] as the RNG.
 ///
 /// See [`is_prime_with_rng`] for details about the performed checks.
 #[cfg(feature = "default-rng")]
@@ -43,9 +41,8 @@ pub fn is_prime<T: Integer + RandomMod>(num: &T) -> bool {
     is_prime_with_rng(&mut OsRng, num)
 }
 
-/// Checks probabilistically if the given number is a safe prime
-/// (that is, such that `(n - 1) / 2` is also prime)
-/// using [`OsRng`] as the RNG.
+/// Probabilistically check if the given number is a safe prime (that is, such that `(n - 1) / 2` is
+/// also prime) using [`OsRng`] as the RNG.
 ///
 /// See [`is_prime_with_rng`] for details about the performed checks.
 #[cfg(feature = "default-rng")]
@@ -54,7 +51,6 @@ pub fn is_safe_prime<T: Integer + RandomMod>(num: &T) -> bool {
 }
 
 /// Returns a random prime of size `bit_length` using the provided RNG.
-/// If `bit_length` is `None`, the full size of `Uint<L>` is used.
 ///
 /// Panics if `bit_length` is less than 2, or greater than the bit size of the target `Uint`.
 ///
@@ -81,9 +77,8 @@ pub fn generate_prime_with_rng<T: Integer + RandomBits + RandomMod>(
 
 /// Returns a random safe prime (that is, such that `(n - 1) / 2` is also prime)
 /// of size `bit_length` using the provided RNG.
-/// If `bit_length` is `None`, the full size of `Uint<L>` is used.
 ///
-/// Panics if `bit_length` is less than 3, or is greater than the bit size of the target `Uint`.
+/// Panics if `bit_length` is less than 3, or greater than the bit size of the target `Uint`.
 ///
 /// See [`is_prime_with_rng`] for details about the performed checks.
 pub fn generate_safe_prime_with_rng<T: Integer + RandomBits + RandomMod>(
@@ -136,15 +131,13 @@ pub fn is_prime_with_rng<T: Integer + RandomMod>(rng: &mut impl CryptoRngCore, n
         return true;
     }
 
-    let odd_num = match Odd::new(num.clone()).into() {
-        Some(x) => x,
-        None => return false,
-    };
-
-    _is_prime_with_rng(rng, &odd_num)
+    match Odd::new(num.clone()).into() {
+        Some(x) => _is_prime_with_rng(rng, &x),
+        None => false,
+    }
 }
 
-/// Checks probabilistically if the given number is a safe prime using the provided RNG.
+/// Probabilistically check if the given number is a safe prime using the provided RNG.
 ///
 /// See [`is_prime_with_rng`] for details about the performed checks.
 pub fn is_safe_prime_with_rng<T: Integer + RandomMod>(
@@ -157,6 +150,10 @@ pub fn is_safe_prime_with_rng<T: Integer + RandomMod>(
     if num == &T::from_limb_like(Limb::from(5u32), num) {
         return true;
     }
+
+    // Safe primes are always of the form 4k + 3 (i.e. n ≡ 3 mod 4)
+    // The last two digits of a binary number give you its value modulo 4.
+    // Primes p=4n+3 will always end in 11​ in binary because p ≡ 3 mod 4.
     if num.as_ref()[0].0 & 3 != 3 {
         return false;
     }
@@ -168,7 +165,7 @@ pub fn is_safe_prime_with_rng<T: Integer + RandomMod>(
     _is_prime_with_rng(rng, &odd_num) && _is_prime_with_rng(rng, &odd_half_num)
 }
 
-/// Checks for primality assuming that `num` is odd.
+/// Checks for primality.
 fn _is_prime_with_rng<T: Integer + RandomMod>(rng: &mut impl CryptoRngCore, num: &Odd<T>) -> bool {
     let mr = MillerRabin::new(num);
 

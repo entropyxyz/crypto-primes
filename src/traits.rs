@@ -10,7 +10,6 @@ use crate::{
 /// and primality checking, wrapping the standalone functions ([`is_prime_with_rng`] etc).
 pub trait RandomPrimeWithRng {
     /// Returns a random prime of size `bit_length` using the provided RNG.
-    /// If `bit_length` is `None`, the full size of `Uint<L>` is used.
     ///
     /// Panics if `bit_length` is less than 2, or greater than the bit size of the target `Uint`.
     ///
@@ -23,7 +22,6 @@ pub trait RandomPrimeWithRng {
 
     /// Returns a random safe prime (that is, such that `(n - 1) / 2` is also prime)
     /// of size `bit_length` using the provided RNG.
-    /// If `bit_length` is `None`, the full size of `Uint<L>` is used.
     ///
     /// Panics if `bit_length` is less than 3, or greater than the bit size of the target `Uint`.
     ///
@@ -34,18 +32,21 @@ pub trait RandomPrimeWithRng {
         bits_precision: u32,
     ) -> Self;
 
-    /// Checks probabilistically if the given number is prime using the provided RNG.
+    /// Probabilistically check if the given number is prime using the provided RNG.
     ///
     /// See [`is_prime_with_rng`] for details about the performed checks.
     fn is_prime_with_rng(&self, rng: &mut impl CryptoRngCore) -> bool;
 
-    /// Checks probabilistically if the given number is a safe prime using the provided RNG.
+    /// Probabilistically check if the given number is a safe prime using the provided RNG.
     ///
     /// See [`is_prime_with_rng`] for details about the performed checks.
     fn is_safe_prime_with_rng(&self, rng: &mut impl CryptoRngCore) -> bool;
 }
 
-impl<T: Integer + RandomBits + RandomMod> RandomPrimeWithRng for T {
+impl<T> RandomPrimeWithRng for T
+where
+    T: Integer + RandomBits + RandomMod,
+{
     fn generate_prime_with_rng(
         rng: &mut impl CryptoRngCore,
         bit_length: u32,

@@ -6,6 +6,7 @@ use rand_core::CryptoRngCore;
 use super::Primality;
 
 /// Precomputed data used to perform Miller-Rabin primality test[^Pomerance1980].
+///
 /// The numbers that pass it are commonly called "strong probable primes"
 /// (or "strong pseudoprimes" if they are, in fact, composite).
 ///
