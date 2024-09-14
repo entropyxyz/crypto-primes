@@ -13,7 +13,7 @@ rust-version = "1.73"
 crypto-bigint = { version = "0.6.0-pre.7", default-features = false, features = ["rand_core"] }
 rand_core = { version = "0.6.4", default-features = false }
 openssl = { version = "0.10.39", optional = true, features = ["vendored"] }
-rug = { version = "1.18", default-features = false, features = ["integer"], optional = true }
+rug = { version = "1.26", default-features = false, features = ["integer"], optional = true }
 
 [dev-dependencies]
 # need `crypto-bigint` with `alloc` to test `BoxedUint`
@@ -30,7 +30,7 @@ num-prime = "0.4.3"
 default = ["default-rng"]
 default-rng = ["rand_core/getrandom"]
 tests-openssl = ["openssl"]
-tests-gmp = ["rug"]
+tests-gmp = ["rug/std"]
 tests-exhaustive = []
 tests-all = ["tests-openssl", "tests-gmp", "tests-exhaustive"]
 
