@@ -32,12 +32,12 @@ pub trait RandomPrimeWithRng {
         bits_precision: u32,
     ) -> Self;
 
-    /// Probabilistically check if the given number is prime using the provided RNG.
+    /// Probabilistically checks if the given number is prime using the provided RNG.
     ///
     /// See [`is_prime_with_rng`] for details about the performed checks.
     fn is_prime_with_rng(&self, rng: &mut impl CryptoRngCore) -> bool;
 
-    /// Probabilistically check if the given number is a safe prime using the provided RNG.
+    /// Probabilistically checks if the given number is a safe prime using the provided RNG.
     ///
     /// See [`is_prime_with_rng`] for details about the performed checks.
     fn is_safe_prime_with_rng(&self, rng: &mut impl CryptoRngCore) -> bool;

@@ -33,7 +33,7 @@ pub fn generate_safe_prime<T: Integer + RandomBits + RandomMod>(
     generate_safe_prime_with_rng(&mut OsRng, bit_length, bits_precision)
 }
 
-/// Probabilistically check if the given number is prime using [`OsRng`] as the RNG.
+/// Probabilistically checks if the given number is prime using [`OsRng`] as the RNG.
 ///
 /// See [`is_prime_with_rng`] for details about the performed checks.
 #[cfg(feature = "default-rng")]
@@ -41,7 +41,7 @@ pub fn is_prime<T: Integer + RandomMod>(num: &T) -> bool {
     is_prime_with_rng(&mut OsRng, num)
 }
 
-/// Probabilistically check if the given number is a safe prime (that is, such that `(n - 1) / 2` is
+/// Probabilistically checks if the given number is a safe prime (that is, such that `(n - 1) / 2` is
 /// also prime) using [`OsRng`] as the RNG.
 ///
 /// See [`is_prime_with_rng`] for details about the performed checks.
@@ -101,7 +101,7 @@ pub fn generate_safe_prime_with_rng<T: Integer + RandomBits + RandomMod>(
     }
 }
 
-/// Checks probabilistically if the given number is prime using the provided RNG.
+/// Probabilistically checks if the given number is prime using the provided RNG.
 ///
 /// Performed checks:
 /// - Miller-Rabin check with base 2;
@@ -137,7 +137,7 @@ pub fn is_prime_with_rng<T: Integer + RandomMod>(rng: &mut impl CryptoRngCore, n
     }
 }
 
-/// Probabilistically check if the given number is a safe prime using the provided RNG.
+/// Probabilistically checks if the given number is a safe prime using the provided RNG.
 ///
 /// See [`is_prime_with_rng`] for details about the performed checks.
 pub fn is_safe_prime_with_rng<T: Integer + RandomMod>(

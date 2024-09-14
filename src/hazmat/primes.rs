@@ -224,7 +224,7 @@ pub(crate) const PRIMES_1024: &[U1024] = &[
 ];
 
 /// A Cunningham chain (of the first kind) is a sequence of `k` numbers
-/// such that `n_{k+1} = n{k} * 2 + 1`, and each `n_k` is prime.
+/// such that `n_{k+1} = n_k * 2 + 1`, and each `n_k` is prime.
 /// We provide pairs `(k, n_0)` here.
 pub(crate) const CUNNINGHAM_CHAINS_128: &[(usize, U128)] = &[
     (17, U128::from_be_hex("00000000000000959c603768458440ef")),
