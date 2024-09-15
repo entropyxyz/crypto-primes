@@ -211,6 +211,7 @@ pub enum LucasCheck {
     /// If either of the following is true:
     /// - any of `V(d*2^r) == 0` for `0 <= r < s`,
     /// - `U(d) == 0`,
+    ///
     /// report the number as prime.
     ///
     /// If the base is [`SelfridgeBase`], known false positives constitute OEIS:A217255[^A217255].
@@ -228,6 +229,7 @@ pub enum LucasCheck {
     /// That is, if either of the following is true:
     /// - any of `V(d*2^r) == 0` for `0 <= r < s`,
     /// - `V(d) == ±2`,
+    ///
     /// report the number as prime.
     ///
     /// Note: the second condition is only checked if `Q == 1`,
@@ -248,6 +250,7 @@ pub enum LucasCheck {
     /// If either of the following is true:
     /// - any of `V(d*2^r) == 0` for `0 <= r < s`,
     /// - `U(d) == 0` and `V(d) == ±2`,
+    ///
     /// report the number as prime.
     ///
     /// Note that this check only differs from [`LucasCheck::Strong`] if `Q == 1`.
