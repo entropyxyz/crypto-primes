@@ -34,7 +34,11 @@ fn random_odd_uint<T: RandomBits + Integer>(
 
 fn make_sieve<const L: usize>(rng: &mut impl CryptoRngCore) -> Sieve<Uint<L>> {
     let start = random_odd_uint::<Uint<L>>(rng, Uint::<L>::BITS, Uint::<L>::BITS);
-    Sieve::new(&start, NonZeroU32::new(Uint::<L>::BITS).unwrap(), false)
+    Sieve::new(
+        start.get(),
+        NonZeroU32::new(Uint::<L>::BITS).unwrap(),
+        false,
+    )
 }
 
 fn make_presieved_num<const L: usize>(rng: &mut impl CryptoRngCore) -> Odd<Uint<L>> {
@@ -52,7 +56,7 @@ fn bench_sieve(c: &mut Criterion) {
     group.bench_function("(U128) creation", |b| {
         b.iter_batched(
             || random_odd_uint::<U128>(&mut OsRng, 128, 128),
-            |start| Sieve::new(start.as_ref(), NonZeroU32::new(128).unwrap(), false),
+            |start| Sieve::new(start.get(), NonZeroU32::new(128).unwrap(), false),
             BatchSize::SmallInput,
         )
     });
@@ -73,7 +77,7 @@ fn bench_sieve(c: &mut Criterion) {
     group.bench_function("(U1024) creation", |b| {
         b.iter_batched(
             || random_odd_uint::<U1024>(&mut OsRng, 1024, 1024),
-            |start| Sieve::new(start.as_ref(), NonZeroU32::new(1024).unwrap(), false),
+            |start| Sieve::new(start.get(), NonZeroU32::new(1024).unwrap(), false),
             BatchSize::SmallInput,
         )
     });
@@ -95,14 +99,14 @@ fn bench_miller_rabin(c: &mut Criterion) {
     group.bench_function("(U128) creation", |b| {
         b.iter_batched(
             || random_odd_uint::<U128>(&mut OsRng, 128, 128),
-            |n| MillerRabin::new(&n),
+            |n| MillerRabin::new(n),
             BatchSize::SmallInput,
         )
     });
 
     group.bench_function("(U128) random base test (pre-sieved)", |b| {
         b.iter_batched(
-            || MillerRabin::new(&make_presieved_num::<{ nlimbs!(128) }>(&mut OsRng)),
+            || MillerRabin::new(make_presieved_num::<{ nlimbs!(128) }>(&mut OsRng)),
             |mr| mr.test_random_base(&mut OsRng),
             BatchSize::SmallInput,
         )
@@ -111,14 +115,14 @@ fn bench_miller_rabin(c: &mut Criterion) {
     group.bench_function("(U1024) creation", |b| {
         b.iter_batched(
             || random_odd_uint::<U1024>(&mut OsRng, 1024, 1024),
-            |n| MillerRabin::new(&n),
+            |n| MillerRabin::new(n),
             BatchSize::SmallInput,
         )
     });
 
     group.bench_function("(U1024) random base test (pre-sieved)", |b| {
         b.iter_batched(
-            || MillerRabin::new(&make_presieved_num::<{ nlimbs!(1024) }>(&mut OsRng)),
+            || MillerRabin::new(make_presieved_num::<{ nlimbs!(1024) }>(&mut OsRng)),
             |mr| mr.test_random_base(&mut OsRng),
             BatchSize::SmallInput,
         )

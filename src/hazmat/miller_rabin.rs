@@ -27,7 +27,7 @@ pub struct MillerRabin<T: Integer> {
 
 impl<T: Integer + RandomMod> MillerRabin<T> {
     /// Initializes a Miller-Rabin test for `candidate`.
-    pub fn new(candidate: &Odd<T>) -> Self {
+    pub fn new(candidate: Odd<T>) -> Self {
         let params = <T as Integer>::Monty::new_params_vartime(candidate.clone());
         let m_one = <T as Integer>::Monty::one(params.clone());
         let m_minus_one = -m_one.clone();
@@ -48,8 +48,8 @@ impl<T: Integer + RandomMod> MillerRabin<T> {
         };
 
         Self {
-            candidate: candidate.as_ref().clone(),
             bit_length: candidate.bits_vartime(),
+            candidate: candidate.get(),
             montgomery_params: params,
             one: m_one,
             minus_one: m_minus_one,
@@ -59,7 +59,7 @@ impl<T: Integer + RandomMod> MillerRabin<T> {
     }
 
     /// Perform a Miller-Rabin check with a given base.
-    pub fn test(&self, base: &T) -> Primality {
+    pub fn test(&self, base: T) -> Primality {
         // TODO: it may be faster to first check that gcd(base, candidate) == 1,
         // otherwise we can return `Composite` right away.
 
@@ -88,7 +88,7 @@ impl<T: Integer + RandomMod> MillerRabin<T> {
 
     /// Perform a Miller-Rabin check with base 2.
     pub fn test_base_two(&self) -> Primality {
-        self.test(&T::from_limb_like(Limb::from(2u32), &self.candidate))
+        self.test(T::from_limb_like(Limb::from(2u32), &self.candidate))
     }
 
     /// Perform a Miller-Rabin check with a random base (in the range `[3, candidate-2]`)
@@ -112,7 +112,12 @@ impl<T: Integer + RandomMod> MillerRabin<T> {
         let random = T::random_mod(rng, &range_nonzero)
             .checked_add(&T::from(3u32))
             .expect("addition should not overflow by construction");
-        self.test(&random)
+        self.test(random)
+    }
+
+    /// Returns the number of bits necessary to represent the candidate.
+    pub fn bit_length(&self) -> u32 {
+        self.bit_length
     }
 }
 
@@ -134,7 +139,7 @@ mod tests {
 
     #[test]
     fn miller_rabin_derived_traits() {
-        let mr = MillerRabin::new(&Odd::new(U64::ONE).unwrap());
+        let mr = MillerRabin::new(Odd::new(U64::ONE).unwrap());
         assert!(format!("{mr:?}").starts_with("MillerRabin"));
         assert_eq!(mr.clone(), mr);
     }
@@ -144,7 +149,7 @@ mod tests {
         expected = "No suitable random base possible when `candidate == 3`; use the base 2 test."
     )]
     fn random_base_range_check() {
-        let mr = MillerRabin::new(&Odd::new(U64::from(3u32)).unwrap());
+        let mr = MillerRabin::new(Odd::new(U64::from(3u32)).unwrap());
         mr.test_random_base(&mut OsRng);
     }
 
@@ -176,7 +181,7 @@ mod tests {
             // with about 1/4 probability. So we're expecting less than
             // 35 out of 100 false positives, seems to work.
 
-            let mr = MillerRabin::new(&Odd::new(U64::from(*num)).unwrap());
+            let mr = MillerRabin::new(Odd::new(U64::from(*num)).unwrap());
             assert_eq!(
                 mr.test_base_two().is_probably_prime(),
                 actual_expected_result
@@ -194,12 +199,12 @@ mod tests {
         let mut rng = ChaCha8Rng::from_seed(*b"01234567890123456789012345678901");
         let start =
             random_odd_integer::<U1024>(&mut rng, NonZeroU32::new(1024).unwrap(), U1024::BITS);
-        for num in Sieve::new(start.as_ref(), NonZeroU32::new(1024).unwrap(), false).take(10) {
-            let mr = MillerRabin::new(&Odd::new(num).unwrap());
+        for num in Sieve::new(start.get(), NonZeroU32::new(1024).unwrap(), false).take(10) {
+            let mr = MillerRabin::new(Odd::new(num).unwrap());
 
             // Trivial tests, must always be true.
-            assert!(mr.test(&1u32.into()).is_probably_prime());
-            assert!(mr.test(&num.wrapping_sub(&1u32.into())).is_probably_prime());
+            assert!(mr.test(1u32.into()).is_probably_prime());
+            assert!(mr.test(num.wrapping_sub(&1u32.into())).is_probably_prime());
         }
     }
 
@@ -210,7 +215,7 @@ mod tests {
         // Mersenne prime 2^127-1
         let num = Odd::new(U128::from_be_hex("7fffffffffffffffffffffffffffffff")).unwrap();
 
-        let mr = MillerRabin::new(&num);
+        let mr = MillerRabin::new(num);
         assert!(mr.test_base_two().is_probably_prime());
         for _ in 0..10 {
             assert!(mr.test_random_base(&mut rng).is_probably_prime());
@@ -222,7 +227,7 @@ mod tests {
         let mut rng = ChaCha8Rng::from_seed(*b"01234567890123456789012345678901");
 
         for num in pseudoprimes::STRONG_FIBONACCI.iter() {
-            let mr = MillerRabin::new(&Odd::new(*num).unwrap());
+            let mr = MillerRabin::new(Odd::new(*num).unwrap());
             assert!(!mr.test_base_two().is_probably_prime());
             for _ in 0..1000 {
                 assert!(!mr.test_random_base(&mut rng).is_probably_prime());
@@ -250,20 +255,20 @@ mod tests {
 
     #[test]
     fn large_carmichael_number() {
-        let mr = MillerRabin::new(&Odd::new(pseudoprimes::LARGE_CARMICHAEL_NUMBER).unwrap());
+        let mr = MillerRabin::new(Odd::new(pseudoprimes::LARGE_CARMICHAEL_NUMBER).unwrap());
 
         // It is known to pass MR tests for all prime bases <307
         assert!(mr.test_base_two().is_probably_prime());
-        assert!(mr.test(&U1536::from(293u64)).is_probably_prime());
+        assert!(mr.test(U1536::from(293u64)).is_probably_prime());
 
         // A test with base 307 correctly reports the number as composite.
-        assert!(!mr.test(&U1536::from(307u64)).is_probably_prime());
+        assert!(!mr.test(U1536::from(307u64)).is_probably_prime());
     }
 
     fn test_large_primes<const L: usize>(nums: &[Uint<L>]) {
         let mut rng = ChaCha8Rng::from_seed(*b"01234567890123456789012345678901");
         for num in nums {
-            let mr = MillerRabin::new(&Odd::new(*num).unwrap());
+            let mr = MillerRabin::new(Odd::new(*num).unwrap());
             assert!(mr.test_base_two().is_probably_prime());
             for _ in 0..10 {
                 assert!(mr.test_random_base(&mut rng).is_probably_prime());

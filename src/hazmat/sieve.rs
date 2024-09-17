@@ -69,7 +69,7 @@ impl<T: Integer> Sieve<T> {
     /// Panics if `max_bit_length` greater than the precision of `start`.
     ///
     /// If `safe_primes` is `true`, both the returned `n` and `n/2` are sieved.
-    pub fn new(start: &T, max_bit_length: NonZeroU32, safe_primes: bool) -> Self {
+    pub fn new(start: T, max_bit_length: NonZeroU32, safe_primes: bool) -> Self {
         let max_bit_length = max_bit_length.get();
 
         if max_bit_length > start.bits_precision() {
@@ -84,7 +84,7 @@ impl<T: Integer> Sieve<T> {
         let (max_bit_length, base) = if safe_primes {
             (max_bit_length - 1, start.wrapping_shr_vartime(1))
         } else {
-            (max_bit_length, start.clone())
+            (max_bit_length, start)
         };
 
         let mut base = base;
@@ -100,7 +100,7 @@ impl<T: Integer> Sieve<T> {
             base = T::from(3u32);
         } else {
             // Adjust the base so that we hit odd numbers when incrementing it by 2.
-            base |= T::one_like(start);
+            base |= T::one();
         }
 
         // Only calculate residues by primes up to and not including `base`,
@@ -285,7 +285,7 @@ mod tests {
         let mut rng = ChaCha8Rng::from_seed(*b"01234567890123456789012345678901");
         let start =
             random_odd_integer::<U64>(&mut rng, NonZeroU32::new(32).unwrap(), U64::BITS).get();
-        for num in Sieve::new(&start, NonZeroU32::new(32).unwrap(), false).take(100) {
+        for num in Sieve::new(start, NonZeroU32::new(32).unwrap(), false).take(100) {
             let num_u64 = u64::from(num);
             assert!(num_u64.leading_zeros() == 32);
 
@@ -298,7 +298,7 @@ mod tests {
 
     fn check_sieve(start: u32, bit_length: u32, safe_prime: bool, reference: &[u32]) {
         let test = Sieve::new(
-            &U64::from(start),
+            U64::from(start),
             NonZeroU32::new(bit_length).unwrap(),
             safe_prime,
         )
@@ -359,7 +359,7 @@ mod tests {
         expected = "The requested bit length (65) is larger than the precision of `start`"
     )]
     fn sieve_too_many_bits() {
-        let _sieve = Sieve::new(&U64::ONE, NonZeroU32::new(65).unwrap(), false);
+        let _sieve = Sieve::new(U64::ONE, NonZeroU32::new(65).unwrap(), false);
     }
 
     #[test]
@@ -381,7 +381,7 @@ mod tests {
 
     #[test]
     fn sieve_derived_traits() {
-        let s = Sieve::new(&U64::ONE, NonZeroU32::new(10).unwrap(), false);
+        let s = Sieve::new(U64::ONE, NonZeroU32::new(10).unwrap(), false);
         assert!(format!("{s:?}").starts_with("Sieve"));
         assert_eq!(s.clone(), s);
     }

@@ -66,7 +66,7 @@ pub fn generate_prime_with_rng<T: Integer + RandomBits + RandomMod>(
     let bit_length = NonZeroU32::new(bit_length).expect("`bit_length` should be non-zero");
     loop {
         let start = random_odd_integer::<T>(rng, bit_length, bits_precision);
-        let sieve = Sieve::new(start.as_ref(), bit_length, false);
+        let sieve = Sieve::new(start.get(), bit_length, false);
         for num in sieve {
             if is_prime_with_rng(rng, &num) {
                 return num;
@@ -92,7 +92,7 @@ pub fn generate_safe_prime_with_rng<T: Integer + RandomBits + RandomMod>(
     let bit_length = NonZeroU32::new(bit_length).expect("`bit_length` should be non-zero");
     loop {
         let start = random_odd_integer::<T>(rng, bit_length, bits_precision);
-        let sieve = Sieve::new(start.as_ref(), bit_length, true);
+        let sieve = Sieve::new(start.get(), bit_length, true);
         for num in sieve {
             if is_safe_prime_with_rng(rng, &num) {
                 return num;
@@ -132,7 +132,7 @@ pub fn is_prime_with_rng<T: Integer + RandomMod>(rng: &mut impl CryptoRngCore, n
     }
 
     match Odd::new(num.clone()).into() {
-        Some(x) => _is_prime_with_rng(rng, &x),
+        Some(x) => _is_prime_with_rng(rng, x),
         None => false,
     }
 }
@@ -159,28 +159,29 @@ pub fn is_safe_prime_with_rng<T: Integer + RandomMod>(
     }
 
     // These are ensured to be odd by the check above.
-    let odd_num = Odd::new(num.clone()).expect("`num` should be odd here");
-    let odd_half_num = Odd::new(num.wrapping_shr_vartime(1)).expect("`num/2` should be odd here");
+    let odd_num = Odd::new(num.clone()).expect("`num` is be odd here given the checks above");
+    let odd_half_num = Odd::new(num.wrapping_shr_vartime(1)).expect("The binary rep of `num` is `11` so shifting right by one is guaranteed to end in one, so it's odd");
 
-    _is_prime_with_rng(rng, &odd_num) && _is_prime_with_rng(rng, &odd_half_num)
+    _is_prime_with_rng(rng, odd_num) && _is_prime_with_rng(rng, odd_half_num)
 }
 
 /// Checks for primality.
-fn _is_prime_with_rng<T: Integer + RandomMod>(rng: &mut impl CryptoRngCore, num: &Odd<T>) -> bool {
+fn _is_prime_with_rng<T: Integer + RandomMod>(rng: &mut impl CryptoRngCore, num: Odd<T>) -> bool {
+    let lucas_copy = num.clone(); // TODO(dp): get rid of this
     let mr = MillerRabin::new(num);
 
     if !mr.test_base_two().is_probably_prime() {
         return false;
     }
 
-    match lucas_test(num, AStarBase, LucasCheck::Strong) {
+    match lucas_test(&lucas_copy, AStarBase, LucasCheck::Strong) {
         Primality::Composite => return false,
         Primality::Prime => return true,
         _ => {}
     }
 
     // The random base test only makes sense when `num > 3`.
-    if num.bits() > 2 && !mr.test_random_base(rng).is_probably_prime() {
+    if mr.bit_length() > 2 && !mr.test_random_base(rng).is_probably_prime() {
         return false;
     }
 
