@@ -282,7 +282,7 @@ fn bench_gmp(c: &mut Criterion) {
     let mut group = c.benchmark_group("GMP");
 
     fn random<const L: usize>(rng: &mut impl CryptoRngCore) -> GmpInteger {
-        let num = random_odd_uint::<Uint<L>>(rng, Uint::<L>::BITS, Uint::<L>::BITS).get();
+        let num = random_odd_uint::<Uint<L>>(rng, Uint::<L>::BITS).get();
         GmpInteger::from_digits(num.as_words(), Order::Lsf)
     }
 
