@@ -197,8 +197,7 @@ mod tests {
     #[test]
     fn trivial() {
         let mut rng = ChaCha8Rng::from_seed(*b"01234567890123456789012345678901");
-        let start =
-            random_odd_integer::<U1024>(&mut rng, NonZeroU32::new(1024).unwrap(), U1024::BITS);
+        let start = random_odd_integer::<U1024>(&mut rng, NonZeroU32::new(1024).unwrap());
         for num in Sieve::new(start.get(), NonZeroU32::new(1024).unwrap(), false).take(10) {
             let mr = MillerRabin::new(Odd::new(num).unwrap());
 
@@ -295,7 +294,7 @@ mod tests {
 
             let spsp = is_spsp(num);
 
-            let mr = MillerRabin::new(&Odd::new(U64::from(num)).unwrap());
+            let mr = MillerRabin::new(Odd::new(U64::from(num)).unwrap());
             let res = mr.test_base_two().is_probably_prime();
             let expected = spsp || res_ref;
             assert_eq!(

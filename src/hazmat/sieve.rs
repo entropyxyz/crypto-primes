@@ -14,12 +14,10 @@ use crate::hazmat::precomputed::{SmallPrime, RECIPROCALS, SMALL_PRIMES};
 pub fn random_odd_integer<T: Integer + RandomBits>(
     rng: &mut impl CryptoRngCore,
     bit_length: NonZeroU32,
-    bits_precision: u32,
 ) -> Odd<T> {
     let bit_length = bit_length.get();
 
-    let mut random = T::random_bits_with_precision(rng, bit_length, bits_precision);
-    assert!(random.bits_precision() == bits_precision);
+    let mut random = T::random_bits(rng, bit_length);
     // Make it odd
     random.set_bit_vartime(0, true);
 
@@ -27,7 +25,7 @@ pub fn random_odd_integer<T: Integer + RandomBits>(
     // Will not overflow since `bit_length` is ensured to be within the size of the integer.
     random.set_bit_vartime(bit_length - 1, true);
 
-    Odd::new(random).expect("the number should be odd by construction")
+    Odd::new(random).expect("the number is odd by construction")
 }
 
 // The type we use to calculate incremental residues.
@@ -57,11 +55,9 @@ pub struct Sieve<T: Integer> {
 }
 
 impl<T: Integer> Sieve<T> {
-    /// Creates a new sieve, iterating from `start` and
-    /// until the last number with `max_bit_length` bits,
-    /// producing numbers that are not non-trivial multiples
-    /// of a list of small primes in the range `[2, start)` (`safe_primes = false`)
-    /// or `[2, start/2)` (`safe_primes = true`).
+    /// Creates a new sieve, iterating from `start` and until the last number with `max_bit_length`
+    /// bits, producing numbers that are not non-trivial multiples of a list of small primes in the
+    /// range `[2, start)` (`safe_primes = false`) or `[2, start/2)` (`safe_primes = true`).
     ///
     /// Note that `start` is adjusted to `2`, or the next `1 mod 2` number (`safe_primes = false`);
     /// and `5`, or `3 mod 4` number (`safe_primes = true`).
@@ -283,10 +279,28 @@ mod tests {
         let max_prime = SMALL_PRIMES[SMALL_PRIMES.len() - 1];
 
         let mut rng = ChaCha8Rng::from_seed(*b"01234567890123456789012345678901");
-        let start =
-            random_odd_integer::<U64>(&mut rng, NonZeroU32::new(32).unwrap(), U64::BITS).get();
+        let start = random_odd_integer::<U64>(&mut rng, NonZeroU32::new(32).unwrap()).get();
         for num in Sieve::new(start, NonZeroU32::new(32).unwrap(), false).take(100) {
             let num_u64 = u64::from(num);
+            assert!(num_u64.leading_zeros() == 32);
+
+            let factors_and_powers = factorize64(num_u64);
+            let factors = factors_and_powers.into_keys().collect::<Vec<_>>();
+
+            assert!(factors[0] > max_prime as u64);
+        }
+    }
+    #[test]
+    fn random_boxed() {
+        let max_prime = SMALL_PRIMES[SMALL_PRIMES.len() - 1];
+
+        let mut rng = ChaCha8Rng::from_seed(*b"01234567890123456789012345678901");
+        let start =
+            random_odd_integer::<crypto_bigint::BoxedUint>(&mut rng, NonZeroU32::new(32).unwrap())
+                .get();
+
+        for num in Sieve::new(start, NonZeroU32::new(32).unwrap(), false).take(100) {
+            let num_u64 = u64::from(num.as_words()[0]);
             assert!(num_u64.leading_zeros() == 32);
 
             let factors_and_powers = factorize64(num_u64);
@@ -365,24 +379,31 @@ mod tests {
     #[test]
     fn random_below_max_length() {
         for _ in 0..10 {
-            let r = random_odd_integer::<U64>(&mut OsRng, NonZeroU32::new(50).unwrap(), U64::BITS)
-                .get();
+            let r = random_odd_integer::<U64>(&mut OsRng, NonZeroU32::new(50).unwrap()).get();
             assert_eq!(r.bits(), 50);
         }
     }
 
     #[test]
     #[should_panic(
-        expected = "try_random_bits_with_precision() failed: BitLengthTooLarge { bit_length: 65, bits_precision: 64 }"
+        expected = "try_random_bits() failed: BitLengthTooLarge { bit_length: 65, bits_precision: 64 }"
     )]
     fn random_odd_uint_too_many_bits() {
-        let _p = random_odd_integer::<U64>(&mut OsRng, NonZeroU32::new(65).unwrap(), U64::BITS);
+        let _p = random_odd_integer::<U64>(&mut OsRng, NonZeroU32::new(65).unwrap());
     }
 
     #[test]
     fn sieve_derived_traits() {
         let s = Sieve::new(U64::ONE, NonZeroU32::new(10).unwrap(), false);
+        // Debug
         assert!(format!("{s:?}").starts_with("Sieve"));
+        // Clone
         assert_eq!(s.clone(), s);
+
+        // PartialEq
+        let s2 = Sieve::new(U64::ONE, NonZeroU32::new(10).unwrap(), false);
+        assert_eq!(s, s2);
+        let s3 = Sieve::new(U64::ONE, NonZeroU32::new(12).unwrap(), false);
+        assert_ne!(s, s3);
     }
 }
