@@ -151,8 +151,8 @@ pub fn is_safe_prime_with_rng<T: Integer + RandomMod>(
     }
 
     // These are ensured to be odd by the check above.
-    let odd_num = Odd::new(num.clone()).expect("`num` is be odd here given the checks above");
-    let odd_half_num = Odd::new(num.wrapping_shr_vartime(1)).expect("The binary rep of `num` is `11` so shifting right by one is guaranteed to end in one, so it's odd");
+    let odd_num = Odd::new(num.clone()).expect("`num` is odd here given the checks above");
+    let odd_half_num = Odd::new(num.wrapping_shr_vartime(1)).expect("The binary rep of `num` ends in `11`, so shifting right by one is guaranteed leave a `1` at the end, so it's odd");
 
     _is_prime_with_rng(rng, odd_num) && _is_prime_with_rng(rng, odd_half_num)
 }
@@ -173,7 +173,7 @@ fn _is_prime_with_rng<T: Integer + RandomMod>(rng: &mut impl CryptoRngCore, num:
     }
 
     // The random base test only makes sense when `num > 3`.
-    if mr.bit_length() > 2 && !mr.test_random_base(rng).is_probably_prime() {
+    if mr.bits() > 2 && !mr.test_random_base(rng).is_probably_prime() {
         return false;
     }
 

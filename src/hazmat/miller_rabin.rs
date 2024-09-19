@@ -16,12 +16,22 @@ use super::Primality;
 ///   DOI: [10.2307/2006210](https://dx.doi.org/10.2307/2006210)
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct MillerRabin<T: Integer> {
+    // The odd number that may or may not be a prime.
     candidate: T,
-    bit_length: u32,
+    /// The number of bits necessesary to represent the candidate. Note: this is not the number of
+    /// bits used by a `T` in memory.
+    bits: u32,
+    /// Pre-computed parameters for the Montgomery form of `T`.
     montgomery_params: <<T as Integer>::Monty as Monty>::Params,
+    /// The number 1 in Montgomery form.
     one: <T as Integer>::Monty,
+    /// The number -1 in Montgomery form.
     minus_one: <T as Integer>::Monty,
+    /// The `s` exponent in the Miller-Rabin test, that finds `s` and `d` odd s.t. `candidate - 1 ==
+    /// 2^s * d` (the pair `s` and `d` is unique).
     s: u32,
+    /// The `d` factor in the Miller-Rabin test, that finds `s` and `d` odd s.t. `candidate -
+    /// 1 == 2^s * d` (the pair `s` and `d` is unique).
     d: T,
 }
 
@@ -43,12 +53,12 @@ impl<T: Integer + RandomMod> MillerRabin<T> {
             // Will not overflow because `candidate` is odd and greater than 1.
             let d = candidate_minus_one
                 .overflowing_shr_vartime(s)
-                .expect("shift should be within range by construction");
+                .expect("shifting by `s` is within range by construction: `candidate` is odd and greater than 1");
             (s, d)
         };
 
         Self {
-            bit_length: candidate.bits_vartime(),
+            bits: candidate.bits_vartime(),
             candidate: candidate.get(),
             montgomery_params: params,
             one: m_one,
@@ -70,7 +80,7 @@ impl<T: Integer + RandomMod> MillerRabin<T> {
         // So even when the bound isn't low enough that the number can fit
         // in a smaller number of limbs, there is still a performance gain
         // from specifying the bound.
-        let mut test = base.pow_bounded_exp(&self.d, self.bit_length);
+        let mut test = base.pow_bounded_exp(&self.d, self.bits);
 
         if test == self.one || test == self.minus_one {
             return Primality::ProbablyPrime;
@@ -116,8 +126,12 @@ impl<T: Integer + RandomMod> MillerRabin<T> {
     }
 
     /// Returns the number of bits necessary to represent the candidate.
-    pub fn bit_length(&self) -> u32 {
-        self.bit_length
+    /// NOTE: This is different than the number of bits of *storage* the integer takes up.
+    ///
+    /// For example, a U512 type occupies 8 64-bit words, but the number `7` contained in such a type
+    /// has a bit length of 3 because 7 is `b111`.
+    pub fn bits(&self) -> u32 {
+        self.bits
     }
 }
 
