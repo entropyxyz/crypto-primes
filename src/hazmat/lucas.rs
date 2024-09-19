@@ -869,36 +869,30 @@ mod tests {
 
             let odd_num = Odd::new(Uint::<1>::from(num)).unwrap();
 
-            let res = lucas_test(
-                odd_num.clone(),
-                BruteForceBase,
-                LucasCheck::AlmostExtraStrong,
-            )
-            .is_probably_prime();
+            let res = lucas_test(odd_num, BruteForceBase, LucasCheck::AlmostExtraStrong)
+                .is_probably_prime();
             let expected = aeslpsp || res_ref;
             assert_eq!(
                 res, expected,
                 "Brute force base, almost extra strong: n={num}, expected={expected}, actual={res}",
             );
 
-            let res = lucas_test(odd_num.clone(), BruteForceBase, LucasCheck::ExtraStrong)
-                .is_probably_prime();
+            let res =
+                lucas_test(odd_num, BruteForceBase, LucasCheck::ExtraStrong).is_probably_prime();
             let expected = eslpsp || res_ref;
             assert_eq!(
                 res, expected,
                 "Brute force base: n={num}, expected={expected}, actual={res}",
             );
 
-            let res =
-                lucas_test(odd_num.clone(), SelfridgeBase, LucasCheck::Strong).is_probably_prime();
+            let res = lucas_test(odd_num, SelfridgeBase, LucasCheck::Strong).is_probably_prime();
             let expected = slpsp || res_ref;
             assert_eq!(
                 res, expected,
                 "Selfridge base: n={num}, expected={expected}, actual={res}",
             );
 
-            let res =
-                lucas_test(odd_num.clone(), AStarBase, LucasCheck::LucasV).is_probably_prime();
+            let res = lucas_test(odd_num, AStarBase, LucasCheck::LucasV).is_probably_prime();
             let expected = vpsp || res_ref;
 
             assert_eq!(

@@ -9,8 +9,11 @@ use rand_core::CryptoRngCore;
 
 use crate::hazmat::precomputed::{SmallPrime, RECIPROCALS, SMALL_PRIMES};
 
-/// Returns a random odd integer with given bit length
-/// (that is, with both `0` and `bit_length-1` bits set).
+/// Returns a random odd integer with given bit length (that is, with both `0` and `bit_length-1`
+/// bits set).
+///
+/// *Panics*: if the `bit_length` is bigger than the bits available in the `Integer`, e.g. 37 for a
+/// `U32`.
 pub fn random_odd_integer<T: Integer + RandomBits>(
     rng: &mut impl CryptoRngCore,
     bit_length: NonZeroU32,
@@ -300,7 +303,7 @@ mod tests {
                 .get();
 
         for num in Sieve::new(start, NonZeroU32::new(32).unwrap(), false).take(100) {
-            let num_u64 = u64::from(num.as_words()[0]);
+            let num_u64 = num.as_words()[0];
             assert!(num_u64.leading_zeros() == 32);
 
             let factors_and_powers = factorize64(num_u64);

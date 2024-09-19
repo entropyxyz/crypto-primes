@@ -98,7 +98,7 @@ fn bench_miller_rabin(c: &mut Criterion) {
     group.bench_function("(U128) creation", |b| {
         b.iter_batched(
             || random_odd_uint::<U128>(&mut OsRng, 128),
-            |n| MillerRabin::new(n),
+            MillerRabin::<U128>::new,
             BatchSize::SmallInput,
         )
     });
@@ -114,7 +114,7 @@ fn bench_miller_rabin(c: &mut Criterion) {
     group.bench_function("(U1024) creation", |b| {
         b.iter_batched(
             || random_odd_uint::<U1024>(&mut OsRng, 1024),
-            |n| MillerRabin::new(n),
+            MillerRabin::<U1024>::new,
             BatchSize::SmallInput,
         )
     });
