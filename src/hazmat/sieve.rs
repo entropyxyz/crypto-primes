@@ -303,7 +303,9 @@ mod tests {
                 .get();
 
         for num in Sieve::new(start, NonZeroU32::new(32).unwrap(), false).take(100) {
-            let num_u64 = num.as_words()[0];
+            // For 32-bit targets
+            #[allow(clippy::useless_conversion)]
+            let num_u64: u64 = num.as_words()[0].into();
             assert!(num_u64.leading_zeros() == 32);
 
             let factors_and_powers = factorize64(num_u64);
