@@ -195,11 +195,7 @@ impl<T: Integer> Sieve<T> {
             // If `(n - 1)/2 mod d == (d - 1)/2`, it means that `n mod d == 0`.
             // In other words, we are checking the remainder of `n mod d`
             // for virtually no additional cost.
-            if r == 0 || (self.safe_primes && r == (d - 1) >> 1) {
-                return true;
-            } else {
-                return false;
-            }
+            r == 0 || (self.safe_primes && r == (d - 1) >> 1)
         })
     }
 
