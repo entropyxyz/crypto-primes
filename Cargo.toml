@@ -10,7 +10,7 @@ categories = ["cryptography", "no-std"]
 rust-version = "1.73"
 
 [dependencies]
-crypto-bigint = { version = "0.6.0-pre.7", default-features = false, features = ["rand_core"] }
+crypto-bigint = { version = "0.6.0-pre.7", default-features = false, features = ["rand_core", "zeroize"] }
 rand_core = { version = "0.6.4", default-features = false }
 openssl = { version = "0.10.39", optional = true, features = ["vendored"] }
 rug = { version = "1.26", default-features = false, features = ["integer"], optional = true }

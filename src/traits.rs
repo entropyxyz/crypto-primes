@@ -1,4 +1,4 @@
-use crypto_bigint::{Integer, RandomBits, RandomMod};
+use crypto_bigint::{zeroize::Zeroize, Integer, RandomBits, RandomMod};
 use rand_core::CryptoRngCore;
 
 use crate::{
@@ -8,7 +8,7 @@ use crate::{
 
 /// Provides a generic way to access methods for random prime number generation
 /// and primality checking, wrapping the standalone functions ([`is_prime_with_rng`] etc).
-pub trait RandomPrimeWithRng {
+pub trait RandomPrimeWithRng: Zeroize {
     /// Returns a random prime of size `bit_length` using the provided RNG.
     ///
     /// Panics if `bit_length` is less than 2, or greater than the bit size of the target `Uint`.
@@ -37,7 +37,7 @@ pub trait RandomPrimeWithRng {
 
 impl<T> RandomPrimeWithRng for T
 where
-    T: Integer + RandomBits + RandomMod,
+    T: Integer + RandomBits + RandomMod + Zeroize,
 {
     fn generate_prime_with_rng(rng: &mut impl CryptoRngCore, bit_length: u32) -> Self {
         generate_prime_with_rng(rng, bit_length)

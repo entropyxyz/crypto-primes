@@ -57,13 +57,12 @@ pub fn generate_prime_with_rng<T: Integer + RandomBits + RandomMod>(
         panic!("`bit_length` must be 2 or greater.");
     }
     let bit_length = NonZeroU32::new(bit_length).expect("`bit_length` should be non-zero");
+    // Empirically, this loop is traversed 1 time.
     loop {
         let start = random_odd_integer::<T>(rng, bit_length);
-        let sieve = Sieve::new(start.get(), bit_length, false);
-        for num in sieve {
-            if is_prime_with_rng(rng, &num) {
-                return num;
-            }
+        let mut sieve = Sieve::new(start.get(), bit_length, false);
+        if let Some(prime) = sieve.find(|num| is_prime_with_rng(rng, num)) {
+            return prime;
         }
     }
 }
@@ -158,6 +157,10 @@ pub fn is_safe_prime_with_rng<T: Integer + RandomMod>(
 }
 
 /// Checks for primality.
+/// First run a Miller-Rabin test with base 2
+/// If the outcome of M-R is "probably prime", then run a Lucas test
+/// If the Lucas test is inconclusive, run a Miller-Rabin with random base and unless this second
+/// M-R test finds it's composite, then conclude that it's prime.
 fn _is_prime_with_rng<T: Integer + RandomMod>(rng: &mut impl CryptoRngCore, num: Odd<T>) -> bool {
     let candidate = num.clone();
     let mr = MillerRabin::new(num);

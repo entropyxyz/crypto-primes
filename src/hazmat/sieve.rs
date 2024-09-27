@@ -185,13 +185,9 @@ impl<T: Integer> Sieve<T> {
 
     // Returns `true` if the current `base + incr` is divisible by any of the small primes.
     fn current_is_composite(&self) -> bool {
-        for (i, m) in self.residues.iter().enumerate() {
+        self.residues.iter().enumerate().any(|(i, m)| {
             let d = SMALL_PRIMES[i] as Residue;
             let r = (*m as Residue + self.incr) % d;
-
-            if r == 0 {
-                return true;
-            }
 
             // A trick from "Safe Prime Generation with a Combined Sieve" by Michael J. Wiener
             // (https://eprint.iacr.org/2003/186).
@@ -199,12 +195,12 @@ impl<T: Integer> Sieve<T> {
             // If `(n - 1)/2 mod d == (d - 1)/2`, it means that `n mod d == 0`.
             // In other words, we are checking the remainder of `n mod d`
             // for virtually no additional cost.
-            if self.safe_primes && r == (d - 1) >> 1 {
+            if r == 0 || (self.safe_primes && r == (d - 1) >> 1) {
                 return true;
+            } else {
+                return false;
             }
-        }
-
-        false
+        })
     }
 
     // Returns the restored `base + incr` if it is not composite (wrt the small primes),

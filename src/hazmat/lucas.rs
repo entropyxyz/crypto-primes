@@ -10,7 +10,7 @@ use super::{
 /// The maximum number of attempts to find `D` such that `(D/n) == -1`.
 // This is widely believed to be impossible.
 // So if we exceed it, we will panic reporting the value of `n`.
-const MAX_ATTEMPTS: usize = 10000;
+const MAX_ATTEMPTS: usize = 10_000;
 
 /// The number of attempts to find `D` such that `(D/n) == -1`
 /// before checking that `n` is a square (in which case such `D` does not exist).
