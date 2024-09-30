@@ -140,7 +140,7 @@ impl<T: Integer> Sieve<T> {
             return false;
         }
 
-        // Set the new base.
+        // Set the new base. This increment will not overflow unless the `Sieve` is misused and manipulated.
         match self.base.checked_add(&self.incr.into()).into() {
             Some(x) => self.base = x,
             None => {
@@ -217,6 +217,7 @@ impl<T: Integer> Sieve<T> {
             match self.base.checked_add(&self.incr.into()).into_option() {
                 Some(mut num) => {
                     if self.safe_primes {
+                        // Divide by 2 and ensure it's odd with an OR.
                         num = num.wrapping_shl_vartime(1) | T::one_like(&self.base);
                     }
                     Some(num)
@@ -231,7 +232,6 @@ impl<T: Integer> Sieve<T> {
 
     fn next(&mut self) -> Option<T> {
         // Corner cases handled here
-
         if self.produces_nothing {
             return None;
         }
@@ -268,7 +268,7 @@ mod tests {
     use alloc::vec::Vec;
     use core::num::NonZeroU32;
 
-    use crypto_bigint::U64;
+    use crypto_bigint::{U1024, U64};
     use num_prime::nt_funcs::factorize64;
     use rand_chacha::ChaCha8Rng;
     use rand_core::{OsRng, SeedableRng};
@@ -383,10 +383,19 @@ mod tests {
         assert!(format!("{s:?}").starts_with("Sieve"));
         assert_eq!(s.clone(), s);
     }
+
     #[test]
     fn sieve_with_max_start() {
         let start = U64::MAX;
         let mut sieve = Sieve::new(&start, NonZeroU32::new(U64::BITS).unwrap(), false);
+        assert!(sieve.next().is_none());
+    }
+
+    #[test]
+    fn sieve_with_max_start_and_malicious_manipulation() {
+        let start = U1024::MAX;
+        let mut sieve = Sieve::new(&start, NonZeroU32::new(U1024::BITS).unwrap(), false);
+        sieve.incr = 10; // Cause overflow in update_residues()
         assert!(sieve.next().is_none());
     }
 }
