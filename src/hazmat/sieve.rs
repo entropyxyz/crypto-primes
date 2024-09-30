@@ -141,13 +141,13 @@ impl<T: Integer> Sieve<T> {
         }
 
         // Set the new base.
-        // Should not overflow since `incr` is never greater than `incr_limit`,
-        // and the latter is chosen such that it doesn't overflow when added to `base`
-        // (see the rest of this method).
-        self.base = self
-            .base
-            .checked_add(&self.incr.into())
-            .expect("addition should not overflow by construction");
+        match self.base.checked_add(&self.incr.into()).into() {
+            Some(x) => self.base = x,
+            None => {
+                self.last_round = true;
+                return false;
+            }
+        }
 
         self.incr = 0;
 
@@ -214,17 +214,15 @@ impl<T: Integer> Sieve<T> {
         let result = if self.current_is_composite() {
             None
         } else {
-            // The overflow should never happen here since `incr`
-            // is never greater than `incr_limit`, and the latter is chosen such that
-            // it does not overflow when added to `base` (see `update_residues()`).
-            let mut num = self
-                .base
-                .checked_add(&self.incr.into())
-                .expect("addition should not overflow by construction");
-            if self.safe_primes {
-                num = num.wrapping_shl_vartime(1) | T::one_like(&self.base);
+            match self.base.checked_add(&self.incr.into()).into_option() {
+                Some(mut num) => {
+                    if self.safe_primes {
+                        num = num.wrapping_shl_vartime(1) | T::one_like(&self.base);
+                    }
+                    Some(num)
+                }
+                None => None,
             }
-            Some(num)
         };
 
         self.incr += 2;
@@ -384,5 +382,11 @@ mod tests {
         let s = Sieve::new(&U64::ONE, NonZeroU32::new(10).unwrap(), false);
         assert!(format!("{s:?}").starts_with("Sieve"));
         assert_eq!(s.clone(), s);
+    }
+    #[test]
+    fn sieve_with_max_start() {
+        let start = U64::MAX;
+        let mut sieve = Sieve::new(&start, NonZeroU32::new(U64::BITS).unwrap(), false);
+        assert!(sieve.next().is_none());
     }
 }
