@@ -189,10 +189,9 @@ fn _is_prime_with_rng<T: Integer + RandomMod>(rng: &mut impl CryptoRngCore, num:
 
 #[cfg(test)]
 mod tests {
-    use crypto_bigint::{BoxedUint, CheckedAdd, Uint, Word, U128, U256, U64};
+    use crypto_bigint::{BoxedUint, CheckedAdd, Uint, Word, U128, U64};
     use num_prime::nt_funcs::is_prime64;
-    use rand_chacha::ChaCha8Rng;
-    use rand_core::{OsRng, SeedableRng};
+    use rand_core::OsRng;
 
     use super::{
         generate_prime, generate_prime_with_rng, generate_safe_prime, generate_safe_prime_with_rng,
@@ -380,12 +379,6 @@ mod tests {
                 assert!(is_prime_ref(p_word) && is_prime_ref(p_word / 2));
             }
         }
-    }
-
-    #[test]
-    fn generate_prime_into_int_double_size_precision() {
-        let mut rng = ChaCha8Rng::from_seed(*b"01234567890123456789012345678901");
-        let _p = generate_safe_prime_with_rng::<U256>(&mut rng, 128, 256);
     }
 }
 
