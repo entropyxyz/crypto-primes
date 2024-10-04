@@ -58,7 +58,7 @@ fn bench_sieve(c: &mut Criterion) {
     });
 
     // 5 is the average number of pre-sieved samples we need to take before we encounter a prime
-    group.bench_function("(U128) 5 samples", |b| {
+    group.bench_function("(U128) average sieve samples for a prime (5)", |b| {
         b.iter_batched(
             || make_sieve::<{ nlimbs!(128) }>(&mut OsRng),
             |sieve| sieve.take(5).for_each(drop),
@@ -78,13 +78,27 @@ fn bench_sieve(c: &mut Criterion) {
         )
     });
 
-    group.bench_function("(U1024) 5 samples", |b| {
+    // 42 is the average number of pre-sieved samples we need to take before we encounter a prime
+    group.bench_function("(U1024) average sieve samples for a prime (42)", |b| {
         b.iter_batched(
             || make_sieve::<{ nlimbs!(1024) }>(&mut OsRng),
-            |sieve| sieve.take(5).for_each(drop),
+            |sieve| sieve.take(42).for_each(drop),
             BatchSize::SmallInput,
         )
     });
+
+    // 42^2 is the average number of pre-sieved samples we need to take
+    // before we encounter a safe prime
+    group.bench_function(
+        "(U1024) average sieve samples for a safe prime (42^2)",
+        |b| {
+            b.iter_batched(
+                || make_sieve::<{ nlimbs!(1024) }>(&mut OsRng),
+                |sieve| sieve.take(42 * 42).for_each(drop),
+                BatchSize::SmallInput,
+            )
+        },
+    );
 
     group.finish()
 }
