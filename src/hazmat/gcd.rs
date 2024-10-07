@@ -4,7 +4,7 @@ use crypto_bigint::{Integer, Limb, NonZero, Word};
 /// By definition, `gcd(0, m) == m`.
 /// `n` must be non-zero.
 #[inline]
-pub fn gcd_vartime<T: Integer>(n: &T, m: Word) -> Word {
+pub(crate) fn gcd_vartime<T: Integer>(n: &T, m: Word) -> Word {
     // This is an internal function, and it will never be called with `m = 0`.
     // Allowing `m = 0` would require us to have the return type of `Uint<L>`
     // (since `gcd(n, 0) = n`).
