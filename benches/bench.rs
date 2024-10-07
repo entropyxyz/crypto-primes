@@ -14,8 +14,7 @@ use openssl::bn::BigNum;
 use crypto_primes::{
     generate_prime_with_rng, generate_safe_prime_with_rng,
     hazmat::{
-        lucas_test, random_odd_integer, AStarBase, BruteForceBase, LucasCheck, MillerRabin,
-        SelfridgeBase, Sieve,
+        lucas_test, random_odd_integer, AStarBase, BruteForceBase, LucasCheck, MillerRabin, SelfridgeBase, Sieve,
     },
     is_prime_with_rng, is_safe_prime_with_rng,
 };
@@ -383,19 +382,13 @@ fn bench_glass_pumpkin(c: &mut Criterion) {
     // Mimics the sequence of checks `glass-pumpkin` does to find a prime.
     fn prime_like_gp(bit_length: u32, rng: &mut impl CryptoRngCore) -> BoxedUint {
         loop {
-            let start = random_odd_integer::<BoxedUint>(
-                rng,
-                NonZeroU32::new(bit_length).unwrap(),
-                bit_length,
-            );
+            let start = random_odd_integer::<BoxedUint>(rng, NonZeroU32::new(bit_length).unwrap(), bit_length);
             let sieve = Sieve::new(start.as_ref(), NonZeroU32::new(bit_length).unwrap(), false);
             for num in sieve {
                 let odd_num = &Odd::new(num.clone()).unwrap();
 
                 let mr = MillerRabin::new(odd_num);
-                if (0..required_checks(bit_length))
-                    .any(|_| !mr.test_random_base(rng).is_probably_prime())
-                {
+                if (0..required_checks(bit_length)).any(|_| !mr.test_random_base(rng).is_probably_prime()) {
                     continue;
                 }
 
@@ -413,11 +406,7 @@ fn bench_glass_pumpkin(c: &mut Criterion) {
     // Mimics the sequence of checks `glass-pumpkin` does to find a safe prime.
     fn safe_prime_like_gp(bit_length: u32, rng: &mut impl CryptoRngCore) -> BoxedUint {
         loop {
-            let start = random_odd_integer::<BoxedUint>(
-                rng,
-                NonZeroU32::new(bit_length).unwrap(),
-                bit_length,
-            );
+            let start = random_odd_integer::<BoxedUint>(rng, NonZeroU32::new(bit_length).unwrap(), bit_length);
             let sieve = Sieve::new(start.as_ref(), NonZeroU32::new(bit_length).unwrap(), true);
             for num in sieve {
                 let odd_num = &Odd::new(num.clone()).unwrap();
@@ -482,10 +471,10 @@ fn bench_glass_pumpkin(c: &mut Criterion) {
     });
 
     let mut rng = make_rng();
-    group
-        .bench_function("(U1024) Random safe prime (crypto-primes mimicking glass-pumpkin)", |b| {
-            b.iter(|| safe_prime_like_gp(1024, &mut rng))
-        });
+    group.bench_function(
+        "(U1024) Random safe prime (crypto-primes mimicking glass-pumpkin)",
+        |b| b.iter(|| safe_prime_like_gp(1024, &mut rng)),
+    );
 
     let mut rng = make_rng();
     group.bench_function("(U1024) Random safe prime", |b| {

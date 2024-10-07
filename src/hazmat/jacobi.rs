@@ -28,7 +28,11 @@ impl core::ops::Neg for JacobiSymbol {
 fn apply_reduce_numerator(j: JacobiSymbol, a: Word, p: Word) -> (JacobiSymbol, Word) {
     let p_mod_8 = p & 7;
     let s = a.trailing_zeros();
-    let j = if (s & 1) == 1 && (p_mod_8 == 3 || p_mod_8 == 5) { -j } else { j };
+    let j = if (s & 1) == 1 && (p_mod_8 == 3 || p_mod_8 == 5) {
+        -j
+    } else {
+        j
+    };
     (j, a >> s)
 }
 
@@ -62,19 +66,18 @@ fn swap_short(j: JacobiSymbol, a: Word, p: Word) -> (JacobiSymbol, Word, Word) {
 }
 
 /// Returns the Jacobi symbol `(a/p)` given an odd `p`.
-pub(crate) fn jacobi_symbol_vartime<T: Integer>(
-    abs_a: Word,
-    a_is_negative: bool,
-    p_long: &Odd<T>,
-) -> JacobiSymbol {
+pub(crate) fn jacobi_symbol_vartime<T: Integer>(abs_a: Word, a_is_negative: bool, p_long: &Odd<T>) -> JacobiSymbol {
     let result = JacobiSymbol::One; // Keep track of all the sign flips here.
 
     // Deal with a negative `a` first:
     // (-a/n) = (-1/n) * (a/n)
     //        = (-1)^((n-1)/2) * (a/n)
     //        = (-1 if n = 3 mod 4 else 1) * (a/n)
-    let result =
-        if a_is_negative && p_long.as_ref().as_ref()[0].0 & 3 == 3 { -result } else { result };
+    let result = if a_is_negative && p_long.as_ref().as_ref()[0].0 & 3 == 3 {
+        -result
+    } else {
+        result
+    };
 
     // A degenerate case.
     if abs_a == 1 || p_long.as_ref() == &T::one_like(p_long) {
@@ -96,8 +99,7 @@ pub(crate) fn jacobi_symbol_vartime<T: Integer>(
         let (result, a_long, p) = swap_long(result, a, p_long);
         // Can unwrap here, since `p` is swapped with `a`,
         // and `a` would be odd after `reduce_numerator()`.
-        let a =
-            a_long.rem_limb(NonZero::new(Limb::from(p)).expect("divisor should be non-zero here"));
+        let a = a_long.rem_limb(NonZero::new(Limb::from(p)).expect("divisor should be non-zero here"));
         (result, a.0, p)
     };
 
