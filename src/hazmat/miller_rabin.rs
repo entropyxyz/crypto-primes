@@ -280,15 +280,6 @@ mod tests {
         test_large_primes(primes::PRIMES_1024);
     }
 
-    // Test to guard against regressions such as https://github.com/RustCrypto/crypto-bigint/pull/685
-    #[test]
-    fn zero_padded_input_works() {
-        // A prime that happens to have 128 starting zeroes.
-        let hex = "00000000000000000000000000000000E0BD7D7A037746B47ABDDC706525370F";
-        let num = U256::from_be_hex(hex);
-        test_large_primes(&[num]);
-    }
-
     #[cfg(feature = "tests-exhaustive")]
     #[test]
     fn exhaustive() {

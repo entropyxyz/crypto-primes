@@ -52,6 +52,14 @@ pub(crate) const PRIMES_256: &[U256] = &[
         "00000162263cf603cfa774a2f1b9ce87",
         "3971228cdc785ce7a15ac33ae5a79eef",
     ]),
+    // This is a prime that helped us debug a regression in crypto-bigint (see [#685][1]) and is
+    // nothing special other than having the first 128 bits set to zero.
+    //
+    // [1]: https://github.com/RustCrypto/crypto-bigint/pull/685
+    U256::from_be_hex(concat![
+        "00000000000000000000000000000000",
+        "E0BD7D7A037746B47ABDDC706525370F",
+    ]),
 ];
 
 pub(crate) const PRIMES_384: &[U384] = &[
