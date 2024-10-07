@@ -20,7 +20,10 @@ pub mod hazmat;
 mod presets;
 mod traits;
 
-pub use presets::{generate_prime_with_rng, generate_safe_prime_with_rng, is_prime_with_rng, is_safe_prime_with_rng};
+pub use presets::{
+    generate_prime_with_rng, generate_safe_prime_with_rng, is_prime_with_rng,
+    is_safe_prime_with_rng,
+};
 pub use traits::RandomPrimeWithRng;
 
 #[cfg(feature = "default-rng")]

@@ -158,13 +158,11 @@ impl<T: Integer> Sieve<T> {
         }
 
         // Find the increment limit.
-        let max_value = match T::one_like(&self.base)
-            .overflowing_shl_vartime(self.max_bit_length)
-            .into()
-        {
-            Some(val) => val,
-            None => T::one_like(&self.base),
-        };
+        let max_value =
+            match T::one_like(&self.base).overflowing_shl_vartime(self.max_bit_length).into() {
+                Some(val) => val,
+                None => T::one_like(&self.base),
+            };
         let incr_limit = max_value.wrapping_sub(&self.base);
         self.incr_limit = if incr_limit > T::from(INCR_LIMIT) {
             INCR_LIMIT
@@ -283,7 +281,8 @@ mod tests {
         let max_prime = SMALL_PRIMES[SMALL_PRIMES.len() - 1];
 
         let mut rng = ChaCha8Rng::from_seed(*b"01234567890123456789012345678901");
-        let start = random_odd_integer::<U64>(&mut rng, NonZeroU32::new(32).unwrap(), U64::BITS).get();
+        let start =
+            random_odd_integer::<U64>(&mut rng, NonZeroU32::new(32).unwrap(), U64::BITS).get();
         for num in Sieve::new(&start, NonZeroU32::new(32).unwrap(), false).take(100) {
             let num_u64 = u64::from(num);
             assert!(num_u64.leading_zeros() == 32);
@@ -296,7 +295,8 @@ mod tests {
     }
 
     fn check_sieve(start: u32, bit_length: u32, safe_prime: bool, reference: &[u32]) {
-        let test = Sieve::new(&U64::from(start), NonZeroU32::new(bit_length).unwrap(), safe_prime).collect::<Vec<_>>();
+        let test = Sieve::new(&U64::from(start), NonZeroU32::new(bit_length).unwrap(), safe_prime)
+            .collect::<Vec<_>>();
         assert_eq!(test.len(), reference.len());
         for (x, y) in test.iter().zip(reference.iter()) {
             assert_eq!(x, &U64::from(*y));
@@ -349,7 +349,9 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "The requested bit length (65) is larger than the precision of `start`")]
+    #[should_panic(
+        expected = "The requested bit length (65) is larger than the precision of `start`"
+    )]
     fn sieve_too_many_bits() {
         let _sieve = Sieve::new(&U64::ONE, NonZeroU32::new(65).unwrap(), false);
     }
@@ -357,7 +359,8 @@ mod tests {
     #[test]
     fn random_below_max_length() {
         for _ in 0..10 {
-            let r = random_odd_integer::<U64>(&mut OsRng, NonZeroU32::new(50).unwrap(), U64::BITS).get();
+            let r = random_odd_integer::<U64>(&mut OsRng, NonZeroU32::new(50).unwrap(), U64::BITS)
+                .get();
             assert_eq!(r.bits(), 50);
         }
     }
