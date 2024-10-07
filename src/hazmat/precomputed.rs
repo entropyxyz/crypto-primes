@@ -126,7 +126,11 @@ const fn create_reciprocals() -> [Reciprocal; SMALL_PRIMES.len()] {
     let mut arr = [Reciprocal::default(); SMALL_PRIMES.len()];
     let mut i = 0;
     while i < SMALL_PRIMES.len() {
-        arr[i] = Reciprocal::new(Limb(SMALL_PRIMES[i] as Word).to_nz().expect("divisor should be non-zero"));
+        arr[i] = Reciprocal::new(
+            Limb(SMALL_PRIMES[i] as Word)
+                .to_nz()
+                .expect("divisor should be non-zero"),
+        );
         i += 1;
     }
     arr

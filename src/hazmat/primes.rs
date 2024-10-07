@@ -16,15 +16,42 @@ pub(crate) const PRIMES_128: &[U128] = &[
 ];
 
 pub(crate) const PRIMES_256: &[U256] = &[
-    U256::from_be_hex(concat!["000000b5fbdee6707ad4aae136384de5", "bab269c2f0762d7f79e125a789aaeb0d",]),
-    U256::from_be_hex(concat!["000000595c108635b5d7a48618c1c266", "bdabd5b872848056fa2673cdb4a26d73",]),
-    U256::from_be_hex(concat!["00000119b6ec864440b587017783e3bd", "5cfe32376bf30fd88e78df6308a21fbf",]),
-    U256::from_be_hex(concat!["0000008dc92563d4d0e518083b120be1", "f972f0e6ec1742dcbb3c005d45d2e1e5",]),
-    U256::from_be_hex(concat!["000000da51fff5ef297699631f9a4cc2", "501c293cb63dcd0460d142edb1d3c347",]),
-    U256::from_be_hex(concat!["000000d903f6577d41bdad7337db1c21", "8f7c2db8ff2972659728ae5f2ffb2717",]),
-    U256::from_be_hex(concat!["0000009d297d4f202f33ee588bcdaa03", "9b851f99cc019cbb0a8ec7a39a22b7d9",]),
-    U256::from_be_hex(concat!["0000008bf47e7a8becb006495390462f", "1fbf78ec20ec06bd63a9c40c0c75302f",]),
-    U256::from_be_hex(concat!["00000162263cf603cfa774a2f1b9ce87", "3971228cdc785ce7a15ac33ae5a79eef",]),
+    U256::from_be_hex(concat![
+        "000000b5fbdee6707ad4aae136384de5",
+        "bab269c2f0762d7f79e125a789aaeb0d",
+    ]),
+    U256::from_be_hex(concat![
+        "000000595c108635b5d7a48618c1c266",
+        "bdabd5b872848056fa2673cdb4a26d73",
+    ]),
+    U256::from_be_hex(concat![
+        "00000119b6ec864440b587017783e3bd",
+        "5cfe32376bf30fd88e78df6308a21fbf",
+    ]),
+    U256::from_be_hex(concat![
+        "0000008dc92563d4d0e518083b120be1",
+        "f972f0e6ec1742dcbb3c005d45d2e1e5",
+    ]),
+    U256::from_be_hex(concat![
+        "000000da51fff5ef297699631f9a4cc2",
+        "501c293cb63dcd0460d142edb1d3c347",
+    ]),
+    U256::from_be_hex(concat![
+        "000000d903f6577d41bdad7337db1c21",
+        "8f7c2db8ff2972659728ae5f2ffb2717",
+    ]),
+    U256::from_be_hex(concat![
+        "0000009d297d4f202f33ee588bcdaa03",
+        "9b851f99cc019cbb0a8ec7a39a22b7d9",
+    ]),
+    U256::from_be_hex(concat![
+        "0000008bf47e7a8becb006495390462f",
+        "1fbf78ec20ec06bd63a9c40c0c75302f",
+    ]),
+    U256::from_be_hex(concat![
+        "00000162263cf603cfa774a2f1b9ce87",
+        "3971228cdc785ce7a15ac33ae5a79eef",
+    ]),
 ];
 
 pub(crate) const PRIMES_384: &[U384] = &[

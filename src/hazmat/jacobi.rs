@@ -28,7 +28,11 @@ impl core::ops::Neg for JacobiSymbol {
 fn apply_reduce_numerator(j: JacobiSymbol, a: Word, p: Word) -> (JacobiSymbol, Word) {
     let p_mod_8 = p & 7;
     let s = a.trailing_zeros();
-    let j = if (s & 1) == 1 && (p_mod_8 == 3 || p_mod_8 == 5) { -j } else { j };
+    let j = if (s & 1) == 1 && (p_mod_8 == 3 || p_mod_8 == 5) {
+        -j
+    } else {
+        j
+    };
     (j, a >> s)
 }
 
@@ -69,7 +73,11 @@ pub(crate) fn jacobi_symbol_vartime<T: Integer>(abs_a: Word, a_is_negative: bool
     // (-a/n) = (-1/n) * (a/n)
     //        = (-1)^((n-1)/2) * (a/n)
     //        = (-1 if n = 3 mod 4 else 1) * (a/n)
-    let result = if a_is_negative && p_long.as_ref().as_ref()[0].0 & 3 == 3 { -result } else { result };
+    let result = if a_is_negative && p_long.as_ref().as_ref()[0].0 & 3 == 3 {
+        -result
+    } else {
+        result
+    };
 
     // A degenerate case.
     if abs_a == 1 || p_long.as_ref() == &T::one_like(p_long) {

@@ -41,8 +41,9 @@ impl<T: Integer + RandomMod> MillerRabin<T> {
             let candidate_minus_one = candidate.wrapping_sub(&one);
             let s = candidate_minus_one.trailing_zeros_vartime();
             // Will not overflow because `candidate` is odd and greater than 1.
-            let d =
-                candidate_minus_one.overflowing_shr_vartime(s).expect("shift should be within range by construction");
+            let d = candidate_minus_one
+                .overflowing_shr_vartime(s)
+                .expect("shift should be within range by construction");
             (s, d)
         };
 
@@ -149,7 +150,9 @@ mod tests {
     }
 
     fn random_checks<T: Integer + RandomMod>(rng: &mut impl CryptoRngCore, mr: &MillerRabin<T>, count: usize) -> usize {
-        (0..count).map(|_| -> usize { mr.test_random_base(rng).is_probably_prime().into() }).sum()
+        (0..count)
+            .map(|_| -> usize { mr.test_random_base(rng).is_probably_prime().into() })
+            .sum()
     }
 
     fn test_composites(numbers: &[u32], expected_result: bool) {
@@ -165,7 +168,10 @@ mod tests {
             let mr = MillerRabin::new(&Odd::new(U64::from(*num)).unwrap());
             assert_eq!(mr.test_base_two().is_probably_prime(), actual_expected_result);
             let reported_prime = random_checks(&mut rng, &mr, 100);
-            assert!(reported_prime < 35, "reported as prime in {reported_prime} out of 100 tests",);
+            assert!(
+                reported_prime < 35,
+                "reported as prime in {reported_prime} out of 100 tests",
+            );
         }
     }
 
@@ -272,7 +278,10 @@ mod tests {
             let mr = MillerRabin::new(&Odd::new(U64::from(num)).unwrap());
             let res = mr.test_base_two().is_probably_prime();
             let expected = spsp || res_ref;
-            assert_eq!(res, expected, "Miller-Rabin: n={num}, expected={expected}, actual={res}",);
+            assert_eq!(
+                res, expected,
+                "Miller-Rabin: n={num}, expected={expected}, actual={res}",
+            );
         }
     }
 }

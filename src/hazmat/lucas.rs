@@ -87,7 +87,11 @@ impl LucasBase for SelfridgeBase {
 
         // Calculate `q = (1 - d) / 4`.
         // No remainder from division by 4, by construction of `d`.
-        let (abs_q, q_is_negative) = if d_is_negative { ((abs_d + 1) / 4, false) } else { ((abs_d - 1) / 4, true) };
+        let (abs_q, q_is_negative) = if d_is_negative {
+            ((abs_d + 1) / 4, false)
+        } else {
+            ((abs_d - 1) / 4, true)
+        };
 
         Ok((1, abs_q, q_is_negative))
     }
@@ -357,7 +361,11 @@ pub fn lucas_test<T: Integer>(candidate: &Odd<T>, base: impl LucasBase, check: L
 
     // Convert P to Montgomery form
 
-    let p = if p_is_one { one.clone() } else { <T as Integer>::Monty::new(to_integer(p), params.clone()) };
+    let p = if p_is_one {
+        one.clone()
+    } else {
+        <T as Integer>::Monty::new(to_integer(p), params.clone())
+    };
 
     // Compute d-th element of Lucas sequence (U_d(P, Q), V_d(P, Q)), where:
     //
@@ -396,7 +404,11 @@ pub fn lucas_test<T: Integer>(candidate: &Odd<T>, base: impl LucasBase, check: L
         if d.bit_vartime(i) {
             // k' = k + 1
 
-            let (p_uk, p_vk) = if p_is_one { (uk.clone(), vk.clone()) } else { (p.clone() * &uk, p.clone() * &vk) };
+            let (p_uk, p_vk) = if p_is_one {
+                (uk.clone(), vk.clone())
+            } else {
+                (p.clone() * &uk, p.clone() * &vk)
+            };
 
             let u_k1 = (p_uk + &vk).div_by_2();
             let v_k1 = (d_m.clone() * &uk + &p_vk).div_by_2();
@@ -522,7 +534,10 @@ mod tests {
     #[test]
     fn base_early_quit() {
         // 5 is flagged as prime at the base generation stage
-        assert_eq!(BruteForceBase.generate(&Odd::new(U64::from(5u32)).unwrap()), Err(Primality::Prime))
+        assert_eq!(
+            BruteForceBase.generate(&Odd::new(U64::from(5u32)).unwrap()),
+            Err(Primality::Prime)
+        )
     }
 
     #[test]
@@ -549,9 +564,18 @@ mod tests {
 
     #[test]
     fn decomposition() {
-        assert_eq!(decompose(&Odd::new(U128::MAX).unwrap()), (128, Odd::new(U128::ONE).unwrap()));
-        assert_eq!(decompose(&Odd::new(U128::ONE).unwrap()), (1, Odd::new(U128::ONE).unwrap()));
-        assert_eq!(decompose(&Odd::new(U128::from(7766015u32)).unwrap()), (15, Odd::new(U128::from(237u32)).unwrap()));
+        assert_eq!(
+            decompose(&Odd::new(U128::MAX).unwrap()),
+            (128, Odd::new(U128::ONE).unwrap())
+        );
+        assert_eq!(
+            decompose(&Odd::new(U128::ONE).unwrap()),
+            (1, Odd::new(U128::ONE).unwrap())
+        );
+        assert_eq!(
+            decompose(&Odd::new(U128::from(7766015u32)).unwrap()),
+            (15, Odd::new(U128::from(237u32)).unwrap())
+        );
     }
 
     fn is_slpsp(num: u32) -> bool {
@@ -577,13 +601,21 @@ mod tests {
 
             // Test both single-limb and multi-limb, just in case.
             assert_eq!(
-                lucas_test(&Odd::new(Uint::<1>::from(*num)).unwrap(), SelfridgeBase, LucasCheck::Strong)
-                    .is_probably_prime(),
+                lucas_test(
+                    &Odd::new(Uint::<1>::from(*num)).unwrap(),
+                    SelfridgeBase,
+                    LucasCheck::Strong
+                )
+                .is_probably_prime(),
                 actual_expected_result
             );
             assert_eq!(
-                lucas_test(&Odd::new(Uint::<2>::from(*num)).unwrap(), SelfridgeBase, LucasCheck::Strong)
-                    .is_probably_prime(),
+                lucas_test(
+                    &Odd::new(Uint::<2>::from(*num)).unwrap(),
+                    SelfridgeBase,
+                    LucasCheck::Strong
+                )
+                .is_probably_prime(),
                 actual_expected_result
             );
         }
@@ -610,9 +642,17 @@ mod tests {
 
     fn test_composites_brute_force(numbers: &[u32], almost_extra: bool, expected_result: bool) {
         for num in numbers.iter() {
-            let false_positive = if almost_extra { is_aeslpsp(*num) } else { is_eslpsp(*num) };
+            let false_positive = if almost_extra {
+                is_aeslpsp(*num)
+            } else {
+                is_eslpsp(*num)
+            };
             let actual_expected_result = if false_positive { true } else { expected_result };
-            let check = if almost_extra { LucasCheck::AlmostExtraStrong } else { LucasCheck::ExtraStrong };
+            let check = if almost_extra {
+                LucasCheck::AlmostExtraStrong
+            } else {
+                LucasCheck::ExtraStrong
+            };
 
             // Test both single-limb and multi-limb, just in case.
             assert_eq!(
@@ -748,7 +788,11 @@ mod tests {
     #[test]
     fn corner_cases() {
         // By convention, 1 is composite. That's what `num-prime` returns.
-        let res = lucas_test(&Odd::new(U64::ONE).unwrap(), BruteForceBase, LucasCheck::AlmostExtraStrong);
+        let res = lucas_test(
+            &Odd::new(U64::ONE).unwrap(),
+            BruteForceBase,
+            LucasCheck::AlmostExtraStrong,
+        );
         assert_eq!(res, Primality::Composite);
     }
 
@@ -776,16 +820,25 @@ mod tests {
 
             let res = lucas_test(&odd_num, BruteForceBase, LucasCheck::ExtraStrong).is_probably_prime();
             let expected = eslpsp || res_ref;
-            assert_eq!(res, expected, "Brute force base: n={num}, expected={expected}, actual={res}",);
+            assert_eq!(
+                res, expected,
+                "Brute force base: n={num}, expected={expected}, actual={res}",
+            );
 
             let res = lucas_test(&odd_num, SelfridgeBase, LucasCheck::Strong).is_probably_prime();
             let expected = slpsp || res_ref;
-            assert_eq!(res, expected, "Selfridge base: n={num}, expected={expected}, actual={res}",);
+            assert_eq!(
+                res, expected,
+                "Selfridge base: n={num}, expected={expected}, actual={res}",
+            );
 
             let res = lucas_test(&odd_num, AStarBase, LucasCheck::LucasV).is_probably_prime();
             let expected = vpsp || res_ref;
 
-            assert_eq!(res, expected, "A* base, Lucas-V: n={num}, expected={expected}, actual={res}",);
+            assert_eq!(
+                res, expected,
+                "A* base, Lucas-V: n={num}, expected={expected}, actual={res}",
+            );
         }
     }
 }

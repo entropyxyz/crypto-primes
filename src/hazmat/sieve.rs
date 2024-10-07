@@ -73,7 +73,10 @@ impl<T: Integer> Sieve<T> {
         let max_bit_length = max_bit_length.get();
 
         if max_bit_length > start.bits_precision() {
-            panic!("The requested bit length ({}) is larger than the precision of `start`", max_bit_length);
+            panic!(
+                "The requested bit length ({}) is larger than the precision of `start`",
+                max_bit_length
+            );
         }
 
         // If we are targeting safe primes, iterate over the corresponding
@@ -141,7 +144,10 @@ impl<T: Integer> Sieve<T> {
         // Should not overflow since `incr` is never greater than `incr_limit`,
         // and the latter is chosen such that it doesn't overflow when added to `base`
         // (see the rest of this method).
-        self.base = self.base.checked_add(&self.incr.into()).expect("addition should not overflow by construction");
+        self.base = self
+            .base
+            .checked_add(&self.incr.into())
+            .expect("addition should not overflow by construction");
 
         self.incr = 0;
 
@@ -152,7 +158,10 @@ impl<T: Integer> Sieve<T> {
         }
 
         // Find the increment limit.
-        let max_value = match T::one_like(&self.base).overflowing_shl_vartime(self.max_bit_length).into() {
+        let max_value = match T::one_like(&self.base)
+            .overflowing_shl_vartime(self.max_bit_length)
+            .into()
+        {
             Some(val) => val,
             None => T::one_like(&self.base),
         };
@@ -165,8 +174,10 @@ impl<T: Integer> Sieve<T> {
             self.last_round = true;
             // Can unwrap here since we just checked above that `incr_limit <= INCR_LIMIT`,
             // and `INCR_LIMIT` fits into `Residue`.
-            let incr_limit_small: Residue =
-                incr_limit.as_ref()[0].0.try_into().expect("the increment limit should fit within `Residue`");
+            let incr_limit_small: Residue = incr_limit.as_ref()[0]
+                .0
+                .try_into()
+                .expect("the increment limit should fit within `Residue`");
             incr_limit_small
         };
 
@@ -206,8 +217,10 @@ impl<T: Integer> Sieve<T> {
             // The overflow should never happen here since `incr`
             // is never greater than `incr_limit`, and the latter is chosen such that
             // it does not overflow when added to `base` (see `update_residues()`).
-            let mut num =
-                self.base.checked_add(&self.incr.into()).expect("addition should not overflow by construction");
+            let mut num = self
+                .base
+                .checked_add(&self.incr.into())
+                .expect("addition should not overflow by construction");
             if self.safe_primes {
                 num = num.wrapping_shl_vartime(1) | T::one_like(&self.base);
             }

@@ -484,7 +484,10 @@ mod tests_gmp {
             let actual = is_prime(p.as_ref());
             let p_bn = to_gmp(&p);
             let expected = gmp_is_prime(&p_bn);
-            assert_eq!(actual, expected, "difference between GMP and us: GMP reports {expected}, we report {actual}",);
+            assert_eq!(
+                actual, expected,
+                "difference between GMP and us: GMP reports {expected}, we report {actual}",
+            );
         }
     }
 }
