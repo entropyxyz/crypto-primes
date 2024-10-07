@@ -2,10 +2,10 @@ name: crypto-primes
 on:
   workflow_dispatch:
   pull_request:
-    paths-ignore: [ README.md ]
+    paths-ignore: [README.md]
   push:
     branches: master
-    paths-ignore: [ README.md ]
+    paths-ignore: [README.md]
 
 env:
   CARGO_INCREMENTAL: 0
@@ -138,3 +138,16 @@ jobs:
           toolchain: 1.73.0
           profile: minimal
       - run: cargo build --all-features --benches
+
+  cargo-careful:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+      - uses: baptiste0928/cargo-install@v3
+        with:
+          crate: "cargo-careful"
+      - run: cargo-careful test
