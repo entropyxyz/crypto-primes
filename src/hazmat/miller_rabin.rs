@@ -122,7 +122,7 @@ mod tests {
     use alloc::format;
     use core::num::NonZeroU32;
 
-    use crypto_bigint::{Integer, Odd, RandomMod, Uint, U1024, U128, U1536, U256, U64};
+    use crypto_bigint::{Integer, Odd, RandomMod, Uint, U1024, U128, U1536, U64};
     use rand_chacha::ChaCha8Rng;
     use rand_core::{CryptoRngCore, OsRng, SeedableRng};
 
