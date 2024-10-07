@@ -57,10 +57,7 @@ mod tests {
         assert_eq!(gcd_vartime(&U128::from(0u64), 5), 5);
         assert_eq!(gcd_vartime(&U128::from(1u64), 11 * 13 * 19), 1);
         assert_eq!(gcd_vartime(&U128::from(7u64 * 11 * 13), 1), 1);
-        assert_eq!(
-            gcd_vartime(&U128::from(7u64 * 11 * 13), 11 * 13 * 19),
-            11 * 13
-        );
+        assert_eq!(gcd_vartime(&U128::from(7u64 * 11 * 13), 11 * 13 * 19), 11 * 13);
     }
 
     prop_compose! {
