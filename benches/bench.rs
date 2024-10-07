@@ -58,7 +58,7 @@ fn bench_sieve(c: &mut Criterion) {
     });
 
     // 5 is the average number of pre-sieved samples we need to take before we encounter a prime
-    group.bench_function("(U128) 5 samples", |b| {
+    group.bench_function("(U128) average sieve samples for a prime (5)", |b| {
         b.iter_batched(
             || make_sieve::<{ nlimbs!(128) }>(&mut OsRng),
             |sieve| sieve.take(5).for_each(drop),
@@ -78,13 +78,27 @@ fn bench_sieve(c: &mut Criterion) {
         )
     });
 
-    group.bench_function("(U1024) 5 samples", |b| {
+    // 42 is the average number of pre-sieved samples we need to take before we encounter a prime
+    group.bench_function("(U1024) average sieve samples for a prime (42)", |b| {
         b.iter_batched(
             || make_sieve::<{ nlimbs!(1024) }>(&mut OsRng),
-            |sieve| sieve.take(5).for_each(drop),
+            |sieve| sieve.take(42).for_each(drop),
             BatchSize::SmallInput,
         )
     });
+
+    // 42^2 is the average number of pre-sieved samples we need to take
+    // before we encounter a safe prime
+    group.bench_function(
+        "(U1024) average sieve samples for a safe prime (42^2)",
+        |b| {
+            b.iter_batched(
+                || make_sieve::<{ nlimbs!(1024) }>(&mut OsRng),
+                |sieve| sieve.take(42 * 42).for_each(drop),
+                BatchSize::SmallInput,
+            )
+        },
+    );
 
     group.finish()
 }
@@ -360,6 +374,135 @@ fn bench_openssl(c: &mut Criterion) {
 #[cfg(not(feature = "tests-openssl"))]
 fn bench_openssl(_c: &mut Criterion) {}
 
+#[cfg(feature = "tests-glass-pumpkin")]
+fn bench_glass_pumpkin(c: &mut Criterion) {
+    use crypto_bigint::Limb;
+    use crypto_primes::hazmat::{lucas_test, AStarBase, LucasCheck, MillerRabin, Primality};
+
+    // The `glass-pumpkin` implementation is doing a different number of M-R checks than this crate.
+    // For a fair comparison we make a custom implementation here,
+    // using the same number of checks that `glass-pumpkin` does.
+    fn required_checks(bits: u32) -> usize {
+        ((bits as f64).log2() as usize) + 5
+    }
+
+    // Mimics the sequence of checks `glass-pumpkin` does to find a prime.
+    fn prime_like_gp(bit_length: u32, rng: &mut impl CryptoRngCore) -> BoxedUint {
+        loop {
+            let start = random_odd_integer::<BoxedUint>(
+                rng,
+                NonZeroU32::new(bit_length).unwrap(),
+                bit_length,
+            );
+            let sieve = Sieve::new(start.as_ref(), NonZeroU32::new(bit_length).unwrap(), false);
+            for num in sieve {
+                let odd_num = &Odd::new(num.clone()).unwrap();
+
+                let mr = MillerRabin::new(odd_num);
+                if (0..required_checks(bit_length))
+                    .any(|_| !mr.test_random_base(rng).is_probably_prime())
+                {
+                    continue;
+                }
+
+                match lucas_test(odd_num, AStarBase, LucasCheck::Strong) {
+                    Primality::Composite => continue,
+                    Primality::Prime => return num,
+                    _ => {}
+                }
+
+                return num;
+            }
+        }
+    }
+
+    // Mimics the sequence of checks `glass-pumpkin` does to find a safe prime.
+    fn safe_prime_like_gp(bit_length: u32, rng: &mut impl CryptoRngCore) -> BoxedUint {
+        loop {
+            let start = random_odd_integer::<BoxedUint>(
+                rng,
+                NonZeroU32::new(bit_length).unwrap(),
+                bit_length,
+            );
+            let sieve = Sieve::new(start.as_ref(), NonZeroU32::new(bit_length).unwrap(), true);
+            for num in sieve {
+                let odd_num = &Odd::new(num.clone()).unwrap();
+
+                let limbs: &[Limb] = num.as_ref();
+                if limbs[0].0 & 3 != 3 {
+                    continue;
+                }
+
+                let half = num.wrapping_shr_vartime(1);
+                let odd_half = &Odd::new(half.clone()).unwrap();
+
+                let checks = required_checks(bit_length) - 5;
+
+                let mr = MillerRabin::new(odd_num);
+                if (0..checks).any(|_| !mr.test_random_base(rng).is_probably_prime()) {
+                    continue;
+                }
+
+                if lucas_test(odd_num, AStarBase, LucasCheck::Strong) == Primality::Composite {
+                    continue;
+                }
+
+                let mr = MillerRabin::new(odd_half);
+                if (0..checks).any(|_| !mr.test_random_base(rng).is_probably_prime()) {
+                    continue;
+                }
+
+                match lucas_test(odd_half, AStarBase, LucasCheck::Strong) {
+                    Primality::Composite => continue,
+                    Primality::Prime => return num,
+                    _ => {}
+                }
+
+                return num;
+            }
+        }
+    }
+
+    let mut group = c.benchmark_group("glass-pumpkin");
+
+    let mut rng = make_rng();
+    group.bench_function("(U1024) Random prime (crypto-primes default)", |b| {
+        b.iter(|| generate_prime_with_rng::<BoxedUint>(&mut rng, 1024, 1024))
+    });
+
+    let mut rng = make_rng();
+    group.bench_function(
+        "(U1024) Random prime (crypto-primes mimicking glass-pumpkin)",
+        |b| b.iter(|| prime_like_gp(1024, &mut rng)),
+    );
+
+    let mut rng = make_rng();
+    group.bench_function("(U1024) Random prime", |b| {
+        b.iter(|| glass_pumpkin::prime::from_rng(1024, &mut rng))
+    });
+
+    group.sample_size(20);
+
+    let mut rng = make_rng();
+    group.bench_function("(U1024) Random safe prime (crypto-primes default)", |b| {
+        b.iter(|| generate_safe_prime_with_rng::<BoxedUint>(&mut rng, 1024, 1024))
+    });
+
+    let mut rng = make_rng();
+    group.bench_function(
+        "(U1024) Random safe prime (crypto-primes mimicking glass-pumpkin)",
+        |b| b.iter(|| safe_prime_like_gp(1024, &mut rng)),
+    );
+
+    let mut rng = make_rng();
+    group.bench_function("(U1024) Random safe prime", |b| {
+        b.iter(|| glass_pumpkin::safe_prime::from_rng(1024, &mut rng))
+    });
+}
+
+#[cfg(not(feature = "tests-glass-pumpkin"))]
+fn bench_glass_pumpkin(_c: &mut Criterion) {}
+
 criterion_group!(
     benches,
     bench_sieve,
@@ -368,5 +511,6 @@ criterion_group!(
     bench_presets,
     bench_gmp,
     bench_openssl,
+    bench_glass_pumpkin,
 );
 criterion_main!(benches);

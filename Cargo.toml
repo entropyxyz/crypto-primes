@@ -18,6 +18,7 @@ openssl = { version = "0.10.39", optional = true, features = ["vendored"] }
 rug = { version = "1.26", default-features = false, features = [
 	"integer",
 ], optional = true }
+glass_pumpkin = { version = "1", optional = true }
 
 [dev-dependencies]
 # need `crypto-bigint` with `alloc` to test `BoxedUint`
@@ -37,8 +38,9 @@ default = ["default-rng"]
 default-rng = ["rand_core/getrandom"]
 tests-openssl = ["openssl"]
 tests-gmp = ["rug/std"]
+tests-glass-pumpkin = ["glass_pumpkin"]
 tests-exhaustive = []
-tests-all = ["tests-openssl", "tests-gmp", "tests-exhaustive"]
+tests-all = ["tests-openssl", "tests-gmp", "tests-exhaustive", "tests-glass-pumpkin"]
 
 [package.metadata.docs.rs]
 features = ["default"]
