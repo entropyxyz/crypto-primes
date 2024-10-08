@@ -335,7 +335,7 @@ pub fn lucas_test<T: Integer>(
     // it does not noticeably affect the performance.
     if abs_q != 1
         && gcd_vartime(candidate.as_ref(), abs_q) != 1
-        && candidate.as_ref() > &to_integer(abs_q)
+        && candidate.as_ref().as_ref()[0].0 > abs_q
     {
         return Primality::Composite;
     }
