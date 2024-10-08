@@ -8,9 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Bumped `crypto-bigint` to 0.6.0-rc.6 (pinned) and MSRV to 1.81. ([#55])
-
+- Remove bit precision from the public API ([#46])
 
 [#55]: https://github.com/entropyxyz/crypto-primes/pull/55
+[#46]: https://github.com/entropyxyz/crypto-primes/pull/46
 
 
 ## [0.6.0-pre.1] - 2024-10-03
