@@ -3,7 +3,6 @@ use crypto_bigint::{Integer, Limb, NonZero, Word};
 /// Calculates the greatest common divisor of `n` and `m`.
 /// By definition, `gcd(0, m) == m`.
 /// `n` must be non-zero.
-#[inline]
 pub(crate) fn gcd_vartime<T: Integer>(n: &T, m: NonZero<Word>) -> Word {
     let m = m.get();
     // This we can check since it doesn't affect the return type,
@@ -42,8 +41,7 @@ pub(crate) fn gcd_vartime<T: Integer>(n: &T, m: NonZero<Word>) -> Word {
 // As GCD is commutative `gcd(n, m) = gcd(m, n)` those identities still apply if the operands are swapped.
 //
 // [1]: https://en.wikipedia.org/wiki/Binary_GCD_algorithm
-#[inline(always)]
-fn binary_gcd(mut n: u64, mut m: u64) -> u64 {
+fn binary_gcd(mut n: Word, mut m: Word) -> Word {
     // Using identities 2 and 3:
     // gcd(2ⁱn, 2ʲm) = 2ᵏ gcd(n, m) with n, m odd and k = min(i, j)
     // 2ᵏ is the greatest power of two that divides both 2ⁱn and 2ʲm
