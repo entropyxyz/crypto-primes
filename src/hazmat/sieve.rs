@@ -140,14 +140,14 @@ impl<T: Integer> Sieve<T> {
             return false;
         }
 
-        // Set the new base. This increment will not overflow unless the `Sieve` is misused and manipulated.
-        match self.base.checked_add(&self.incr.into()).into() {
-            Some(x) => self.base = x,
-            None => {
-                self.last_round = true;
-                return false;
-            }
-        }
+        // Set the new base.
+        // Should not overflow since `incr` is never greater than `incr_limit`,
+        // and the latter is chosen such that it doesn't overflow when added to `base`
+        // (see the rest of this method).
+        self.base = self
+            .base
+            .checked_add(&self.incr.into())
+            .expect("Does not overflow by construction");
 
         self.incr = 0;
 
