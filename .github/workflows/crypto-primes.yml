@@ -138,3 +138,16 @@ jobs:
           toolchain: 1.81.0
           profile: minimal
       - run: cargo build --all-features --benches
+
+  cargo-careful:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          profile: minimal
+      - uses: baptiste0928/cargo-install@v3
+        with:
+          crate: "cargo-careful"
+      - run: cargo +nightly careful setup && cargo +nightly careful test --features=tests-exhaustive
