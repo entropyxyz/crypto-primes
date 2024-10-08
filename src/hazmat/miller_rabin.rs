@@ -60,8 +60,8 @@ impl<T: Integer + RandomMod> MillerRabin<T> {
 
     /// Perform a Miller-Rabin check with a given base.
     pub fn test(&self, base: &T) -> Primality {
-        // TODO: it may be faster to first check that gcd(base, candidate) == 1,
-        // otherwise we can return `Composite` right away.
+        // One could check here if `gcd(base, candidate) == 1` and return `Composite` otherwise.
+        // In practice it doesn't make any performance difference in normal operation.
 
         let base = <T as Integer>::Monty::new(base.clone(), self.montgomery_params.clone());
 
