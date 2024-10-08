@@ -392,16 +392,13 @@ fn bench_glass_pumpkin(c: &mut Criterion) {
     // Mimics the sequence of checks `glass-pumpkin` does to find a prime.
     fn prime_like_gp(bit_length: u32, rng: &mut impl CryptoRngCore) -> BoxedUint {
         loop {
-            let start = random_odd_integer::<BoxedUint>(
-                rng,
-                NonZeroU32::new(bit_length).unwrap(),
-                bit_length,
-            );
-            let sieve = Sieve::new(start.as_ref(), NonZeroU32::new(bit_length).unwrap(), false);
+            let start =
+                random_odd_integer::<BoxedUint>(rng, NonZeroU32::new(bit_length).unwrap()).get();
+            let sieve = Sieve::new(start, NonZeroU32::new(bit_length).unwrap(), false);
             for num in sieve {
-                let odd_num = &Odd::new(num.clone()).unwrap();
+                let odd_num = Odd::new(num.clone()).unwrap();
 
-                let mr = MillerRabin::new(odd_num);
+                let mr = MillerRabin::new(odd_num.clone());
                 if (0..required_checks(bit_length))
                     .any(|_| !mr.test_random_base(rng).is_probably_prime())
                 {
@@ -422,14 +419,11 @@ fn bench_glass_pumpkin(c: &mut Criterion) {
     // Mimics the sequence of checks `glass-pumpkin` does to find a safe prime.
     fn safe_prime_like_gp(bit_length: u32, rng: &mut impl CryptoRngCore) -> BoxedUint {
         loop {
-            let start = random_odd_integer::<BoxedUint>(
-                rng,
-                NonZeroU32::new(bit_length).unwrap(),
-                bit_length,
-            );
-            let sieve = Sieve::new(start.as_ref(), NonZeroU32::new(bit_length).unwrap(), true);
+            let start =
+                random_odd_integer::<BoxedUint>(rng, NonZeroU32::new(bit_length).unwrap()).get();
+            let sieve = Sieve::new(start, NonZeroU32::new(bit_length).unwrap(), true);
             for num in sieve {
-                let odd_num = &Odd::new(num.clone()).unwrap();
+                let odd_num = Odd::new(num.clone()).unwrap();
 
                 let limbs: &[Limb] = num.as_ref();
                 if limbs[0].0 & 3 != 3 {
@@ -437,11 +431,11 @@ fn bench_glass_pumpkin(c: &mut Criterion) {
                 }
 
                 let half = num.wrapping_shr_vartime(1);
-                let odd_half = &Odd::new(half.clone()).unwrap();
+                let odd_half = Odd::new(half.clone()).unwrap();
 
                 let checks = required_checks(bit_length) - 5;
 
-                let mr = MillerRabin::new(odd_num);
+                let mr = MillerRabin::new(odd_num.clone());
                 if (0..checks).any(|_| !mr.test_random_base(rng).is_probably_prime()) {
                     continue;
                 }
@@ -450,7 +444,7 @@ fn bench_glass_pumpkin(c: &mut Criterion) {
                     continue;
                 }
 
-                let mr = MillerRabin::new(odd_half);
+                let mr = MillerRabin::new(odd_half.clone());
                 if (0..checks).any(|_| !mr.test_random_base(rng).is_probably_prime()) {
                     continue;
                 }
@@ -470,7 +464,7 @@ fn bench_glass_pumpkin(c: &mut Criterion) {
 
     let mut rng = make_rng();
     group.bench_function("(U1024) Random prime (crypto-primes default)", |b| {
-        b.iter(|| generate_prime_with_rng::<BoxedUint>(&mut rng, 1024, 1024))
+        b.iter(|| generate_prime_with_rng::<BoxedUint>(&mut rng, 1024))
     });
 
     let mut rng = make_rng();
@@ -488,7 +482,7 @@ fn bench_glass_pumpkin(c: &mut Criterion) {
 
     let mut rng = make_rng();
     group.bench_function("(U1024) Random safe prime (crypto-primes default)", |b| {
-        b.iter(|| generate_safe_prime_with_rng::<BoxedUint>(&mut rng, 1024, 1024))
+        b.iter(|| generate_safe_prime_with_rng::<BoxedUint>(&mut rng, 1024))
     });
 
     let mut rng = make_rng();
