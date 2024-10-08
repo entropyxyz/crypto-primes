@@ -69,7 +69,7 @@ impl<T: Integer + RandomMod> MillerRabin<T> {
     }
 
     /// Perform a Miller-Rabin check with a given base.
-    pub fn test(&self, base: T) -> Primality {
+    pub fn test(&self, base: &T) -> Primality {
         // TODO: it may be faster to first check that gcd(base, candidate) == 1,
         // otherwise we can return `Composite` right away.
 
@@ -98,7 +98,7 @@ impl<T: Integer + RandomMod> MillerRabin<T> {
 
     /// Perform a Miller-Rabin check with base 2.
     pub fn test_base_two(&self) -> Primality {
-        self.test(T::from_limb_like(Limb::from(2u32), &self.candidate))
+        self.test(&T::from_limb_like(Limb::from(2u32), &self.candidate))
     }
 
     /// Perform a Miller-Rabin check with a random base (in the range `[3, candidate-2]`)
@@ -122,7 +122,7 @@ impl<T: Integer + RandomMod> MillerRabin<T> {
         let random = T::random_mod(rng, &range_nonzero)
             .checked_add(&T::from(3u32))
             .expect("addition should not overflow by construction");
-        self.test(random)
+        self.test(&random)
     }
 
     /// Returns the number of bits necessary to represent the candidate.
@@ -130,7 +130,7 @@ impl<T: Integer + RandomMod> MillerRabin<T> {
     ///
     /// For example, a U512 type occupies 8 64-bit words, but the number `7` contained in such a type
     /// has a bit length of 3 because 7 is `b111`.
-    pub fn bits(&self) -> u32 {
+    pub(crate) fn bits(&self) -> u32 {
         self.bits
     }
 }
@@ -216,8 +216,8 @@ mod tests {
             let mr = MillerRabin::new(Odd::new(num).unwrap());
 
             // Trivial tests, must always be true.
-            assert!(mr.test(1u32.into()).is_probably_prime());
-            assert!(mr.test(num.wrapping_sub(&1u32.into())).is_probably_prime());
+            assert!(mr.test(&1u32.into()).is_probably_prime());
+            assert!(mr.test(&num.wrapping_sub(&1u32.into())).is_probably_prime());
         }
     }
 
@@ -272,10 +272,10 @@ mod tests {
 
         // It is known to pass MR tests for all prime bases <307
         assert!(mr.test_base_two().is_probably_prime());
-        assert!(mr.test(U1536::from(293u64)).is_probably_prime());
+        assert!(mr.test(&U1536::from(293u64)).is_probably_prime());
 
         // A test with base 307 correctly reports the number as composite.
-        assert!(!mr.test(U1536::from(307u64)).is_probably_prime());
+        assert!(!mr.test(&U1536::from(307u64)).is_probably_prime());
     }
 
     fn test_large_primes<const L: usize>(nums: &[Uint<L>]) {

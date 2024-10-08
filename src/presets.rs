@@ -161,9 +161,11 @@ pub fn is_safe_prime_with_rng<T: Integer + RandomMod>(
 /// If the outcome of M-R is "probably prime", then run a Lucas test
 /// If the Lucas test is inconclusive, run a Miller-Rabin with random base and unless this second
 /// M-R test finds it's composite, then conclude that it's prime.
-fn _is_prime_with_rng<T: Integer + RandomMod>(rng: &mut impl CryptoRngCore, num: Odd<T>) -> bool {
-    let candidate = num.clone();
-    let mr = MillerRabin::new(num);
+fn _is_prime_with_rng<T: Integer + RandomMod>(
+    rng: &mut impl CryptoRngCore,
+    candidate: Odd<T>,
+) -> bool {
+    let mr = MillerRabin::new(candidate.clone());
 
     if !mr.test_base_two().is_probably_prime() {
         return false;

@@ -9,8 +9,8 @@ use rand_core::CryptoRngCore;
 
 use crate::hazmat::precomputed::{SmallPrime, RECIPROCALS, SMALL_PRIMES};
 
-/// Returns a random odd integer with given bit length (that is, with both `0` and `bit_length-1`
-/// bits set).
+/// Returns a random odd integer with given bit length
+/// (that is, with both `0` and `bit_length-1` bits set).
 ///
 /// *Panics*: if the `bit_length` is bigger than the bits available in the `Integer`, e.g. 37 for a
 /// `U32`.
