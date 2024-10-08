@@ -7,10 +7,10 @@ description = "Random prime number generation and primality checking library"
 repository = "https://github.com/entropyxyz/crypto-primes"
 readme = "README.md"
 categories = ["cryptography", "no-std"]
-rust-version = "1.73"
+rust-version = "1.81"
 
 [dependencies]
-crypto-bigint = { version = "=0.6.0-rc.2", default-features = false, features = [
+crypto-bigint = { version = "=0.6.0-rc.6", default-features = false, features = [
 	"rand_core",
 ] }
 rand_core = { version = "0.6.4", default-features = false }
@@ -22,7 +22,7 @@ glass_pumpkin = { version = "1", optional = true }
 
 [dev-dependencies]
 # need `crypto-bigint` with `alloc` to test `BoxedUint`
-crypto-bigint = { version = "=0.6.0-rc.2", default-features = false, features = [
+crypto-bigint = { version = "=0.6.0-rc.6", default-features = false, features = [
 	"alloc",
 ] }
 rand_chacha = "0.3"
@@ -40,7 +40,12 @@ tests-openssl = ["openssl"]
 tests-gmp = ["rug/std"]
 tests-glass-pumpkin = ["glass_pumpkin"]
 tests-exhaustive = []
-tests-all = ["tests-openssl", "tests-gmp", "tests-exhaustive", "tests-glass-pumpkin"]
+tests-all = [
+	"tests-openssl",
+	"tests-gmp",
+	"tests-exhaustive",
+	"tests-glass-pumpkin",
+]
 
 [package.metadata.docs.rs]
 features = ["default"]
