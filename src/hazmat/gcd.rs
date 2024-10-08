@@ -4,12 +4,8 @@ use crypto_bigint::{Integer, Limb, NonZero, Word};
 /// By definition, `gcd(0, m) == m`.
 /// `n` must be non-zero.
 #[inline]
-pub(crate) fn gcd_vartime<T: Integer>(n: &T, m: Word) -> Word {
-    // This is an internal function, and it will never be called with `m = 0`.
-    // Allowing `m = 0` would require us to have the return type of `Uint<L>`
-    // (since `gcd(n, 0) = n`).
-    debug_assert!(m != 0);
-
+pub(crate) fn gcd_vartime<T: Integer>(n: &T, m: NonZero<Word>) -> Word {
+    let m = m.get();
     // This we can check since it doesn't affect the return type,
     // even though `n` will not be 0 either in the application.
     if n.is_zero().into() {
@@ -80,7 +76,7 @@ fn binary_gcd(mut n: u64, mut m: u64) -> u64 {
 
 #[cfg(test)]
 mod tests {
-    use crypto_bigint::{Word, U128};
+    use crypto_bigint::{NonZero, Word, U128};
     use num_bigint::BigUint;
     use num_integer::Integer;
     use proptest::prelude::*;
@@ -89,11 +85,20 @@ mod tests {
 
     #[test]
     fn corner_cases() {
-        assert_eq!(gcd_vartime(&U128::from(0u64), 5), 5);
-        assert_eq!(gcd_vartime(&U128::from(1u64), 11 * 13 * 19), 1);
-        assert_eq!(gcd_vartime(&U128::from(7u64 * 11 * 13), 1), 1);
+        assert_eq!(gcd_vartime(&U128::from(0u64), NonZero::new(5).unwrap()), 5);
         assert_eq!(
-            gcd_vartime(&U128::from(7u64 * 11 * 13), 11 * 13 * 19),
+            gcd_vartime(&U128::from(1u64), NonZero::new(11 * 13 * 19).unwrap()),
+            1
+        );
+        assert_eq!(
+            gcd_vartime(&U128::from(7u64 * 11 * 13), NonZero::new(1).unwrap()),
+            1
+        );
+        assert_eq!(
+            gcd_vartime(
+                &U128::from(7u64 * 11 * 13),
+                NonZero::new(11 * 13 * 19).unwrap()
+            ),
             11 * 13
         );
     }
@@ -115,7 +120,7 @@ mod tests {
             let n_bi = BigUint::from_bytes_be(n.to_be_bytes().as_ref());
             let gcd_ref: Word = n_bi.gcd(&m_bi).try_into().unwrap();
 
-            let gcd_test = gcd_vartime(&n, m);
+            let gcd_test = gcd_vartime(&n, NonZero::new(m).unwrap());
             assert_eq!(gcd_test, gcd_ref);
         }
     }
