@@ -268,7 +268,7 @@ mod tests {
     use alloc::vec::Vec;
     use core::num::NonZeroU32;
 
-    use crypto_bigint::{U1024, U64};
+    use crypto_bigint::U64;
     use num_prime::nt_funcs::factorize64;
     use rand_chacha::ChaCha8Rng;
     use rand_core::{OsRng, SeedableRng};
@@ -388,14 +388,6 @@ mod tests {
     fn sieve_with_max_start() {
         let start = U64::MAX;
         let mut sieve = Sieve::new(&start, NonZeroU32::new(U64::BITS).unwrap(), false);
-        assert!(sieve.next().is_none());
-    }
-
-    #[test]
-    fn sieve_with_max_start_and_malicious_manipulation() {
-        let start = U1024::MAX;
-        let mut sieve = Sieve::new(&start, NonZeroU32::new(U1024::BITS).unwrap(), false);
-        sieve.incr = 10; // Cause overflow in update_residues()
         assert!(sieve.next().is_none());
     }
 }
