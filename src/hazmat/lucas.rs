@@ -1,5 +1,5 @@
 //! Lucas primality test.
-use crypto_bigint::{Integer, Limb, Monty, Odd, Square, Word};
+use crypto_bigint::{Integer, Limb, Monty, NonZero, Odd, Square, Word};
 
 use super::{
     gcd::gcd_vartime,
@@ -334,7 +334,10 @@ pub fn lucas_test<T: Integer>(
     // we check that gcd(n, Q) = 1 anyway - again, since `Q` is small,
     // it does not noticeably affect the performance.
     if abs_q != 1
-        && gcd_vartime(candidate.as_ref(), abs_q) != 1
+        && gcd_vartime(
+            candidate.as_ref(),
+            NonZero::new(abs_q).expect("q is not zero by construction"),
+        ) != 1
         && candidate.as_ref() > &to_integer(abs_q)
     {
         return Primality::Composite;
