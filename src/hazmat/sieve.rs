@@ -11,15 +11,16 @@ use crate::hazmat::precomputed::{SmallPrime, RECIPROCALS, SMALL_PRIMES};
 
 /// Returns a random odd integer with given bit length
 /// (that is, with both `0` and `bit_length-1` bits set).
+///
+/// *Panics*: if the `bit_length` is bigger than the bits available in the `Integer`, e.g. 37 for a
+/// `U32`.
 pub fn random_odd_integer<T: Integer + RandomBits>(
     rng: &mut impl CryptoRngCore,
     bit_length: NonZeroU32,
-    bits_precision: u32,
 ) -> Odd<T> {
     let bit_length = bit_length.get();
 
-    let mut random = T::random_bits_with_precision(rng, bit_length, bits_precision);
-    assert!(random.bits_precision() == bits_precision);
+    let mut random = T::random_bits(rng, bit_length);
     // Make it odd
     random.set_bit_vartime(0, true);
 
@@ -27,7 +28,7 @@ pub fn random_odd_integer<T: Integer + RandomBits>(
     // Will not overflow since `bit_length` is ensured to be within the size of the integer.
     random.set_bit_vartime(bit_length - 1, true);
 
-    Odd::new(random).expect("the number should be odd by construction")
+    Odd::new(random).expect("the number is odd by construction")
 }
 
 // The type we use to calculate incremental residues.
@@ -57,11 +58,9 @@ pub struct Sieve<T: Integer> {
 }
 
 impl<T: Integer> Sieve<T> {
-    /// Creates a new sieve, iterating from `start` and
-    /// until the last number with `max_bit_length` bits,
-    /// producing numbers that are not non-trivial multiples
-    /// of a list of small primes in the range `[2, start)` (`safe_primes = false`)
-    /// or `[2, start/2)` (`safe_primes = true`).
+    /// Creates a new sieve, iterating from `start` and until the last number with `max_bit_length`
+    /// bits, producing numbers that are not non-trivial multiples of a list of small primes in the
+    /// range `[2, start)` (`safe_primes = false`) or `[2, start/2)` (`safe_primes = true`).
     ///
     /// Note that `start` is adjusted to `2`, or the next `1 mod 2` number (`safe_primes = false`);
     /// and `5`, or `3 mod 4` number (`safe_primes = true`).
@@ -69,7 +68,7 @@ impl<T: Integer> Sieve<T> {
     /// Panics if `max_bit_length` greater than the precision of `start`.
     ///
     /// If `safe_primes` is `true`, both the returned `n` and `n/2` are sieved.
-    pub fn new(start: &T, max_bit_length: NonZeroU32, safe_primes: bool) -> Self {
+    pub fn new(start: T, max_bit_length: NonZeroU32, safe_primes: bool) -> Self {
         let max_bit_length = max_bit_length.get();
 
         if max_bit_length > start.bits_precision() {
@@ -84,7 +83,7 @@ impl<T: Integer> Sieve<T> {
         let (max_bit_length, base) = if safe_primes {
             (max_bit_length - 1, start.wrapping_shr_vartime(1))
         } else {
-            (max_bit_length, start.clone())
+            (max_bit_length, start)
         };
 
         let mut base = base;
@@ -100,7 +99,7 @@ impl<T: Integer> Sieve<T> {
             base = T::from(3u32);
         } else {
             // Adjust the base so that we hit odd numbers when incrementing it by 2.
-            base |= T::one_like(start);
+            base |= T::one();
         }
 
         // Only calculate residues by primes up to and not including `base`,
@@ -186,13 +185,9 @@ impl<T: Integer> Sieve<T> {
 
     // Returns `true` if the current `base + incr` is divisible by any of the small primes.
     fn current_is_composite(&self) -> bool {
-        for (i, m) in self.residues.iter().enumerate() {
+        self.residues.iter().enumerate().any(|(i, m)| {
             let d = SMALL_PRIMES[i] as Residue;
             let r = (*m as Residue + self.incr) % d;
-
-            if r == 0 {
-                return true;
-            }
 
             // A trick from "Safe Prime Generation with a Combined Sieve" by Michael J. Wiener
             // (https://eprint.iacr.org/2003/186).
@@ -200,12 +195,8 @@ impl<T: Integer> Sieve<T> {
             // If `(n - 1)/2 mod d == (d - 1)/2`, it means that `n mod d == 0`.
             // In other words, we are checking the remainder of `n mod d`
             // for virtually no additional cost.
-            if self.safe_primes && r == (d - 1) >> 1 {
-                return true;
-            }
-        }
-
-        false
+            r == 0 || (self.safe_primes && r == (d - 1) >> 1)
+        })
     }
 
     // Returns the restored `base + incr` if it is not composite (wrt the small primes),
@@ -283,10 +274,30 @@ mod tests {
         let max_prime = SMALL_PRIMES[SMALL_PRIMES.len() - 1];
 
         let mut rng = ChaCha8Rng::from_seed(*b"01234567890123456789012345678901");
-        let start =
-            random_odd_integer::<U64>(&mut rng, NonZeroU32::new(32).unwrap(), U64::BITS).get();
-        for num in Sieve::new(&start, NonZeroU32::new(32).unwrap(), false).take(100) {
+        let start = random_odd_integer::<U64>(&mut rng, NonZeroU32::new(32).unwrap()).get();
+        for num in Sieve::new(start, NonZeroU32::new(32).unwrap(), false).take(100) {
             let num_u64 = u64::from(num);
+            assert!(num_u64.leading_zeros() == 32);
+
+            let factors_and_powers = factorize64(num_u64);
+            let factors = factors_and_powers.into_keys().collect::<Vec<_>>();
+
+            assert!(factors[0] > max_prime as u64);
+        }
+    }
+    #[test]
+    fn random_boxed() {
+        let max_prime = SMALL_PRIMES[SMALL_PRIMES.len() - 1];
+
+        let mut rng = ChaCha8Rng::from_seed(*b"01234567890123456789012345678901");
+        let start =
+            random_odd_integer::<crypto_bigint::BoxedUint>(&mut rng, NonZeroU32::new(32).unwrap())
+                .get();
+
+        for num in Sieve::new(start, NonZeroU32::new(32).unwrap(), false).take(100) {
+            // For 32-bit targets
+            #[allow(clippy::useless_conversion)]
+            let num_u64: u64 = num.as_words()[0].into();
             assert!(num_u64.leading_zeros() == 32);
 
             let factors_and_powers = factorize64(num_u64);
@@ -298,7 +309,7 @@ mod tests {
 
     fn check_sieve(start: u32, bit_length: u32, safe_prime: bool, reference: &[u32]) {
         let test = Sieve::new(
-            &U64::from(start),
+            U64::from(start),
             NonZeroU32::new(bit_length).unwrap(),
             safe_prime,
         )
@@ -359,30 +370,37 @@ mod tests {
         expected = "The requested bit length (65) is larger than the precision of `start`"
     )]
     fn sieve_too_many_bits() {
-        let _sieve = Sieve::new(&U64::ONE, NonZeroU32::new(65).unwrap(), false);
+        let _sieve = Sieve::new(U64::ONE, NonZeroU32::new(65).unwrap(), false);
     }
 
     #[test]
     fn random_below_max_length() {
         for _ in 0..10 {
-            let r = random_odd_integer::<U64>(&mut OsRng, NonZeroU32::new(50).unwrap(), U64::BITS)
-                .get();
+            let r = random_odd_integer::<U64>(&mut OsRng, NonZeroU32::new(50).unwrap()).get();
             assert_eq!(r.bits(), 50);
         }
     }
 
     #[test]
     #[should_panic(
-        expected = "try_random_bits_with_precision() failed: BitLengthTooLarge { bit_length: 65, bits_precision: 64 }"
+        expected = "try_random_bits() failed: BitLengthTooLarge { bit_length: 65, bits_precision: 64 }"
     )]
     fn random_odd_uint_too_many_bits() {
-        let _p = random_odd_integer::<U64>(&mut OsRng, NonZeroU32::new(65).unwrap(), U64::BITS);
+        let _p = random_odd_integer::<U64>(&mut OsRng, NonZeroU32::new(65).unwrap());
     }
 
     #[test]
     fn sieve_derived_traits() {
-        let s = Sieve::new(&U64::ONE, NonZeroU32::new(10).unwrap(), false);
+        let s = Sieve::new(U64::ONE, NonZeroU32::new(10).unwrap(), false);
+        // Debug
         assert!(format!("{s:?}").starts_with("Sieve"));
+        // Clone
         assert_eq!(s.clone(), s);
+
+        // PartialEq
+        let s2 = Sieve::new(U64::ONE, NonZeroU32::new(10).unwrap(), false);
+        assert_eq!(s, s2);
+        let s3 = Sieve::new(U64::ONE, NonZeroU32::new(12).unwrap(), false);
+        assert_ne!(s, s3);
     }
 }

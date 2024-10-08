@@ -16,18 +16,28 @@ use super::Primality;
 ///   DOI: [10.2307/2006210](https://dx.doi.org/10.2307/2006210)
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct MillerRabin<T: Integer> {
+    // The odd number that may or may not be a prime.
     candidate: T,
-    bit_length: u32,
+    /// The number of bits necessesary to represent the candidate. Note: this is not the number of
+    /// bits used by a `T` in memory.
+    bits: u32,
+    /// Pre-computed parameters for the Montgomery form of `T`.
     montgomery_params: <<T as Integer>::Monty as Monty>::Params,
+    /// The number 1 in Montgomery form.
     one: <T as Integer>::Monty,
+    /// The number -1 in Montgomery form.
     minus_one: <T as Integer>::Monty,
+    /// The `s` exponent in the Miller-Rabin test, that finds `s` and `d` odd s.t. `candidate - 1 ==
+    /// 2^s * d` (the pair `s` and `d` is unique).
     s: u32,
+    /// The `d` factor in the Miller-Rabin test, that finds `s` and `d` odd s.t. `candidate -
+    /// 1 == 2^s * d` (the pair `s` and `d` is unique).
     d: T,
 }
 
 impl<T: Integer + RandomMod> MillerRabin<T> {
     /// Initializes a Miller-Rabin test for `candidate`.
-    pub fn new(candidate: &Odd<T>) -> Self {
+    pub fn new(candidate: Odd<T>) -> Self {
         let params = <T as Integer>::Monty::new_params_vartime(candidate.clone());
         let m_one = <T as Integer>::Monty::one(params.clone());
         let m_minus_one = -m_one.clone();
@@ -43,13 +53,13 @@ impl<T: Integer + RandomMod> MillerRabin<T> {
             // Will not overflow because `candidate` is odd and greater than 1.
             let d = candidate_minus_one
                 .overflowing_shr_vartime(s)
-                .expect("shift should be within range by construction");
+                .expect("shifting by `s` is within range by construction: `candidate` is odd and greater than 1");
             (s, d)
         };
 
         Self {
-            candidate: candidate.as_ref().clone(),
-            bit_length: candidate.bits_vartime(),
+            bits: candidate.bits_vartime(),
+            candidate: candidate.get(),
             montgomery_params: params,
             one: m_one,
             minus_one: m_minus_one,
@@ -70,7 +80,7 @@ impl<T: Integer + RandomMod> MillerRabin<T> {
         // So even when the bound isn't low enough that the number can fit
         // in a smaller number of limbs, there is still a performance gain
         // from specifying the bound.
-        let mut test = base.pow_bounded_exp(&self.d, self.bit_length);
+        let mut test = base.pow_bounded_exp(&self.d, self.bits);
 
         if test == self.one || test == self.minus_one {
             return Primality::ProbablyPrime;
@@ -114,6 +124,15 @@ impl<T: Integer + RandomMod> MillerRabin<T> {
             .expect("addition should not overflow by construction");
         self.test(&random)
     }
+
+    /// Returns the number of bits necessary to represent the candidate.
+    /// NOTE: This is different than the number of bits of *storage* the integer takes up.
+    ///
+    /// For example, a U512 type occupies 8 64-bit words, but the number `7` contained in such a type
+    /// has a bit length of 3 because 7 is `b111`.
+    pub(crate) fn bits(&self) -> u32 {
+        self.bits
+    }
 }
 
 #[cfg(test)]
@@ -134,7 +153,7 @@ mod tests {
 
     #[test]
     fn miller_rabin_derived_traits() {
-        let mr = MillerRabin::new(&Odd::new(U64::ONE).unwrap());
+        let mr = MillerRabin::new(Odd::new(U64::ONE).unwrap());
         assert!(format!("{mr:?}").starts_with("MillerRabin"));
         assert_eq!(mr.clone(), mr);
     }
@@ -144,7 +163,7 @@ mod tests {
         expected = "No suitable random base possible when `candidate == 3`; use the base 2 test."
     )]
     fn random_base_range_check() {
-        let mr = MillerRabin::new(&Odd::new(U64::from(3u32)).unwrap());
+        let mr = MillerRabin::new(Odd::new(U64::from(3u32)).unwrap());
         mr.test_random_base(&mut OsRng);
     }
 
@@ -176,7 +195,7 @@ mod tests {
             // with about 1/4 probability. So we're expecting less than
             // 35 out of 100 false positives, seems to work.
 
-            let mr = MillerRabin::new(&Odd::new(U64::from(*num)).unwrap());
+            let mr = MillerRabin::new(Odd::new(U64::from(*num)).unwrap());
             assert_eq!(
                 mr.test_base_two().is_probably_prime(),
                 actual_expected_result
@@ -192,10 +211,9 @@ mod tests {
     #[test]
     fn trivial() {
         let mut rng = ChaCha8Rng::from_seed(*b"01234567890123456789012345678901");
-        let start =
-            random_odd_integer::<U1024>(&mut rng, NonZeroU32::new(1024).unwrap(), U1024::BITS);
-        for num in Sieve::new(start.as_ref(), NonZeroU32::new(1024).unwrap(), false).take(10) {
-            let mr = MillerRabin::new(&Odd::new(num).unwrap());
+        let start = random_odd_integer::<U1024>(&mut rng, NonZeroU32::new(1024).unwrap());
+        for num in Sieve::new(start.get(), NonZeroU32::new(1024).unwrap(), false).take(10) {
+            let mr = MillerRabin::new(Odd::new(num).unwrap());
 
             // Trivial tests, must always be true.
             assert!(mr.test(&1u32.into()).is_probably_prime());
@@ -210,7 +228,7 @@ mod tests {
         // Mersenne prime 2^127-1
         let num = Odd::new(U128::from_be_hex("7fffffffffffffffffffffffffffffff")).unwrap();
 
-        let mr = MillerRabin::new(&num);
+        let mr = MillerRabin::new(num);
         assert!(mr.test_base_two().is_probably_prime());
         for _ in 0..10 {
             assert!(mr.test_random_base(&mut rng).is_probably_prime());
@@ -222,7 +240,7 @@ mod tests {
         let mut rng = ChaCha8Rng::from_seed(*b"01234567890123456789012345678901");
 
         for num in pseudoprimes::STRONG_FIBONACCI.iter() {
-            let mr = MillerRabin::new(&Odd::new(*num).unwrap());
+            let mr = MillerRabin::new(Odd::new(*num).unwrap());
             assert!(!mr.test_base_two().is_probably_prime());
             for _ in 0..1000 {
                 assert!(!mr.test_random_base(&mut rng).is_probably_prime());
@@ -250,7 +268,7 @@ mod tests {
 
     #[test]
     fn large_carmichael_number() {
-        let mr = MillerRabin::new(&Odd::new(pseudoprimes::LARGE_CARMICHAEL_NUMBER).unwrap());
+        let mr = MillerRabin::new(Odd::new(pseudoprimes::LARGE_CARMICHAEL_NUMBER).unwrap());
 
         // It is known to pass MR tests for all prime bases <307
         assert!(mr.test_base_two().is_probably_prime());
@@ -263,7 +281,7 @@ mod tests {
     fn test_large_primes<const L: usize>(nums: &[Uint<L>]) {
         let mut rng = ChaCha8Rng::from_seed(*b"01234567890123456789012345678901");
         for num in nums {
-            let mr = MillerRabin::new(&Odd::new(*num).unwrap());
+            let mr = MillerRabin::new(Odd::new(*num).unwrap());
             assert!(mr.test_base_two().is_probably_prime());
             for _ in 0..10 {
                 assert!(mr.test_random_base(&mut rng).is_probably_prime());
@@ -290,7 +308,7 @@ mod tests {
 
             let spsp = is_spsp(num);
 
-            let mr = MillerRabin::new(&Odd::new(U64::from(num)).unwrap());
+            let mr = MillerRabin::new(Odd::new(U64::from(num)).unwrap());
             let res = mr.test_base_two().is_probably_prime();
             let expected = spsp || res_ref;
             assert_eq!(
