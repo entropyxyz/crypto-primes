@@ -146,7 +146,7 @@ impl<T: Integer> Sieve<T> {
         self.base = self
             .base
             .checked_add(&self.incr.into())
-            .expect("addition should not overflow by construction");
+            .expect("Does not overflow by construction");
 
         self.incr = 0;
 
@@ -205,17 +205,16 @@ impl<T: Integer> Sieve<T> {
         let result = if self.current_is_composite() {
             None
         } else {
-            // The overflow should never happen here since `incr`
-            // is never greater than `incr_limit`, and the latter is chosen such that
-            // it does not overflow when added to `base` (see `update_residues()`).
-            let mut num = self
-                .base
-                .checked_add(&self.incr.into())
-                .expect("addition should not overflow by construction");
-            if self.safe_primes {
-                num = num.wrapping_shl_vartime(1) | T::one_like(&self.base);
+            match self.base.checked_add(&self.incr.into()).into_option() {
+                Some(mut num) => {
+                    if self.safe_primes {
+                        // Divide by 2 and ensure it's odd with an OR.
+                        num = num.wrapping_shl_vartime(1) | T::one_like(&self.base);
+                    }
+                    Some(num)
+                }
+                None => None,
             }
-            Some(num)
         };
 
         self.incr += 2;
@@ -224,7 +223,6 @@ impl<T: Integer> Sieve<T> {
 
     fn next(&mut self) -> Option<T> {
         // Corner cases handled here
-
         if self.produces_nothing {
             return None;
         }
@@ -402,5 +400,12 @@ mod tests {
         assert_eq!(s, s2);
         let s3 = Sieve::new(U64::ONE, NonZeroU32::new(12).unwrap(), false);
         assert_ne!(s, s3);
+    }
+
+    #[test]
+    fn sieve_with_max_start() {
+        let start = U64::MAX;
+        let mut sieve = Sieve::new(&start, NonZeroU32::new(U64::BITS).unwrap(), false);
+        assert!(sieve.next().is_none());
     }
 }
