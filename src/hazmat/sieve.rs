@@ -405,7 +405,7 @@ mod tests {
     #[test]
     fn sieve_with_max_start() {
         let start = U64::MAX;
-        let mut sieve = Sieve::new(&start, NonZeroU32::new(U64::BITS).unwrap(), false);
+        let mut sieve = Sieve::new(start, NonZeroU32::new(U64::BITS).unwrap(), false);
         assert!(sieve.next().is_none());
     }
 }
