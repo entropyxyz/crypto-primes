@@ -1,5 +1,5 @@
 //! Lucas primality test.
-use crypto_bigint::{Integer, Limb, Monty, Odd, Square, Word};
+use crypto_bigint::{Integer, Limb, Monty, NonZero, Odd, Square, Word};
 
 use super::{
     gcd::gcd_vartime,
@@ -10,7 +10,7 @@ use super::{
 /// The maximum number of attempts to find `D` such that `(D/n) == -1`.
 // This is widely believed to be impossible.
 // So if we exceed it, we will panic reporting the value of `n`.
-const MAX_ATTEMPTS: usize = 10000;
+const MAX_ATTEMPTS: usize = 10_000;
 
 /// The number of attempts to find `D` such that `(D/n) == -1`
 /// before checking that `n` is a square (in which case such `D` does not exist).
@@ -286,7 +286,7 @@ pub enum LucasCheck {
 /// Performs the primality test based on Lucas sequence.
 /// See [`LucasCheck`] for possible checks, and the implementors of [`LucasBase`]
 /// for the corresponding bases.
-pub fn lucas_test<T: Integer>(candidate: &Odd<T>, base: impl LucasBase, check: LucasCheck) -> Primality {
+pub fn lucas_test<T: Integer>(candidate: Odd<T>, base: impl LucasBase, check: LucasCheck) -> Primality {
     // The comments in this function use references in `LucasCheck`, plus this one:
     //
     // [^Crandall2005]:
@@ -297,7 +297,7 @@ pub fn lucas_test<T: Integer>(candidate: &Odd<T>, base: impl LucasBase, check: L
     let to_integer = |x: Word| T::from_limb_like(Limb::from(x), candidate.as_ref());
 
     // Find the base for the Lucas sequence.
-    let (p, abs_q, q_is_negative) = match base.generate(candidate) {
+    let (p, abs_q, q_is_negative) = match base.generate(&candidate) {
         Ok(pq) => pq,
         Err(primality) => return primality,
     };
@@ -329,16 +329,23 @@ pub fn lucas_test<T: Integer>(candidate: &Odd<T>, base: impl LucasBase, check: L
     // But in order to avoid an implicit assumption that a sieve has been run,
     // we check that gcd(n, Q) = 1 anyway - again, since `Q` is small,
     // it does not noticeably affect the performance.
-    if abs_q != 1 && gcd_vartime(candidate.as_ref(), abs_q) != 1 && candidate.as_ref() > &to_integer(abs_q) {
+    if abs_q != 1
+        && gcd_vartime(
+            candidate.as_ref(),
+            NonZero::new(abs_q).expect("q is not zero by construction"),
+        ) != 1
+        && candidate.as_ref() > &to_integer(abs_q)
+    {
         return Primality::Composite;
     }
 
     // Find `d` and `s`, such that `d` is odd and `d * 2^s = n - (D/n)`.
     // Since `(D/n) == -1` by construction, we're looking for `d * 2^s = n + 1`.
-    let (s, d) = decompose(candidate);
+    let (s, d) = decompose(&candidate);
 
     // Some constants in Montgomery form
-
+    // TODO(dp): Cloning `candidate` should not be necessary. It's only needed because the
+    // `to_integer` closure captures it, but all we really need is the `BITS`
     let params = <T as Integer>::Monty::new_params_vartime(candidate.clone());
 
     let zero = <T as Integer>::Monty::zero(params.clone());
@@ -557,7 +564,7 @@ mod tests {
         }
 
         assert_eq!(
-            lucas_test(&Odd::new(U64::from(15u32)).unwrap(), TestBase, LucasCheck::Strong),
+            lucas_test(Odd::new(U64::from(15u32)).unwrap(), TestBase, LucasCheck::Strong),
             Primality::Composite
         );
     }
@@ -602,7 +609,7 @@ mod tests {
             // Test both single-limb and multi-limb, just in case.
             assert_eq!(
                 lucas_test(
-                    &Odd::new(Uint::<1>::from(*num)).unwrap(),
+                    Odd::new(Uint::<1>::from(*num)).unwrap(),
                     SelfridgeBase,
                     LucasCheck::Strong
                 )
@@ -611,7 +618,7 @@ mod tests {
             );
             assert_eq!(
                 lucas_test(
-                    &Odd::new(Uint::<2>::from(*num)).unwrap(),
+                    Odd::new(Uint::<2>::from(*num)).unwrap(),
                     SelfridgeBase,
                     LucasCheck::Strong
                 )
@@ -628,13 +635,11 @@ mod tests {
 
             // Test both single-limb and multi-limb, just in case.
             assert_eq!(
-                lucas_test(&Odd::new(Uint::<1>::from(*num)).unwrap(), AStarBase, LucasCheck::LucasV)
-                    .is_probably_prime(),
+                lucas_test(Odd::new(Uint::<1>::from(*num)).unwrap(), AStarBase, LucasCheck::LucasV).is_probably_prime(),
                 actual_expected_result
             );
             assert_eq!(
-                lucas_test(&Odd::new(Uint::<2>::from(*num)).unwrap(), AStarBase, LucasCheck::LucasV)
-                    .is_probably_prime(),
+                lucas_test(Odd::new(Uint::<2>::from(*num)).unwrap(), AStarBase, LucasCheck::LucasV).is_probably_prime(),
                 actual_expected_result
             );
         }
@@ -656,12 +661,12 @@ mod tests {
 
             // Test both single-limb and multi-limb, just in case.
             assert_eq!(
-                lucas_test(&Odd::new(Uint::<1>::from(*num)).unwrap(), BruteForceBase, check).is_probably_prime(),
+                lucas_test(Odd::new(Uint::<1>::from(*num)).unwrap(), BruteForceBase, check).is_probably_prime(),
                 actual_expected_result,
                 "Brute force base, n = {num}, almost_extra = {almost_extra}",
             );
             assert_eq!(
-                lucas_test(&Odd::new(Uint::<2>::from(*num)).unwrap(), BruteForceBase, check).is_probably_prime(),
+                lucas_test(Odd::new(Uint::<2>::from(*num)).unwrap(), BruteForceBase, check).is_probably_prime(),
                 actual_expected_result
             );
         }
@@ -673,8 +678,8 @@ mod tests {
         // Good thing we don't need to test for intersection
         // with `EXTRA_STRONG_LUCAS` or `STRONG_LUCAS` - there's none.
         for num in pseudoprimes::STRONG_FIBONACCI.iter() {
-            assert!(!lucas_test(&Odd::new(*num).unwrap(), SelfridgeBase, LucasCheck::Strong).is_probably_prime());
-            assert!(!lucas_test(&Odd::new(*num).unwrap(), BruteForceBase, LucasCheck::ExtraStrong).is_probably_prime());
+            assert!(!lucas_test(Odd::new(*num).unwrap(), SelfridgeBase, LucasCheck::Strong).is_probably_prime());
+            assert!(!lucas_test(Odd::new(*num).unwrap(), BruteForceBase, LucasCheck::ExtraStrong).is_probably_prime());
         }
     }
 
@@ -746,19 +751,19 @@ mod tests {
     #[test]
     fn large_carmichael_number() {
         let p = Odd::new(pseudoprimes::LARGE_CARMICHAEL_NUMBER).unwrap();
-        assert!(!lucas_test(&p, SelfridgeBase, LucasCheck::Strong).is_probably_prime());
-        assert!(!lucas_test(&p, AStarBase, LucasCheck::LucasV).is_probably_prime());
-        assert!(!lucas_test(&p, BruteForceBase, LucasCheck::AlmostExtraStrong).is_probably_prime());
-        assert!(!lucas_test(&p, BruteForceBase, LucasCheck::ExtraStrong).is_probably_prime());
+        assert!(!lucas_test(p, SelfridgeBase, LucasCheck::Strong).is_probably_prime());
+        assert!(!lucas_test(p, AStarBase, LucasCheck::LucasV).is_probably_prime());
+        assert!(!lucas_test(p, BruteForceBase, LucasCheck::AlmostExtraStrong).is_probably_prime());
+        assert!(!lucas_test(p, BruteForceBase, LucasCheck::ExtraStrong).is_probably_prime());
     }
 
     fn test_large_primes<const L: usize>(nums: &[Uint<L>]) {
         for num in nums {
             let num = Odd::new(*num).unwrap();
-            assert!(lucas_test(&num, SelfridgeBase, LucasCheck::Strong).is_probably_prime());
-            assert!(lucas_test(&num, AStarBase, LucasCheck::LucasV).is_probably_prime());
-            assert!(lucas_test(&num, BruteForceBase, LucasCheck::AlmostExtraStrong).is_probably_prime());
-            assert!(lucas_test(&num, BruteForceBase, LucasCheck::ExtraStrong).is_probably_prime());
+            assert!(lucas_test(num, SelfridgeBase, LucasCheck::Strong).is_probably_prime());
+            assert!(lucas_test(num, AStarBase, LucasCheck::LucasV).is_probably_prime());
+            assert!(lucas_test(num, BruteForceBase, LucasCheck::AlmostExtraStrong).is_probably_prime());
+            assert!(lucas_test(num, BruteForceBase, LucasCheck::ExtraStrong).is_probably_prime());
         }
     }
 
@@ -776,12 +781,12 @@ mod tests {
         for num in pseudoprimes::LARGE_LUCAS_V {
             let num = Odd::new(*num).unwrap();
             // These are false positives for Lucas-V test
-            assert!(lucas_test(&num, AStarBase, LucasCheck::LucasV).is_probably_prime());
+            assert!(lucas_test(num, AStarBase, LucasCheck::LucasV).is_probably_prime());
 
             // These tests should work correctly
-            assert!(!lucas_test(&num, SelfridgeBase, LucasCheck::Strong).is_probably_prime());
-            assert!(!lucas_test(&num, BruteForceBase, LucasCheck::AlmostExtraStrong).is_probably_prime());
-            assert!(!lucas_test(&num, BruteForceBase, LucasCheck::ExtraStrong).is_probably_prime());
+            assert!(!lucas_test(num, SelfridgeBase, LucasCheck::Strong).is_probably_prime());
+            assert!(!lucas_test(num, BruteForceBase, LucasCheck::AlmostExtraStrong).is_probably_prime());
+            assert!(!lucas_test(num, BruteForceBase, LucasCheck::ExtraStrong).is_probably_prime());
         }
     }
 
@@ -789,7 +794,7 @@ mod tests {
     fn corner_cases() {
         // By convention, 1 is composite. That's what `num-prime` returns.
         let res = lucas_test(
-            &Odd::new(U64::ONE).unwrap(),
+            Odd::new(U64::ONE).unwrap(),
             BruteForceBase,
             LucasCheck::AlmostExtraStrong,
         );
@@ -811,28 +816,28 @@ mod tests {
 
             let odd_num = Odd::new(Uint::<1>::from(num)).unwrap();
 
-            let res = lucas_test(&odd_num, BruteForceBase, LucasCheck::AlmostExtraStrong).is_probably_prime();
+            let res = lucas_test(odd_num, BruteForceBase, LucasCheck::AlmostExtraStrong).is_probably_prime();
             let expected = aeslpsp || res_ref;
             assert_eq!(
                 res, expected,
                 "Brute force base, almost extra strong: n={num}, expected={expected}, actual={res}",
             );
 
-            let res = lucas_test(&odd_num, BruteForceBase, LucasCheck::ExtraStrong).is_probably_prime();
+            let res = lucas_test(odd_num, BruteForceBase, LucasCheck::ExtraStrong).is_probably_prime();
             let expected = eslpsp || res_ref;
             assert_eq!(
                 res, expected,
                 "Brute force base: n={num}, expected={expected}, actual={res}",
             );
 
-            let res = lucas_test(&odd_num, SelfridgeBase, LucasCheck::Strong).is_probably_prime();
+            let res = lucas_test(odd_num, SelfridgeBase, LucasCheck::Strong).is_probably_prime();
             let expected = slpsp || res_ref;
             assert_eq!(
                 res, expected,
                 "Selfridge base: n={num}, expected={expected}, actual={res}",
             );
 
-            let res = lucas_test(&odd_num, AStarBase, LucasCheck::LucasV).is_probably_prime();
+            let res = lucas_test(odd_num, AStarBase, LucasCheck::LucasV).is_probably_prime();
             let expected = vpsp || res_ref;
 
             assert_eq!(

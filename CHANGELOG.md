@@ -3,6 +3,16 @@
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+### Changed
+
+- Bumped `crypto-bigint` to 0.6.0-rc.6 (pinned) and MSRV to 1.81. ([#55])
+- Remove bit precision from the public API ([#46])
+
+[#55]: https://github.com/entropyxyz/crypto-primes/pull/55
+[#46]: https://github.com/entropyxyz/crypto-primes/pull/46
+
 
 ## [0.6.0-pre.1] - 2024-10-03
 
@@ -11,7 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Bumped `crypto-bigint` to 0.6.0-rc.2 (and pinned, since there is a bug introduced in rc.3). ([#48])
 
 
-[#36]: https://github.com/entropyxyz/crypto-primes/pull/48
+[#48]: https://github.com/entropyxyz/crypto-primes/pull/48
 
 
 ## [0.6.0-pre.0] - 2023-12-29
@@ -142,3 +152,4 @@ Initial release.
 [0.4.1]: https://github.com/entropyxyz/crypto-primes/releases/tag/v0.4.1
 [0.5.0]: https://github.com/entropyxyz/crypto-primes/releases/tag/v0.5.0
 [0.6.0-pre.0]: https://github.com/entropyxyz/crypto-primes/releases/tag/v0.6.0-pre.0
+[0.6.0-pre.1]: https://github.com/entropyxyz/crypto-primes/releases/tag/v0.6.0-pre.1

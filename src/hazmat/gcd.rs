@@ -3,12 +3,8 @@ use crypto_bigint::{Integer, Limb, NonZero, Word};
 /// Calculates the greatest common divisor of `n` and `m`.
 /// By definition, `gcd(0, m) == m`.
 /// `n` must be non-zero.
-pub(crate) fn gcd_vartime<T: Integer>(n: &T, m: Word) -> Word {
-    // This is an internal function, and it will never be called with `m = 0`.
-    // Allowing `m = 0` would require us to have the return type of `Uint<L>`
-    // (since `gcd(n, 0) = n`).
-    debug_assert!(m != 0);
-
+pub(crate) fn gcd_vartime<T: Integer>(n: &T, m: NonZero<Word>) -> Word {
+    let m = m.get();
     // This we can check since it doesn't affect the return type,
     // even though `n` will not be 0 either in the application.
     if n.is_zero().into() {
@@ -16,7 +12,7 @@ pub(crate) fn gcd_vartime<T: Integer>(n: &T, m: Word) -> Word {
     }
 
     // Normalize input: the resulting (a, b) are both small, a >= b, and b != 0.
-    let (mut a, mut b): (Word, Word) = if n.bits() > Word::BITS {
+    let (a, b): (Word, Word) = if n.bits() > Word::BITS {
         // `m` is non-zero, so we can unwrap.
         let r = n.rem_limb(NonZero::new(Limb::from(m)).expect("divisor should be non-zero here"));
         (m, r.0)
@@ -31,21 +27,54 @@ pub(crate) fn gcd_vartime<T: Integer>(n: &T, m: Word) -> Word {
         }
     };
 
-    // Euclidean algorithm.
-    // Binary GCD algorithm could be used here,
-    // but the performance impact of this code is negligible.
+    // Now do standard binary GCD on the two u64s
+    binary_gcd(a, b)
+}
+
+// Binary GCD lifted verbatim from [1], minus the base checks.
+// The identities mentioned in the comments are the following:
+// 1. `gcd(n, 0) = n`: everything divides 0 and n is the largest number that divides n.
+// 2. `gcd(2n, 2m) = 2*gcd(n, m)`: 2 is a common divisor
+// 3. `gcd(n, 2m) = gcd(n, m)` if m is odd: 2 is then not a common divisor.
+// 4. `gcd(n, m) = gcd(n, m - n)` if n, m odd and n <= m
+//
+// As GCD is commutative `gcd(n, m) = gcd(m, n)` those identities still apply if the operands are swapped.
+//
+// [1]: https://en.wikipedia.org/wiki/Binary_GCD_algorithm
+fn binary_gcd(mut n: Word, mut m: Word) -> Word {
+    // Using identities 2 and 3:
+    // gcd(2ⁱn, 2ʲm) = 2ᵏ gcd(n, m) with n, m odd and k = min(i, j)
+    // 2ᵏ is the greatest power of two that divides both 2ⁱn and 2ʲm
+    let i = n.trailing_zeros();
+    n >>= i;
+    let j = m.trailing_zeros();
+    m >>= j;
+    let k = core::cmp::min(i, j);
+
     loop {
-        let r = a % b;
-        if r == 0 {
-            return b;
+        // Swap if necessary so n ≤ m
+        if n > m {
+            core::mem::swap(&mut n, &mut m);
         }
-        (a, b) = (b, r)
+
+        // Identity 4: gcd(n, m) = gcd(n, m-n) as n ≤ m and n, m are both odd
+        m -= n;
+        // m is now even
+
+        if m == 0 {
+            // Identity 1: gcd(n, 0) = n
+            // The shift by k is necessary to add back the 2ᵏ factor that was removed before the loop
+            return n << k;
+        }
+
+        // Identity 3: gcd(n, 2ʲ m) = gcd(n, m) as n is odd
+        m >>= m.trailing_zeros();
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crypto_bigint::{Word, U128};
+    use crypto_bigint::{NonZero, Word, U128};
     use num_bigint::BigUint;
     use num_integer::Integer;
     use proptest::prelude::*;
@@ -54,10 +83,13 @@ mod tests {
 
     #[test]
     fn corner_cases() {
-        assert_eq!(gcd_vartime(&U128::from(0u64), 5), 5);
-        assert_eq!(gcd_vartime(&U128::from(1u64), 11 * 13 * 19), 1);
-        assert_eq!(gcd_vartime(&U128::from(7u64 * 11 * 13), 1), 1);
-        assert_eq!(gcd_vartime(&U128::from(7u64 * 11 * 13), 11 * 13 * 19), 11 * 13);
+        assert_eq!(gcd_vartime(&U128::from(0u64), NonZero::new(5).unwrap()), 5);
+        assert_eq!(gcd_vartime(&U128::from(1u64), NonZero::new(11 * 13 * 19).unwrap()), 1);
+        assert_eq!(gcd_vartime(&U128::from(7u64 * 11 * 13), NonZero::new(1).unwrap()), 1);
+        assert_eq!(
+            gcd_vartime(&U128::from(7u64 * 11 * 13), NonZero::new(11 * 13 * 19).unwrap()),
+            11 * 13
+        );
     }
 
     prop_compose! {
@@ -77,7 +109,7 @@ mod tests {
             let n_bi = BigUint::from_bytes_be(n.to_be_bytes().as_ref());
             let gcd_ref: Word = n_bi.gcd(&m_bi).try_into().unwrap();
 
-            let gcd_test = gcd_vartime(&n, m);
+            let gcd_test = gcd_vartime(&n, NonZero::new(m).unwrap());
             assert_eq!(gcd_test, gcd_ref);
         }
     }
