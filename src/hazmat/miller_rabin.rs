@@ -115,8 +115,7 @@ impl<T: Integer + RandomMod> MillerRabin<T> {
 
         let range = self.candidate.wrapping_sub(&T::from(4u32));
         // Can unwrap here since `candidate` is odd, and `candidate >= 4` (as checked above)
-        let range_nonzero =
-            NonZero::new(range).expect("the range should be non-zero by construction");
+        let range_nonzero = NonZero::new(range).expect("the range should be non-zero by construction");
         // This should not overflow as long as `random_mod()` behaves according to the contract
         // (that is, returns a number within the given range).
         let random = T::random_mod(rng, &range_nonzero)
@@ -159,9 +158,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(
-        expected = "No suitable random base possible when `candidate == 3`; use the base 2 test."
-    )]
+    #[should_panic(expected = "No suitable random base possible when `candidate == 3`; use the base 2 test.")]
     fn random_base_range_check() {
         let mr = MillerRabin::new(Odd::new(U64::from(3u32)).unwrap());
         mr.test_random_base(&mut OsRng);
@@ -171,11 +168,7 @@ mod tests {
         pseudoprimes::STRONG_BASE_2.iter().any(|x| *x == num)
     }
 
-    fn random_checks<T: Integer + RandomMod>(
-        rng: &mut impl CryptoRngCore,
-        mr: &MillerRabin<T>,
-        count: usize,
-    ) -> usize {
+    fn random_checks<T: Integer + RandomMod>(rng: &mut impl CryptoRngCore, mr: &MillerRabin<T>, count: usize) -> usize {
         (0..count)
             .map(|_| -> usize { mr.test_random_base(rng).is_probably_prime().into() })
             .sum()
@@ -185,21 +178,14 @@ mod tests {
         let mut rng = ChaCha8Rng::from_seed(*b"01234567890123456789012345678901");
         for num in numbers.iter() {
             let base_2_false_positive = is_spsp(*num);
-            let actual_expected_result = if base_2_false_positive {
-                true
-            } else {
-                expected_result
-            };
+            let actual_expected_result = if base_2_false_positive { true } else { expected_result };
 
             // A random base MR test is expected to report a composite as a prime
             // with about 1/4 probability. So we're expecting less than
             // 35 out of 100 false positives, seems to work.
 
             let mr = MillerRabin::new(Odd::new(U64::from(*num)).unwrap());
-            assert_eq!(
-                mr.test_base_two().is_probably_prime(),
-                actual_expected_result
-            );
+            assert_eq!(mr.test_base_two().is_probably_prime(), actual_expected_result);
             let reported_prime = random_checks(&mut rng, &mr, 100);
             assert!(
                 reported_prime < 35,

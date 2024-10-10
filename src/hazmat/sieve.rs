@@ -14,10 +14,7 @@ use crate::hazmat::precomputed::{SmallPrime, RECIPROCALS, SMALL_PRIMES};
 ///
 /// *Panics*: if the `bit_length` is bigger than the bits available in the `Integer`, e.g. 37 for a
 /// `U32`.
-pub fn random_odd_integer<T: Integer + RandomBits>(
-    rng: &mut impl CryptoRngCore,
-    bit_length: NonZeroU32,
-) -> Odd<T> {
+pub fn random_odd_integer<T: Integer + RandomBits>(rng: &mut impl CryptoRngCore, bit_length: NonZeroU32) -> Odd<T> {
     let bit_length = bit_length.get();
 
     let mut random = T::random_bits(rng, bit_length);
@@ -288,9 +285,7 @@ mod tests {
         let max_prime = SMALL_PRIMES[SMALL_PRIMES.len() - 1];
 
         let mut rng = ChaCha8Rng::from_seed(*b"01234567890123456789012345678901");
-        let start =
-            random_odd_integer::<crypto_bigint::BoxedUint>(&mut rng, NonZeroU32::new(32).unwrap())
-                .get();
+        let start = random_odd_integer::<crypto_bigint::BoxedUint>(&mut rng, NonZeroU32::new(32).unwrap()).get();
 
         for num in Sieve::new(start, NonZeroU32::new(32).unwrap(), false).take(100) {
             // For 32-bit targets
@@ -306,12 +301,7 @@ mod tests {
     }
 
     fn check_sieve(start: u32, bit_length: u32, safe_prime: bool, reference: &[u32]) {
-        let test = Sieve::new(
-            U64::from(start),
-            NonZeroU32::new(bit_length).unwrap(),
-            safe_prime,
-        )
-        .collect::<Vec<_>>();
+        let test = Sieve::new(U64::from(start), NonZeroU32::new(bit_length).unwrap(), safe_prime).collect::<Vec<_>>();
         assert_eq!(test.len(), reference.len());
         for (x, y) in test.iter().zip(reference.iter()) {
             assert_eq!(x, &U64::from(*y));
@@ -364,9 +354,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(
-        expected = "The requested bit length (65) is larger than the precision of `start`"
-    )]
+    #[should_panic(expected = "The requested bit length (65) is larger than the precision of `start`")]
     fn sieve_too_many_bits() {
         let _sieve = Sieve::new(U64::ONE, NonZeroU32::new(65).unwrap(), false);
     }
@@ -380,9 +368,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(
-        expected = "try_random_bits() failed: BitLengthTooLarge { bit_length: 65, bits_precision: 64 }"
-    )]
+    #[should_panic(expected = "try_random_bits() failed: BitLengthTooLarge { bit_length: 65, bits_precision: 64 }")]
     fn random_odd_uint_too_many_bits() {
         let _p = random_odd_integer::<U64>(&mut OsRng, NonZeroU32::new(65).unwrap());
     }

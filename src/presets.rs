@@ -6,9 +6,7 @@ use rand_core::CryptoRngCore;
 #[cfg(feature = "default-rng")]
 use rand_core::OsRng;
 
-use crate::hazmat::{
-    lucas_test, random_odd_integer, AStarBase, LucasCheck, MillerRabin, Primality, Sieve,
-};
+use crate::hazmat::{lucas_test, random_odd_integer, AStarBase, LucasCheck, MillerRabin, Primality, Sieve};
 
 /// Returns a random prime of size `bit_length` using [`OsRng`] as the RNG.
 ///
@@ -131,10 +129,7 @@ pub fn is_prime_with_rng<T: Integer + RandomMod>(rng: &mut impl CryptoRngCore, n
 /// Probabilistically checks if the given number is a safe prime using the provided RNG.
 ///
 /// See [`is_prime_with_rng`] for details about the performed checks.
-pub fn is_safe_prime_with_rng<T: Integer + RandomMod>(
-    rng: &mut impl CryptoRngCore,
-    num: &T,
-) -> bool {
+pub fn is_safe_prime_with_rng<T: Integer + RandomMod>(rng: &mut impl CryptoRngCore, num: &T) -> bool {
     // Since, by the definition of safe prime, `(num - 1) / 2` must also be prime,
     // and therefore odd, `num` has to be equal to 3 modulo 4.
     // 5 is the only exception, so we check for it.
@@ -161,10 +156,7 @@ pub fn is_safe_prime_with_rng<T: Integer + RandomMod>(
 /// If the outcome of M-R is "probably prime", then run a Lucas test
 /// If the Lucas test is inconclusive, run a Miller-Rabin with random base and unless this second
 /// M-R test finds it's composite, then conclude that it's prime.
-fn _is_prime_with_rng<T: Integer + RandomMod>(
-    rng: &mut impl CryptoRngCore,
-    candidate: Odd<T>,
-) -> bool {
+fn _is_prime_with_rng<T: Integer + RandomMod>(rng: &mut impl CryptoRngCore, candidate: Odd<T>) -> bool {
     let mr = MillerRabin::new(candidate.clone());
 
     if !mr.test_base_two().is_probably_prime() {
@@ -192,8 +184,8 @@ mod tests {
     use rand_core::OsRng;
 
     use super::{
-        generate_prime, generate_prime_with_rng, generate_safe_prime, generate_safe_prime_with_rng,
-        is_prime, is_safe_prime,
+        generate_prime, generate_prime_with_rng, generate_safe_prime, generate_safe_prime_with_rng, is_prime,
+        is_safe_prime,
     };
     use crate::hazmat::{primes, pseudoprimes};
 
@@ -245,10 +237,7 @@ mod tests {
                 assert!(is_safe_prime(&next));
             }
 
-            next = next
-                .wrapping_shl_vartime(1)
-                .checked_add(&Uint::<L>::ONE)
-                .unwrap();
+            next = next.wrapping_shl_vartime(1).checked_add(&Uint::<L>::ONE).unwrap();
         }
 
         // The chain ended.
@@ -340,17 +329,13 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(
-        expected = "try_random_bits() failed: BitLengthTooLarge { bit_length: 65, bits_precision: 64 }"
-    )]
+    #[should_panic(expected = "try_random_bits() failed: BitLengthTooLarge { bit_length: 65, bits_precision: 64 }")]
     fn generate_prime_too_many_bits() {
         let _p: U64 = generate_prime_with_rng(&mut OsRng, 65);
     }
 
     #[test]
-    #[should_panic(
-        expected = "try_random_bits() failed: BitLengthTooLarge { bit_length: 65, bits_precision: 64 }"
-    )]
+    #[should_panic(expected = "try_random_bits() failed: BitLengthTooLarge { bit_length: 65, bits_precision: 64 }")]
     fn generate_safe_prime_too_many_bits() {
         let _p: U64 = generate_safe_prime_with_rng(&mut OsRng, 65);
     }
@@ -415,10 +400,7 @@ mod tests_openssl {
         for _ in 0..100 {
             let p: U128 = generate_prime(128);
             let p_bn = to_openssl(&p);
-            assert!(
-                openssl_is_prime(&p_bn, &mut ctx),
-                "OpenSSL reports {p} as composite",
-            );
+            assert!(openssl_is_prime(&p_bn, &mut ctx), "OpenSSL reports {p} as composite",);
         }
 
         // Generate primes with OpenSSL, check them

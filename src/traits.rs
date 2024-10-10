@@ -1,10 +1,7 @@
 use crypto_bigint::{Integer, RandomBits, RandomMod};
 use rand_core::CryptoRngCore;
 
-use crate::{
-    generate_prime_with_rng, generate_safe_prime_with_rng, is_prime_with_rng,
-    is_safe_prime_with_rng,
-};
+use crate::{generate_prime_with_rng, generate_safe_prime_with_rng, is_prime_with_rng, is_safe_prime_with_rng};
 
 /// Provides a generic way to access methods for random prime number generation
 /// and primality checking, wrapping the standalone functions ([`is_prime_with_rng`] etc).
@@ -69,9 +66,7 @@ mod tests {
         assert!(U64::from(11u32).is_safe_prime_with_rng(&mut OsRng));
 
         assert!(U64::generate_prime_with_rng(&mut OsRng, 10).is_prime_with_rng(&mut OsRng));
-        assert!(
-            U64::generate_safe_prime_with_rng(&mut OsRng, 10).is_safe_prime_with_rng(&mut OsRng)
-        );
+        assert!(U64::generate_safe_prime_with_rng(&mut OsRng, 10).is_safe_prime_with_rng(&mut OsRng));
     }
 
     #[test]
@@ -83,7 +78,6 @@ mod tests {
         assert!(BoxedUint::from(11u32).is_safe_prime_with_rng(&mut OsRng));
 
         assert!(BoxedUint::generate_prime_with_rng(&mut OsRng, 10).is_prime_with_rng(&mut OsRng));
-        assert!(BoxedUint::generate_safe_prime_with_rng(&mut OsRng, 10)
-            .is_safe_prime_with_rng(&mut OsRng));
+        assert!(BoxedUint::generate_safe_prime_with_rng(&mut OsRng, 10).is_safe_prime_with_rng(&mut OsRng));
     }
 }
