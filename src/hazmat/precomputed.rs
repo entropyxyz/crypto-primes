@@ -121,6 +121,7 @@ pub(crate) const SMALL_PRIMES: [SmallPrime; 2047] = [
     17683, 17707, 17713, 17729, 17737, 17747, 17749, 17761, 17783, 17789, 17791, 17807, 17827, 17837, 17839, 17851,
     17863,
 ];
+
 pub(crate) const LAST_SMALL_PRIME: SmallPrime = SMALL_PRIMES[SMALL_PRIMES.len() - 1];
 const fn create_reciprocals() -> [Reciprocal; SMALL_PRIMES.len()] {
     let mut arr = [Reciprocal::default(); SMALL_PRIMES.len()];
