@@ -105,8 +105,8 @@ impl<T: Integer> Sieve<T> {
         } else {
             // `start` is smaller than the last prime in the list so casting `start` to a `u16` is
             // safe. We need to find out how many residues we can use.
-            let start_u16 = start.as_ref()[0].0 as SmallPrime;
-            SMALL_PRIMES.partition_point(|x| *x < start_u16)
+            let start_small = start.as_ref()[0].0 as SmallPrime;
+            SMALL_PRIMES.partition_point(|x| *x < start_small)
         };
 
         Self {
