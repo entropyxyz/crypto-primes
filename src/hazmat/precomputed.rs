@@ -123,6 +123,7 @@ pub(crate) const SMALL_PRIMES: [SmallPrime; 2047] = [
 ];
 
 pub(crate) const LAST_SMALL_PRIME: SmallPrime = SMALL_PRIMES[SMALL_PRIMES.len() - 1];
+
 const fn create_reciprocals() -> [Reciprocal; SMALL_PRIMES.len()] {
     let mut arr = [Reciprocal::default(); SMALL_PRIMES.len()];
     let mut i = 0;
