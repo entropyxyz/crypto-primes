@@ -135,7 +135,10 @@ impl<T: Integer> Sieve<T> {
         // Should not overflow since `incr` is never greater than `incr_limit`,
         // and the latter is chosen such that it doesn't overflow when added to `base`
         // (see the rest of this method).
-        self.base = self.base.wrapping_add(&self.incr.into());
+        self.base = self
+            .base
+            .checked_add(&self.incr.into())
+            .expect("Does not overflow by construction");
 
         self.incr = 0;
 
