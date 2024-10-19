@@ -4,15 +4,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
-## Unreleased
-
-## [0.6.0-pre.2] - 2024-10-15
+## [0.6.0-pre.2] - 2024-10-18
 
 ### Changed
 
 - Bumped `crypto-bigint` to 0.6.0-rc.6 and MSRV to 1.81. ([#55])
 - Switch to binary GCD for improved performance ([#54])
 - Remove bit precision from the public API ([#46])
+
 
 [#55]: https://github.com/entropyxyz/crypto-primes/pull/55
 [#54]: https://github.com/entropyxyz/crypto-primes/pull/54
