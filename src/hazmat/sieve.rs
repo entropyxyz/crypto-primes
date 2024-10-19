@@ -7,7 +7,7 @@ use core::num::NonZeroU32;
 use crypto_bigint::{Integer, Odd, RandomBits};
 use rand_core::CryptoRngCore;
 
-use crate::hazmat::precomputed::{SmallPrime, RECIPROCALS, SMALL_PRIMES};
+use crate::hazmat::precomputed::{SmallPrime, LAST_SMALL_PRIME, RECIPROCALS, SMALL_PRIMES};
 
 /// Returns a random odd integer with given bit length
 /// (that is, with both `0` and `bit_length-1` bits set).
@@ -34,7 +34,7 @@ type Residue = u32;
 
 // The maximum increment that won't overflow the type we use to calculate residues of increments:
 // we need `(max_prime - 1) + max_incr <= Type::MAX`.
-const INCR_LIMIT: Residue = Residue::MAX - SMALL_PRIMES[SMALL_PRIMES.len() - 1] as Residue + 1;
+const INCR_LIMIT: Residue = Residue::MAX - LAST_SMALL_PRIME as Residue + 1;
 
 /// An iterator returning numbers with up to and including given bit length,
 /// starting from a given number, that are not multiples of the first 2048 small primes.
@@ -77,45 +77,40 @@ impl<T: Integer> Sieve<T> {
 
         // If we are targeting safe primes, iterate over the corresponding
         // possible Germain primes (`n/2`), reducing the task to that with `safe_primes = false`.
-        let (max_bit_length, base) = if safe_primes {
+        let (max_bit_length, mut start) = if safe_primes {
             (max_bit_length - 1, start.wrapping_shr_vartime(1))
         } else {
             (max_bit_length, start)
         };
 
-        let mut base = base;
-
         // This is easier than making all the methods generic enough to handle these corner cases.
-        let produces_nothing = max_bit_length < base.bits_vartime() || max_bit_length < 2;
+        let produces_nothing = max_bit_length < start.bits_vartime() || max_bit_length < 2;
 
         // Add the exception to the produced candidates - the only one that doesn't fit
         // the general pattern of incrementing the base by 2.
         let mut starts_from_exception = false;
-        if base <= T::from(2u32) {
+        if start <= T::from(2u32) {
             starts_from_exception = true;
-            base = T::from(3u32);
+            start = T::from(3u32);
         } else {
-            // Adjust the base so that we hit odd numbers when incrementing it by 2.
-            base |= T::one();
+            // Adjust the start so that we hit odd numbers when incrementing it by 2.
+            start |= T::one();
         }
 
-        // Only calculate residues by primes up to and not including `base`,
-        // because when we only have the resiude,
-        // we cannot distinguish between a prime itself and a multiple of that prime.
-        let residues_len = if T::from(SMALL_PRIMES[SMALL_PRIMES.len() - 1]) >= base {
-            SMALL_PRIMES
-                .iter()
-                .enumerate()
-                .find(|(_i, p)| T::from(**p) >= base)
-                .map(|(i, _p)| i)
-                .unwrap_or(SMALL_PRIMES.len())
-        } else {
-            // This will be the majority of use cases
+        // Only calculate residues by primes up to and not including `start`, because when we only
+        // have the resiude, we cannot distinguish between a prime itself and a multiple of that
+        // prime.
+        let residues_len = if T::from(LAST_SMALL_PRIME) <= start {
             SMALL_PRIMES.len()
+        } else {
+            // `start` is smaller than the last prime in the list so casting `start` to a `u16` is
+            // safe. We need to find out how many residues we can use.
+            let start_small = start.as_ref()[0].0 as SmallPrime;
+            SMALL_PRIMES.partition_point(|x| *x < start_small)
         };
 
         Self {
-            base,
+            base: start,
             incr: 0, // This will ensure that `update_residues()` is called right away.
             incr_limit: 0,
             safe_primes,
@@ -147,7 +142,7 @@ impl<T: Integer> Sieve<T> {
 
         self.incr = 0;
 
-        // Re-calculate residues.
+        // Re-calculate residues. This is taking up most of the sieving time.
         for (i, rec) in RECIPROCALS.iter().enumerate().take(self.residues.len()) {
             let rem = self.base.rem_limb_with_reciprocal(rec);
             self.residues[i] = rem.0 as SmallPrime;
