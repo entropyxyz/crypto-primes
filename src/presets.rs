@@ -126,7 +126,7 @@ where
             is_prime_with_rng(&mut rng, c)
         }) {
             // TODO(dp): This clone is very annoying.
-            Some(p) => return p.clone(),
+            Some(p) => p.clone(),
             None => par_generate_prime_with_rng(rng, bit_length.get()),
         }
     })
