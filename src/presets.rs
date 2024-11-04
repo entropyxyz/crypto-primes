@@ -93,7 +93,6 @@ pub fn generate_safe_prime_with_rng<T: Integer + RandomBits + RandomMod>(
     }
 }
 
-#[cfg(feature = "rayon")]
 /// Use [`rayon`] to parallelize the prime search.
 ///
 /// Returns a random prime of size `bit_length` using the provided RNG.
@@ -101,6 +100,7 @@ pub fn generate_safe_prime_with_rng<T: Integer + RandomBits + RandomMod>(
 /// Panics if `bit_length` is less than 2, or greater than the bit size of the target `Uint`.
 ///
 /// Panics if the platform is unable to spawn threads.
+#[cfg(feature = "rayon")]
 pub fn par_generate_prime_with_rng<T>(rng: &mut (impl CryptoRngCore + Send + Sync + Clone), bit_length: u32) -> T
 where
     T: Integer + RandomBits + RandomMod,
@@ -119,17 +119,19 @@ where
     let start = random_odd_integer::<T>(rng, bit_length).get();
     let sieve = Sieve::new(start, bit_length, false);
 
-    threadpool.install(|| {
-        match sieve.par_bridge().find_any(|c| {
-            //TODO(dp): This clone feels dumb. OTOH it is fairly cheap to clone a rng.
+    let prime = threadpool.install(|| {
+        sieve.par_bridge().find_any(|c| {
             let mut rng = rng.clone();
             is_prime_with_rng(&mut rng, c)
-        }) {
-            // TODO(dp): This clone is very annoying.
-            Some(p) => p.clone(),
-            None => par_generate_prime_with_rng(rng, bit_length.get()),
+        })
+    });
+    match prime {
+        Some(prime) => prime,
+        None => {
+            drop(threadpool);
+            par_generate_prime_with_rng(rng, bit_length.get())
         }
-    })
+    }
 }
 
 /// Probabilistically checks if the given number is prime using the provided RNG.
@@ -410,7 +412,7 @@ mod tests {
 }
 
 #[cfg(all(test, feature = "rayon"))]
-mod tests_rayon {
+mod rayon_tests {
     use super::{is_prime, par_generate_prime_with_rng};
     use crypto_bigint::{nlimbs, BoxedUint, U128};
 
@@ -434,6 +436,7 @@ mod tests_rayon {
         }
     }
 }
+
 #[cfg(test)]
 #[cfg(feature = "tests-openssl")]
 mod tests_openssl {
