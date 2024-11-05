@@ -467,7 +467,7 @@ mod rayon_tests {
     #[test]
     fn parallel_prime_generation() {
         for bit_length in (28..=128).step_by(10) {
-            let p: U128 = par_generate_prime_with_rng(&mut OsRng, bit_length);
+            let p: U128 = par_generate_prime_with_rng(&mut OsRng, bit_length, 4);
             assert!(p.bits_vartime() == bit_length);
             assert!(is_prime(&p));
         }
@@ -476,7 +476,7 @@ mod rayon_tests {
     #[test]
     fn parallel_prime_generation_boxed() {
         for bit_length in (28..=128).step_by(10) {
-            let p: BoxedUint = par_generate_prime_with_rng(&mut OsRng, bit_length);
+            let p: BoxedUint = par_generate_prime_with_rng(&mut OsRng, bit_length, 2);
             assert!(p.bits_vartime() == bit_length);
             assert!(p.to_words().len() == nlimbs!(bit_length));
             assert!(is_prime(&p));
@@ -486,7 +486,7 @@ mod rayon_tests {
     #[test]
     fn parallel_safe_prime_generation() {
         for bit_length in (28..=128).step_by(10) {
-            let p: U128 = par_generate_safe_prime_with_rng(&mut OsRng, bit_length);
+            let p: U128 = par_generate_safe_prime_with_rng(&mut OsRng, bit_length, 8);
             assert!(p.bits_vartime() == bit_length);
             assert!(is_prime(&p));
         }
@@ -495,7 +495,7 @@ mod rayon_tests {
     #[test]
     fn parallel_safe_prime_generation_boxed() {
         for bit_length in (28..=128).step_by(10) {
-            let p: BoxedUint = par_generate_safe_prime_with_rng(&mut OsRng, bit_length);
+            let p: BoxedUint = par_generate_safe_prime_with_rng(&mut OsRng, bit_length, 4);
             assert!(p.bits_vartime() == bit_length);
             assert!(p.to_words().len() == nlimbs!(bit_length));
             assert!(is_prime(&p));
