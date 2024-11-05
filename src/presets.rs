@@ -19,6 +19,20 @@ pub fn generate_prime<T: Integer + RandomBits + RandomMod>(bit_length: u32) -> T
     generate_prime_with_rng(&mut OsRng, bit_length)
 }
 
+/// Returns a random prime of size `bit_length` using [`OsRng`] as the RNG.
+///
+/// See [`is_prime_with_rng`] for details about the performed checks.
+///
+/// Uses [`rayon`] to parallelize the prime search using `corecount/2` threads (but minimum 2).
+///
+/// Panics if `bit_length` is less than 2, or greater than the bit size of the target `Uint`.
+///
+/// Panics if the platform is unable to spawn threads.
+#[cfg(all(feature = "default-rng", feature = "rayon"))]
+pub fn par_generate_prime<T: Integer + RandomBits + RandomMod>(bit_length: u32, threadcount: usize) -> T {
+    par_generate_prime_with_rng(&mut OsRng, bit_length, threadcount)
+}
+
 /// Returns a random safe prime (that is, such that `(n - 1) / 2` is also prime) of size
 /// `bit_length` using [`OsRng`] as the RNG.
 ///
@@ -26,6 +40,21 @@ pub fn generate_prime<T: Integer + RandomBits + RandomMod>(bit_length: u32) -> T
 #[cfg(feature = "default-rng")]
 pub fn generate_safe_prime<T: Integer + RandomBits + RandomMod>(bit_length: u32) -> T {
     generate_safe_prime_with_rng(&mut OsRng, bit_length)
+}
+
+/// Returns a random safe prime (that is, such that `(n - 1) / 2` is also prime) of size
+/// `bit_length` using [`OsRng`] as the RNG.
+///
+/// See [`is_prime_with_rng`] for details about the performed checks.
+///
+/// Uses [`rayon`] to parallelize the prime search using `corecount/2` threads (but minimum 2).
+///
+/// Panics if `bit_length` is less than 3, or greater than the bit size of the target `Uint`.
+///
+/// Panics if the platform is unable to spawn threads.
+#[cfg(all(feature = "default-rng", feature = "rayon"))]
+pub fn par_generate_safe_prime<T: Integer + RandomBits + RandomMod>(bit_length: u32, threadcount: usize) -> T {
+    par_generate_safe_prime_with_rng(&mut OsRng, bit_length, threadcount)
 }
 
 /// Probabilistically checks if the given number is prime using [`OsRng`] as the RNG.
