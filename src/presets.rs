@@ -101,7 +101,11 @@ pub fn generate_safe_prime_with_rng<T: Integer + RandomBits + RandomMod>(
 ///
 /// Panics if the platform is unable to spawn threads.
 #[cfg(feature = "rayon")]
-pub fn par_generate_prime_with_rng<T>(rng: &mut (impl CryptoRngCore + Send + Sync + Clone), bit_length: u32) -> T
+pub fn par_generate_prime_with_rng<T>(
+    rng: &mut (impl CryptoRngCore + Send + Sync + Clone),
+    bit_length: u32,
+    threadcount: usize,
+) -> T
 where
     T: Integer + RandomBits + RandomMod,
 {
@@ -110,8 +114,6 @@ where
     }
     let bit_length = NonZeroU32::new(bit_length).expect("`bit_length` should be non-zero");
 
-    // TODO(dp): decide how to set the threadcount.
-    let threadcount = core::cmp::max(2, num_cpus::get() / 2);
     let threadpool = rayon::ThreadPoolBuilder::new()
         .num_threads(threadcount)
         .build()
@@ -129,7 +131,7 @@ where
         Some(prime) => prime,
         None => {
             drop(threadpool);
-            par_generate_prime_with_rng(rng, bit_length.get())
+            par_generate_prime_with_rng(rng, bit_length.get(), threadcount)
         }
     }
 }
@@ -144,7 +146,11 @@ where
 ///
 /// See [`is_prime_with_rng`] for details about the performed checks.
 #[cfg(feature = "rayon")]
-pub fn par_generate_safe_prime_with_rng<T>(rng: &mut (impl CryptoRngCore + Send + Sync + Clone), bit_length: u32) -> T
+pub fn par_generate_safe_prime_with_rng<T>(
+    rng: &mut (impl CryptoRngCore + Send + Sync + Clone),
+    bit_length: u32,
+    threadcount: usize,
+) -> T
 where
     T: Integer + RandomBits + RandomMod,
 {
@@ -153,8 +159,6 @@ where
     }
     let bit_length = NonZeroU32::new(bit_length).expect("`bit_length` should be non-zero");
 
-    // TODO(dp): decide how to set the threadcount.
-    let threadcount = core::cmp::max(2, num_cpus::get() / 2);
     let threadpool = rayon::ThreadPoolBuilder::new()
         .num_threads(threadcount)
         .build()
@@ -172,7 +176,7 @@ where
         Some(prime) => prime,
         None => {
             drop(threadpool);
-            par_generate_safe_prime_with_rng(rng, bit_length.get())
+            par_generate_safe_prime_with_rng(rng, bit_length.get(), threadcount)
         }
     }
 }
