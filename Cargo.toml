@@ -29,6 +29,7 @@ num-bigint = "0.4"
 num-integer = "0.1"
 proptest = "1"
 num-prime = "0.4.3"
+num_cpus = "1.16"
 
 [features]
 default = ["default-rng"]
