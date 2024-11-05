@@ -23,7 +23,7 @@ mod traits;
 pub use presets::{generate_prime_with_rng, generate_safe_prime_with_rng, is_prime_with_rng, is_safe_prime_with_rng};
 pub use traits::RandomPrimeWithRng;
 
-#[cfg(feature = "rayon")]
-pub use presets::par_generate_prime_with_rng;
 #[cfg(feature = "default-rng")]
 pub use presets::{generate_prime, generate_safe_prime, is_prime, is_safe_prime};
+#[cfg(feature = "rayon")]
+pub use presets::{par_generate_prime_with_rng, par_generate_safe_prime_with_rng};

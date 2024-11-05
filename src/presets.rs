@@ -93,9 +93,9 @@ pub fn generate_safe_prime_with_rng<T: Integer + RandomBits + RandomMod>(
     }
 }
 
-/// Use [`rayon`] to parallelize the prime search.
-///
 /// Returns a random prime of size `bit_length` using the provided RNG.
+///
+/// Uses [`rayon`] to parallelize the prime search using `corecount/2` threads (but minimum 2).
 ///
 /// Panics if `bit_length` is less than 2, or greater than the bit size of the target `Uint`.
 ///
@@ -130,6 +130,49 @@ where
         None => {
             drop(threadpool);
             par_generate_prime_with_rng(rng, bit_length.get())
+        }
+    }
+}
+
+/// Returns a random safe prime (that is, such that `(n - 1) / 2` is also prime)
+/// of size `bit_length` using the provided RNG.
+///
+/// Uses [`rayon`] to parallelize the prime search using `corecount/2` threads (but minimum 2).
+///
+/// Panics if `bit_length` is less than 3, or greater than the bit size of the target `Uint`.
+/// Panics if the platform is unable to spawn threads.
+///
+/// See [`is_prime_with_rng`] for details about the performed checks.
+#[cfg(feature = "rayon")]
+pub fn par_generate_safe_prime_with_rng<T>(rng: &mut (impl CryptoRngCore + Send + Sync + Clone), bit_length: u32) -> T
+where
+    T: Integer + RandomBits + RandomMod,
+{
+    if bit_length < 2 {
+        panic!("`bit_length` must be 2 or greater.");
+    }
+    let bit_length = NonZeroU32::new(bit_length).expect("`bit_length` should be non-zero");
+
+    // TODO(dp): decide how to set the threadcount.
+    let threadcount = core::cmp::max(2, num_cpus::get() / 2);
+    let threadpool = rayon::ThreadPoolBuilder::new()
+        .num_threads(threadcount)
+        .build()
+        .expect("If the platform can spawn threads, then this call will work.");
+    let start = random_odd_integer::<T>(rng, bit_length).get();
+    let sieve = Sieve::new(start, bit_length, true);
+
+    let prime = threadpool.install(|| {
+        sieve.par_bridge().find_any(|c| {
+            let mut rng = rng.clone();
+            is_safe_prime_with_rng(&mut rng, c)
+        })
+    });
+    match prime {
+        Some(prime) => prime,
+        None => {
+            drop(threadpool);
+            par_generate_safe_prime_with_rng(rng, bit_length.get())
         }
     }
 }
@@ -430,6 +473,25 @@ mod rayon_tests {
     fn parallel_prime_generation_boxed() {
         for bit_length in (28..=128).step_by(10) {
             let p: BoxedUint = par_generate_prime_with_rng(&mut OsRng, bit_length);
+            assert!(p.bits_vartime() == bit_length);
+            assert!(p.to_words().len() == nlimbs!(bit_length));
+            assert!(is_prime(&p));
+        }
+    }
+
+    #[test]
+    fn parallel_safe_prime_generation() {
+        for bit_length in (28..=128).step_by(10) {
+            let p: U128 = par_generate_safe_prime_with_rng(&mut OsRng, bit_length);
+            assert!(p.bits_vartime() == bit_length);
+            assert!(is_prime(&p));
+        }
+    }
+
+    #[test]
+    fn parallel_safe_prime_generation_boxed() {
+        for bit_length in (28..=128).step_by(10) {
+            let p: BoxedUint = par_generate_safe_prime_with_rng(&mut OsRng, bit_length);
             assert!(p.bits_vartime() == bit_length);
             assert!(p.to_words().len() == nlimbs!(bit_length));
             assert!(is_prime(&p));
