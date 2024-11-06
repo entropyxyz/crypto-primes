@@ -1,4 +1,5 @@
-use crypto_bigint::{Integer, Limb, NonZero, Word};
+use core::num::NonZero;
+use crypto_bigint::{Integer, Limb, NonZero as CTNonZero, Word};
 
 /// Calculates the greatest common divisor of `n` and `m`.
 /// By definition, `gcd(0, m) == m`.
@@ -14,7 +15,7 @@ pub(crate) fn gcd_vartime<T: Integer>(n: &T, m: NonZero<Word>) -> Word {
     // Normalize input: the resulting (a, b) are both small, a >= b, and b != 0.
     let (a, b): (Word, Word) = if n.bits() > Word::BITS {
         // `m` is non-zero, so we can unwrap.
-        let r = n.rem_limb(NonZero::new(Limb::from(m)).expect("divisor should be non-zero here"));
+        let r = n.rem_limb(CTNonZero::new(Limb::from(m)).expect("divisor should be non-zero here"));
         (m, r.0)
     } else {
         // In this branch `n` is `Word::BITS` bits or shorter,
@@ -74,7 +75,8 @@ fn binary_gcd(mut n: Word, mut m: Word) -> Word {
 
 #[cfg(test)]
 mod tests {
-    use crypto_bigint::{NonZero, Word, U128};
+    use core::num::NonZero;
+    use crypto_bigint::{Word, U128};
     use num_bigint::BigUint;
     use num_integer::Integer;
     use proptest::prelude::*;

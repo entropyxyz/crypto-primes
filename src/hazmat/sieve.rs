@@ -249,7 +249,7 @@ mod tests {
 
     use alloc::format;
     use alloc::vec::Vec;
-    use core::num::NonZeroU32;
+    use core::num::NonZero;
 
     use crypto_bigint::U64;
     use num_prime::nt_funcs::factorize64;
@@ -264,8 +264,8 @@ mod tests {
         let max_prime = SMALL_PRIMES[SMALL_PRIMES.len() - 1];
 
         let mut rng = ChaCha8Rng::from_seed(*b"01234567890123456789012345678901");
-        let start = random_odd_integer::<U64>(&mut rng, NonZeroU32::new(32).unwrap()).get();
-        for num in Sieve::new(start, NonZeroU32::new(32).unwrap(), false).take(100) {
+        let start = random_odd_integer::<U64>(&mut rng, NonZero::new(32).unwrap()).get();
+        for num in Sieve::new(start, NonZero::new(32).unwrap(), false).take(100) {
             let num_u64 = u64::from(num);
             assert!(num_u64.leading_zeros() == 32);
 
@@ -280,9 +280,9 @@ mod tests {
         let max_prime = SMALL_PRIMES[SMALL_PRIMES.len() - 1];
 
         let mut rng = ChaCha8Rng::from_seed(*b"01234567890123456789012345678901");
-        let start = random_odd_integer::<crypto_bigint::BoxedUint>(&mut rng, NonZeroU32::new(32).unwrap()).get();
+        let start = random_odd_integer::<crypto_bigint::BoxedUint>(&mut rng, NonZero::new(32).unwrap()).get();
 
-        for num in Sieve::new(start, NonZeroU32::new(32).unwrap(), false).take(100) {
+        for num in Sieve::new(start, NonZero::new(32).unwrap(), false).take(100) {
             // For 32-bit targets
             #[allow(clippy::useless_conversion)]
             let num_u64: u64 = num.as_words()[0].into();
@@ -296,7 +296,7 @@ mod tests {
     }
 
     fn check_sieve(start: u32, bit_length: u32, safe_prime: bool, reference: &[u32]) {
-        let test = Sieve::new(U64::from(start), NonZeroU32::new(bit_length).unwrap(), safe_prime).collect::<Vec<_>>();
+        let test = Sieve::new(U64::from(start), NonZero::new(bit_length).unwrap(), safe_prime).collect::<Vec<_>>();
         assert_eq!(test.len(), reference.len());
         for (x, y) in test.iter().zip(reference.iter()) {
             assert_eq!(x, &U64::from(*y));
@@ -351,13 +351,13 @@ mod tests {
     #[test]
     #[should_panic(expected = "The requested bit length (65) is larger than the precision of `start`")]
     fn sieve_too_many_bits() {
-        let _sieve = Sieve::new(U64::ONE, NonZeroU32::new(65).unwrap(), false);
+        let _sieve = Sieve::new(U64::ONE, NonZero::new(65).unwrap(), false);
     }
 
     #[test]
     fn random_below_max_length() {
         for _ in 0..10 {
-            let r = random_odd_integer::<U64>(&mut OsRng, NonZeroU32::new(50).unwrap()).get();
+            let r = random_odd_integer::<U64>(&mut OsRng, NonZero::new(50).unwrap()).get();
             assert_eq!(r.bits(), 50);
         }
     }
@@ -365,28 +365,28 @@ mod tests {
     #[test]
     #[should_panic(expected = "try_random_bits() failed: BitLengthTooLarge { bit_length: 65, bits_precision: 64 }")]
     fn random_odd_uint_too_many_bits() {
-        let _p = random_odd_integer::<U64>(&mut OsRng, NonZeroU32::new(65).unwrap());
+        let _p = random_odd_integer::<U64>(&mut OsRng, NonZero::new(65).unwrap());
     }
 
     #[test]
     fn sieve_derived_traits() {
-        let s = Sieve::new(U64::ONE, NonZeroU32::new(10).unwrap(), false);
+        let s = Sieve::new(U64::ONE, NonZero::new(10).unwrap(), false);
         // Debug
         assert!(format!("{s:?}").starts_with("Sieve"));
         // Clone
         assert_eq!(s.clone(), s);
 
         // PartialEq
-        let s2 = Sieve::new(U64::ONE, NonZeroU32::new(10).unwrap(), false);
+        let s2 = Sieve::new(U64::ONE, NonZero::new(10).unwrap(), false);
         assert_eq!(s, s2);
-        let s3 = Sieve::new(U64::ONE, NonZeroU32::new(12).unwrap(), false);
+        let s3 = Sieve::new(U64::ONE, NonZero::new(12).unwrap(), false);
         assert_ne!(s, s3);
     }
 
     #[test]
     fn sieve_with_max_start() {
         let start = U64::MAX;
-        let mut sieve = Sieve::new(start, NonZeroU32::new(U64::BITS).unwrap(), false);
+        let mut sieve = Sieve::new(start, NonZero::new(U64::BITS).unwrap(), false);
         assert!(sieve.next().is_none());
     }
 }

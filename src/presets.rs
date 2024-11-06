@@ -1,4 +1,4 @@
-use core::num::NonZeroU32;
+use core::num::NonZero;
 
 use crypto_bigint::{Integer, Limb, Odd, RandomBits, RandomMod};
 use rand_core::CryptoRngCore;
@@ -54,7 +54,7 @@ pub fn generate_prime_with_rng<T: Integer + RandomBits + RandomMod>(
     if bit_length < 2 {
         panic!("`bit_length` must be 2 or greater.");
     }
-    let bit_length = NonZeroU32::new(bit_length).expect("`bit_length` should be non-zero");
+    let bit_length = NonZero::new(bit_length).expect("`bit_length` should be non-zero");
     // Empirically, this loop is traversed 1 time.
     loop {
         let start = random_odd_integer::<T>(rng, bit_length);
@@ -78,7 +78,7 @@ pub fn generate_safe_prime_with_rng<T: Integer + RandomBits + RandomMod>(
     if bit_length < 3 {
         panic!("`bit_length` must be 3 or greater.");
     }
-    let bit_length = NonZeroU32::new(bit_length).expect("`bit_length` should be non-zero");
+    let bit_length = NonZero::new(bit_length).expect("`bit_length` should be non-zero");
     loop {
         let start = random_odd_integer::<T>(rng, bit_length);
         let sieve = Sieve::new(start.get(), bit_length, true);
@@ -371,7 +371,7 @@ mod tests {
 #[cfg(feature = "tests-openssl")]
 mod tests_openssl {
     use alloc::format;
-    use core::num::NonZeroU32;
+    use core::num::NonZero;
 
     use crypto_bigint::U128;
     use openssl::bn::{BigNum, BigNumContext};
@@ -413,7 +413,7 @@ mod tests_openssl {
 
         // Generate random numbers, check if our test agrees with OpenSSL
         for _ in 0..100 {
-            let p = random_odd_integer::<U128>(&mut OsRng, NonZeroU32::new(128).unwrap());
+            let p = random_odd_integer::<U128>(&mut OsRng, NonZero::new(128).unwrap());
             let actual = is_prime(p.as_ref());
             let p_bn = to_openssl(&p);
             let expected = openssl_is_prime(&p_bn, &mut ctx);
@@ -428,7 +428,7 @@ mod tests_openssl {
 #[cfg(test)]
 #[cfg(feature = "tests-gmp")]
 mod tests_gmp {
-    use core::num::NonZeroU32;
+    use core::num::NonZero;
 
     use crypto_bigint::U128;
     use rand_core::OsRng;
@@ -463,7 +463,7 @@ mod tests_gmp {
 
         // Generate primes with GMP, check them
         for _ in 0..100 {
-            let start = random_odd_integer::<U128>(&mut OsRng, NonZeroU32::new(128).unwrap());
+            let start = random_odd_integer::<U128>(&mut OsRng, NonZero::new(128).unwrap());
             let start_bn = to_gmp(&start);
             let p_bn = start_bn.next_prime();
             let p = from_gmp(&p_bn);
@@ -472,7 +472,7 @@ mod tests_gmp {
 
         // Generate random numbers, check if our test agrees with GMP
         for _ in 0..100 {
-            let p = random_odd_integer::<U128>(&mut OsRng, NonZeroU32::new(128).unwrap());
+            let p = random_odd_integer::<U128>(&mut OsRng, NonZero::new(128).unwrap());
             let actual = is_prime(p.as_ref());
             let p_bn = to_gmp(&p);
             let expected = gmp_is_prime(&p_bn);
