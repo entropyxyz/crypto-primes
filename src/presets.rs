@@ -6,7 +6,7 @@ use rand_core::CryptoRngCore;
 #[cfg(feature = "default-rng")]
 use rand_core::OsRng;
 
-#[cfg(feature = "rayon")]
+#[cfg(feature = "multicore")]
 use rayon::iter::{ParallelBridge, ParallelIterator};
 
 use crate::hazmat::{lucas_test, random_odd_integer, AStarBase, LucasCheck, MillerRabin, Primality, Sieve};
@@ -23,12 +23,12 @@ pub fn generate_prime<T: Integer + RandomBits + RandomMod>(bit_length: u32) -> T
 ///
 /// See [`is_prime_with_rng`] for details about the performed checks.
 ///
-/// Uses [`rayon`] to parallelize the prime search using `corecount/2` threads (but minimum 2).
+/// Uses `threadcount` cores to parallelize the prime search.
 ///
 /// Panics if `bit_length` is less than 2, or greater than the bit size of the target `Uint`.
 ///
 /// Panics if the platform is unable to spawn threads.
-#[cfg(all(feature = "default-rng", feature = "rayon"))]
+#[cfg(all(feature = "default-rng", feature = "multicore"))]
 pub fn par_generate_prime<T: Integer + RandomBits + RandomMod>(bit_length: u32, threadcount: usize) -> T {
     par_generate_prime_with_rng(&mut OsRng, bit_length, threadcount)
 }
@@ -47,12 +47,12 @@ pub fn generate_safe_prime<T: Integer + RandomBits + RandomMod>(bit_length: u32)
 ///
 /// See [`is_prime_with_rng`] for details about the performed checks.
 ///
-/// Uses [`rayon`] to parallelize the prime search using `corecount/2` threads (but minimum 2).
+/// Uses `threadcount` cores to parallelize the prime search.
 ///
 /// Panics if `bit_length` is less than 3, or greater than the bit size of the target `Uint`.
 ///
 /// Panics if the platform is unable to spawn threads.
-#[cfg(all(feature = "default-rng", feature = "rayon"))]
+#[cfg(all(feature = "default-rng", feature = "multicore"))]
 pub fn par_generate_safe_prime<T: Integer + RandomBits + RandomMod>(bit_length: u32, threadcount: usize) -> T {
     par_generate_safe_prime_with_rng(&mut OsRng, bit_length, threadcount)
 }
@@ -124,12 +124,12 @@ pub fn generate_safe_prime_with_rng<T: Integer + RandomBits + RandomMod>(
 
 /// Returns a random prime of size `bit_length` using the provided RNG.
 ///
-/// Uses [`rayon`] to parallelize the prime search using `corecount/2` threads (but minimum 2).
+/// Uses `threadcount` cores to parallelize the prime search.
 ///
 /// Panics if `bit_length` is less than 2, or greater than the bit size of the target `Uint`.
 ///
 /// Panics if the platform is unable to spawn threads.
-#[cfg(feature = "rayon")]
+#[cfg(feature = "multicore")]
 pub fn par_generate_prime_with_rng<T>(
     rng: &mut (impl CryptoRngCore + Send + Sync + Clone),
     bit_length: u32,
@@ -168,13 +168,13 @@ where
 /// Returns a random safe prime (that is, such that `(n - 1) / 2` is also prime)
 /// of size `bit_length` using the provided RNG.
 ///
-/// Uses [`rayon`] to parallelize the prime search using `corecount/2` threads (but minimum 2).
+/// Uses `threadcount` cores to parallelize the prime search.
 ///
 /// Panics if `bit_length` is less than 3, or greater than the bit size of the target `Uint`.
 /// Panics if the platform is unable to spawn threads.
 ///
 /// See [`is_prime_with_rng`] for details about the performed checks.
-#[cfg(feature = "rayon")]
+#[cfg(feature = "multicore")]
 pub fn par_generate_safe_prime_with_rng<T>(
     rng: &mut (impl CryptoRngCore + Send + Sync + Clone),
     bit_length: u32,
@@ -487,8 +487,8 @@ mod tests {
     }
 }
 
-#[cfg(all(test, feature = "rayon"))]
-mod rayon_tests {
+#[cfg(all(test, feature = "multicore"))]
+mod multicore_tests {
     use super::{is_prime, par_generate_prime_with_rng};
     use crypto_bigint::{nlimbs, BoxedUint, U128};
 

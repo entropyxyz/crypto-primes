@@ -14,7 +14,6 @@ In particular:
 - Miller-Rabin test;
 - Strong and extra strong Lucas tests, and Lucas-V test.
 
-See the documentation for the specific tests for more information and references.
 
 The library is no-std compatible and contains no unsafe code.
 
@@ -47,7 +46,7 @@ Advanced users can use the [`hazmat`][hazmat-lnk] module in the library to build
 The following features are available:
 
 - `default-rng`: Use the OS default CSPRNG, `OsRng`. Enabled by default.
-- `rayon`: Enables additional parallel prime finding functions. Disabled by default.
+- `multicore`: Enables additional parallel prime finding functions. Disabled by default.
 
 
 [crate-image]: https://img.shields.io/crates/v/crypto-primes.svg
@@ -59,4 +58,4 @@ The following features are available:
 [build-link]: https://github.com/entropyxyz/crypto-primes/actions?query=workflow%3Acrypto-primes
 [coverage-image]: https://codecov.io/gh/entropyxyz/crypto-primes/branch/master/graph/badge.svg
 [coverage-link]: https://codecov.io/gh/entropyxyz/crypto-primes
-[hazmat-lnk]: crate::hazmat
+[hazmat-lnk]: https://docs.rs/crypto-primes/latest/crypto_primes/hazmat

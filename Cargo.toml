@@ -39,7 +39,7 @@ tests-gmp = ["rug/std"]
 tests-glass-pumpkin = ["glass_pumpkin"]
 tests-exhaustive = []
 tests-all = ["tests-openssl", "tests-gmp", "tests-exhaustive", "tests-glass-pumpkin"]
-rayon = ["dep:rayon"]
+multicore = ["rayon"]
 
 [package.metadata.docs.rs]
 features = ["default"]
@@ -51,6 +51,5 @@ name = "bench"
 harness = false
 
 [profile.bench]
-opt-level = 3
 lto = true
 codegen-units = 1

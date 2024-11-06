@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Unreleased
 
 ### Added
-- Parallel prime finding methods and a "rayon" feature ([#60])
+- Parallel prime finding methods and a "multicore" feature ([#60])
 
 [#60]: https://github.com/entropyxyz/crypto-primes/pull/60
 

@@ -18,7 +18,7 @@ use crypto_primes::{
     },
     is_prime_with_rng, is_safe_prime_with_rng,
 };
-#[cfg(feature = "rayon")]
+#[cfg(feature = "multicore")]
 use crypto_primes::{par_generate_prime_with_rng, par_generate_safe_prime_with_rng};
 
 fn make_rng() -> ChaCha8Rng {
@@ -279,9 +279,9 @@ fn bench_presets(c: &mut Criterion) {
     group.finish();
 }
 
-#[cfg(feature = "rayon")]
-fn bench_rayon_presets(c: &mut Criterion) {
-    let mut group = c.benchmark_group("Presets (rayon)");
+#[cfg(feature = "multicore")]
+fn bench_multicore_presets(c: &mut Criterion) {
+    let mut group = c.benchmark_group("Presets (multicore)");
     let mut rng = make_rng();
     group.bench_function("(U128) Random prime", |b| {
         b.iter(|| par_generate_prime_with_rng::<U128>(&mut rng, 128, num_cpus::get()))
@@ -314,8 +314,8 @@ fn bench_rayon_presets(c: &mut Criterion) {
         b.iter(|| par_generate_safe_prime_with_rng::<BoxedUint>(&mut rng, 1024, num_cpus::get()))
     });
 }
-#[cfg(not(feature = "rayon"))]
-fn bench_rayon_presets(_c: &mut Criterion) {}
+#[cfg(not(feature = "multicore"))]
+fn bench_multicore_presets(_c: &mut Criterion) {}
 
 #[cfg(feature = "tests-gmp")]
 fn bench_gmp(c: &mut Criterion) {
@@ -527,7 +527,7 @@ criterion_group!(
     bench_miller_rabin,
     bench_lucas,
     bench_presets,
-    bench_rayon_presets,
+    bench_multicore_presets,
     bench_gmp,
     bench_openssl,
     bench_glass_pumpkin,
