@@ -1,5 +1,6 @@
 //! Lucas primality test.
-use crypto_bigint::{Integer, Limb, Monty, NonZero, Odd, Square, Word};
+use core::num::NonZero;
+use crypto_bigint::{Integer, Limb, Monty, Odd, Square, Word};
 
 use super::{
     gcd::gcd_vartime,

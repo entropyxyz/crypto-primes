@@ -1,6 +1,6 @@
 //! Jacobi symbol calculation.
 
-use crypto_bigint::{Integer, Limb, NonZero, Odd, Word};
+use crypto_bigint::{Integer, Limb, NonZero as CTNonZero, Odd, Word};
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub(crate) enum JacobiSymbol {
@@ -99,7 +99,7 @@ pub(crate) fn jacobi_symbol_vartime<T: Integer>(abs_a: Word, a_is_negative: bool
         let (result, a_long, p) = swap_long(result, a, p_long);
         // Can unwrap here, since `p` is swapped with `a`,
         // and `a` would be odd after `reduce_numerator()`.
-        let a = a_long.rem_limb(NonZero::new(Limb::from(p)).expect("divisor should be non-zero here"));
+        let a = a_long.rem_limb(CTNonZero::new(Limb::from(p)).expect("divisor should be non-zero here"));
         (result, a.0, p)
     };
 

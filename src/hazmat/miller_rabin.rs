@@ -1,6 +1,6 @@
 //! Miller-Rabin primality test.
 
-use crypto_bigint::{Integer, Limb, Monty, NonZero, Odd, PowBoundedExp, RandomMod, Square};
+use crypto_bigint::{Integer, Limb, Monty, NonZero as CTNonZero, Odd, PowBoundedExp, RandomMod, Square};
 use rand_core::CryptoRngCore;
 
 use super::Primality;
@@ -115,7 +115,7 @@ impl<T: Integer + RandomMod> MillerRabin<T> {
 
         let range = self.candidate.wrapping_sub(&T::from(4u32));
         // Can unwrap here since `candidate` is odd, and `candidate >= 4` (as checked above)
-        let range_nonzero = NonZero::new(range).expect("the range should be non-zero by construction");
+        let range_nonzero = CTNonZero::new(range).expect("the range should be non-zero by construction");
         // This should not overflow as long as `random_mod()` behaves according to the contract
         // (that is, returns a number within the given range).
         let random = T::random_mod(rng, &range_nonzero)
@@ -136,9 +136,8 @@ impl<T: Integer + RandomMod> MillerRabin<T> {
 
 #[cfg(test)]
 mod tests {
-
     use alloc::format;
-    use core::num::NonZeroU32;
+    use core::num::NonZero;
 
     use crypto_bigint::{Integer, Odd, RandomMod, Uint, U1024, U128, U1536, U64};
     use rand_chacha::ChaCha8Rng;
@@ -197,8 +196,8 @@ mod tests {
     #[test]
     fn trivial() {
         let mut rng = ChaCha8Rng::from_seed(*b"01234567890123456789012345678901");
-        let start = random_odd_integer::<U1024>(&mut rng, NonZeroU32::new(1024).unwrap());
-        for num in Sieve::new(start.get(), NonZeroU32::new(1024).unwrap(), false).take(10) {
+        let start = random_odd_integer::<U1024>(&mut rng, NonZero::new(1024).unwrap());
+        for num in Sieve::new(start.get(), NonZero::new(1024).unwrap(), false).take(10) {
             let mr = MillerRabin::new(Odd::new(num).unwrap());
 
             // Trivial tests, must always be true.

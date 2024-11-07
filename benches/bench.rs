@@ -1,4 +1,4 @@
-use core::num::NonZeroU32;
+use core::num::NonZero;
 
 use criterion::{criterion_group, criterion_main, BatchSize, Criterion};
 use crypto_bigint::{nlimbs, BoxedUint, Integer, Odd, RandomBits, Uint, U1024, U128, U256};
@@ -24,12 +24,12 @@ fn make_rng() -> ChaCha8Rng {
 }
 
 fn random_odd_uint<T: RandomBits + Integer>(rng: &mut impl CryptoRngCore, bit_length: u32) -> Odd<T> {
-    random_odd_integer::<T>(rng, NonZeroU32::new(bit_length).unwrap())
+    random_odd_integer::<T>(rng, NonZero::new(bit_length).unwrap())
 }
 
 fn make_sieve<const L: usize>(rng: &mut impl CryptoRngCore) -> Sieve<Uint<L>> {
     let start = random_odd_uint::<Uint<L>>(rng, Uint::<L>::BITS);
-    Sieve::new(start.get(), NonZeroU32::new(Uint::<L>::BITS).unwrap(), false)
+    Sieve::new(start.get(), NonZero::new(Uint::<L>::BITS).unwrap(), false)
 }
 
 fn make_presieved_num<const L: usize>(rng: &mut impl CryptoRngCore) -> Odd<Uint<L>> {
@@ -47,7 +47,7 @@ fn bench_sieve(c: &mut Criterion) {
     group.bench_function("(U128) creation", |b| {
         b.iter_batched(
             || random_odd_uint::<U128>(&mut OsRng, 128),
-            |start| Sieve::new(start.get(), NonZeroU32::new(128).unwrap(), false),
+            |start| Sieve::new(start.get(), NonZero::new(128).unwrap(), false),
             BatchSize::SmallInput,
         )
     });
@@ -68,7 +68,7 @@ fn bench_sieve(c: &mut Criterion) {
     group.bench_function("(U1024) creation", |b| {
         b.iter_batched(
             || random_odd_uint::<U1024>(&mut OsRng, 1024),
-            |start| Sieve::new(start.get(), NonZeroU32::new(1024).unwrap(), false),
+            |start| Sieve::new(start.get(), NonZero::new(1024).unwrap(), false),
             BatchSize::SmallInput,
         )
     });
@@ -378,8 +378,8 @@ fn bench_glass_pumpkin(c: &mut Criterion) {
     // Mimics the sequence of checks `glass-pumpkin` does to find a prime.
     fn prime_like_gp(bit_length: u32, rng: &mut impl CryptoRngCore) -> BoxedUint {
         loop {
-            let start = random_odd_integer::<BoxedUint>(rng, NonZeroU32::new(bit_length).unwrap()).get();
-            let sieve = Sieve::new(start, NonZeroU32::new(bit_length).unwrap(), false);
+            let start = random_odd_integer::<BoxedUint>(rng, NonZero::new(bit_length).unwrap()).get();
+            let sieve = Sieve::new(start, NonZero::new(bit_length).unwrap(), false);
             for num in sieve {
                 let odd_num = Odd::new(num.clone()).unwrap();
 
@@ -402,8 +402,8 @@ fn bench_glass_pumpkin(c: &mut Criterion) {
     // Mimics the sequence of checks `glass-pumpkin` does to find a safe prime.
     fn safe_prime_like_gp(bit_length: u32, rng: &mut impl CryptoRngCore) -> BoxedUint {
         loop {
-            let start = random_odd_integer::<BoxedUint>(rng, NonZeroU32::new(bit_length).unwrap()).get();
-            let sieve = Sieve::new(start, NonZeroU32::new(bit_length).unwrap(), true);
+            let start = random_odd_integer::<BoxedUint>(rng, NonZero::new(bit_length).unwrap()).get();
+            let sieve = Sieve::new(start, NonZero::new(bit_length).unwrap(), true);
             for num in sieve {
                 let odd_num = Odd::new(num.clone()).unwrap();
 
