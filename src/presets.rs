@@ -6,6 +6,9 @@ use rand_core::CryptoRngCore;
 #[cfg(feature = "default-rng")]
 use rand_core::OsRng;
 
+#[cfg(feature = "multicore")]
+use rayon::iter::{ParallelBridge, ParallelIterator};
+
 use crate::hazmat::{lucas_test, random_odd_integer, AStarBase, LucasCheck, MillerRabin, Primality, Sieve};
 
 /// Returns a random prime of size `bit_length` using [`OsRng`] as the RNG.
@@ -16,6 +19,20 @@ pub fn generate_prime<T: Integer + RandomBits + RandomMod>(bit_length: u32) -> T
     generate_prime_with_rng(&mut OsRng, bit_length)
 }
 
+/// Returns a random prime of size `bit_length` using [`OsRng`] as the RNG.
+///
+/// See [`is_prime_with_rng`] for details about the performed checks.
+///
+/// Uses `threadcount` cores to parallelize the prime search.
+///
+/// Panics if `bit_length` is less than 2, or greater than the bit size of the target `Uint`.
+///
+/// Panics if the platform is unable to spawn threads.
+#[cfg(all(feature = "default-rng", feature = "multicore"))]
+pub fn par_generate_prime<T: Integer + RandomBits + RandomMod>(bit_length: u32, threadcount: usize) -> T {
+    par_generate_prime_with_rng(&mut OsRng, bit_length, threadcount)
+}
+
 /// Returns a random safe prime (that is, such that `(n - 1) / 2` is also prime) of size
 /// `bit_length` using [`OsRng`] as the RNG.
 ///
@@ -23,6 +40,21 @@ pub fn generate_prime<T: Integer + RandomBits + RandomMod>(bit_length: u32) -> T
 #[cfg(feature = "default-rng")]
 pub fn generate_safe_prime<T: Integer + RandomBits + RandomMod>(bit_length: u32) -> T {
     generate_safe_prime_with_rng(&mut OsRng, bit_length)
+}
+
+/// Returns a random safe prime (that is, such that `(n - 1) / 2` is also prime) of size
+/// `bit_length` using [`OsRng`] as the RNG.
+///
+/// See [`is_prime_with_rng`] for details about the performed checks.
+///
+/// Uses `threadcount` cores to parallelize the prime search.
+///
+/// Panics if `bit_length` is less than 3, or greater than the bit size of the target `Uint`.
+///
+/// Panics if the platform is unable to spawn threads.
+#[cfg(all(feature = "default-rng", feature = "multicore"))]
+pub fn par_generate_safe_prime<T: Integer + RandomBits + RandomMod>(bit_length: u32, threadcount: usize) -> T {
+    par_generate_safe_prime_with_rng(&mut OsRng, bit_length, threadcount)
 }
 
 /// Probabilistically checks if the given number is prime using [`OsRng`] as the RNG.
@@ -86,6 +118,94 @@ pub fn generate_safe_prime_with_rng<T: Integer + RandomBits + RandomMod>(
             if is_safe_prime_with_rng(rng, &num) {
                 return num;
             }
+        }
+    }
+}
+
+/// Returns a random prime of size `bit_length` using the provided RNG.
+///
+/// Uses `threadcount` cores to parallelize the prime search.
+///
+/// Panics if `bit_length` is less than 2, or greater than the bit size of the target `Uint`.
+///
+/// Panics if the platform is unable to spawn threads.
+#[cfg(feature = "multicore")]
+pub fn par_generate_prime_with_rng<T>(
+    rng: &mut (impl CryptoRngCore + Send + Sync + Clone),
+    bit_length: u32,
+    threadcount: usize,
+) -> T
+where
+    T: Integer + RandomBits + RandomMod,
+{
+    if bit_length < 2 {
+        panic!("`bit_length` must be 2 or greater.");
+    }
+    let bit_length = NonZero::new(bit_length).expect("`bit_length` should be non-zero");
+
+    let threadpool = rayon::ThreadPoolBuilder::new()
+        .num_threads(threadcount)
+        .build()
+        .expect("If the platform can spawn threads, then this call will work.");
+    let start = random_odd_integer::<T>(rng, bit_length).get();
+    let sieve = Sieve::new(start, bit_length, false);
+
+    let prime = threadpool.install(|| {
+        sieve.par_bridge().find_any(|c| {
+            let mut rng = rng.clone();
+            is_prime_with_rng(&mut rng, c)
+        })
+    });
+    match prime {
+        Some(prime) => prime,
+        None => {
+            drop(threadpool);
+            par_generate_prime_with_rng(rng, bit_length.get(), threadcount)
+        }
+    }
+}
+
+/// Returns a random safe prime (that is, such that `(n - 1) / 2` is also prime)
+/// of size `bit_length` using the provided RNG.
+///
+/// Uses `threadcount` cores to parallelize the prime search.
+///
+/// Panics if `bit_length` is less than 3, or greater than the bit size of the target `Uint`.
+/// Panics if the platform is unable to spawn threads.
+///
+/// See [`is_prime_with_rng`] for details about the performed checks.
+#[cfg(feature = "multicore")]
+pub fn par_generate_safe_prime_with_rng<T>(
+    rng: &mut (impl CryptoRngCore + Send + Sync + Clone),
+    bit_length: u32,
+    threadcount: usize,
+) -> T
+where
+    T: Integer + RandomBits + RandomMod,
+{
+    if bit_length < 2 {
+        panic!("`bit_length` must be 2 or greater.");
+    }
+    let bit_length = NonZero::new(bit_length).expect("`bit_length` should be non-zero");
+
+    let threadpool = rayon::ThreadPoolBuilder::new()
+        .num_threads(threadcount)
+        .build()
+        .expect("If the platform can spawn threads, then this call will work.");
+    let start = random_odd_integer::<T>(rng, bit_length).get();
+    let sieve = Sieve::new(start, bit_length, true);
+
+    let prime = threadpool.install(|| {
+        sieve.par_bridge().find_any(|c| {
+            let mut rng = rng.clone();
+            is_safe_prime_with_rng(&mut rng, c)
+        })
+    });
+    match prime {
+        Some(prime) => prime,
+        None => {
+            drop(threadpool);
+            par_generate_safe_prime_with_rng(rng, bit_length.get(), threadcount)
         }
     }
 }
@@ -363,6 +483,51 @@ mod tests {
                 let p_word = p.as_words()[0];
                 assert!(is_prime_ref(p_word) && is_prime_ref(p_word / 2));
             }
+        }
+    }
+}
+
+#[cfg(all(test, feature = "multicore"))]
+mod multicore_tests {
+    use super::{is_prime, par_generate_prime_with_rng};
+    use crypto_bigint::{nlimbs, BoxedUint, U128};
+
+    use super::*;
+    #[test]
+    fn parallel_prime_generation() {
+        for bit_length in (28..=128).step_by(10) {
+            let p: U128 = par_generate_prime_with_rng(&mut OsRng, bit_length, 4);
+            assert!(p.bits_vartime() == bit_length);
+            assert!(is_prime(&p));
+        }
+    }
+
+    #[test]
+    fn parallel_prime_generation_boxed() {
+        for bit_length in (28..=128).step_by(10) {
+            let p: BoxedUint = par_generate_prime_with_rng(&mut OsRng, bit_length, 2);
+            assert!(p.bits_vartime() == bit_length);
+            assert!(p.to_words().len() == nlimbs!(bit_length));
+            assert!(is_prime(&p));
+        }
+    }
+
+    #[test]
+    fn parallel_safe_prime_generation() {
+        for bit_length in (28..=128).step_by(10) {
+            let p: U128 = par_generate_safe_prime_with_rng(&mut OsRng, bit_length, 8);
+            assert!(p.bits_vartime() == bit_length);
+            assert!(is_prime(&p));
+        }
+    }
+
+    #[test]
+    fn parallel_safe_prime_generation_boxed() {
+        for bit_length in (28..=128).step_by(10) {
+            let p: BoxedUint = par_generate_safe_prime_with_rng(&mut OsRng, bit_length, 4);
+            assert!(p.bits_vartime() == bit_length);
+            assert!(p.to_words().len() == nlimbs!(bit_length));
+            assert!(is_prime(&p));
         }
     }
 }

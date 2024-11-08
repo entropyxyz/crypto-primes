@@ -18,6 +18,8 @@ use crypto_primes::{
     },
     is_prime_with_rng, is_safe_prime_with_rng,
 };
+#[cfg(feature = "multicore")]
+use crypto_primes::{par_generate_prime_with_rng, par_generate_safe_prime_with_rng};
 
 fn make_rng() -> ChaCha8Rng {
     ChaCha8Rng::from_seed(*b"01234567890123456789012345678901")
@@ -277,6 +279,44 @@ fn bench_presets(c: &mut Criterion) {
     group.finish();
 }
 
+#[cfg(feature = "multicore")]
+fn bench_multicore_presets(c: &mut Criterion) {
+    let mut group = c.benchmark_group("Presets (multicore)");
+    let mut rng = make_rng();
+    group.bench_function("(U128) Random prime", |b| {
+        b.iter(|| par_generate_prime_with_rng::<U128>(&mut rng, 128, num_cpus::get()))
+    });
+
+    let mut rng = make_rng();
+    group.bench_function("(U1024) Random prime", |b| {
+        b.iter(|| par_generate_prime_with_rng::<U1024>(&mut rng, 1024, num_cpus::get()))
+    });
+
+    let mut rng = make_rng();
+    group.bench_function("(U128) Random safe prime", |b| {
+        b.iter(|| par_generate_safe_prime_with_rng::<U128>(&mut rng, 128, num_cpus::get()))
+    });
+
+    group.sample_size(20);
+    let mut rng = make_rng();
+    group.bench_function("(U1024) Random safe prime", |b| {
+        b.iter(|| par_generate_safe_prime_with_rng::<U1024>(&mut rng, 1024, num_cpus::get()))
+    });
+
+    let mut rng = make_rng();
+    group.bench_function("(Boxed128) Random safe prime", |b| {
+        b.iter(|| par_generate_safe_prime_with_rng::<BoxedUint>(&mut rng, 128, num_cpus::get()))
+    });
+
+    group.sample_size(20);
+    let mut rng = make_rng();
+    group.bench_function("(Boxed1024) Random safe prime", |b| {
+        b.iter(|| par_generate_safe_prime_with_rng::<BoxedUint>(&mut rng, 1024, num_cpus::get()))
+    });
+}
+#[cfg(not(feature = "multicore"))]
+fn bench_multicore_presets(_c: &mut Criterion) {}
+
 #[cfg(feature = "tests-gmp")]
 fn bench_gmp(c: &mut Criterion) {
     let mut group = c.benchmark_group("GMP");
@@ -487,6 +527,7 @@ criterion_group!(
     bench_miller_rabin,
     bench_lucas,
     bench_presets,
+    bench_multicore_presets,
     bench_gmp,
     bench_openssl,
     bench_glass_pumpkin,
