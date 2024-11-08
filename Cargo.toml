@@ -49,7 +49,3 @@ rustdoc-args = ["--cfg", "docsrs"]
 [[bench]]
 name = "bench"
 harness = false
-
-[profile.bench]
-lto = true
-codegen-units = 1
