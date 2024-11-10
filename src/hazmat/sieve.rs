@@ -2,12 +2,13 @@
 //! before proceeding with slower tests.
 
 use alloc::{vec, vec::Vec};
-use core::num::NonZeroU32;
+use core::num::{NonZero, NonZeroU32};
 
 use crypto_bigint::{Integer, Odd, RandomBits};
 use rand_core::CryptoRngCore;
 
 use crate::hazmat::precomputed::{SmallPrime, LAST_SMALL_PRIME, RECIPROCALS, SMALL_PRIMES};
+use crate::traits::SieveFactory;
 
 /// Returns a random odd integer with given bit length
 /// (that is, with both `0` and `bit_length-1` bits set).
@@ -241,6 +242,42 @@ impl<T: Integer> Iterator for Sieve<T> {
 
     fn next(&mut self) -> Option<Self::Item> {
         Self::next(self)
+    }
+}
+
+/// A sieve returning numbers that are not multiples of a set of small factors.
+#[derive(Debug, Clone, Copy)]
+pub struct DefaultSieveFactory {
+    max_bit_length: NonZeroU32,
+    safe_primes: bool,
+}
+
+impl DefaultSieveFactory {
+    /// Creates a factory that produces sieves returning numbers of `max_bit_length` bits (with the top bit set).
+    ///
+    /// If `safe_primes` is `true`, additionally filters out such `n` that `(n - 1) / 2` are divisible
+    /// by any of the small factors tested.
+    pub fn new(max_bit_length: u32, safe_primes: bool) -> Self {
+        let max_bit_length = NonZero::new(max_bit_length).expect("`bit_length` should be non-zero");
+        Self {
+            max_bit_length,
+            safe_primes,
+        }
+    }
+}
+
+impl<T: Integer + RandomBits> SieveFactory<T> for DefaultSieveFactory {
+    type Sieve = Sieve<T>;
+    fn make_sieve(&self, rng: &mut impl CryptoRngCore, _previous_sieve: Option<&Self::Sieve>) -> Option<Self::Sieve> {
+        if !self.safe_primes && self.max_bit_length.get() < 2 {
+            panic!("`bit_length` must be 2 or greater.");
+        }
+        if self.safe_primes && self.max_bit_length.get() < 3 {
+            panic!("`bit_length` must be 3 or greater.");
+        }
+
+        let start = random_odd_integer::<T>(rng, self.max_bit_length);
+        Some(Sieve::new(start.get(), self.max_bit_length, self.safe_primes))
     }
 }
 

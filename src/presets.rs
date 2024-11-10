@@ -1,15 +1,16 @@
-use core::num::NonZero;
-
 use crypto_bigint::{Integer, Limb, Odd, RandomBits, RandomMod};
 use rand_core::CryptoRngCore;
 
 #[cfg(feature = "default-rng")]
 use rand_core::OsRng;
 
-#[cfg(feature = "multicore")]
-use rayon::iter::{ParallelBridge, ParallelIterator};
+use crate::{
+    generic::sieve_and_find,
+    hazmat::{lucas_test, AStarBase, DefaultSieveFactory, LucasCheck, MillerRabin, Primality},
+};
 
-use crate::hazmat::{lucas_test, random_odd_integer, AStarBase, LucasCheck, MillerRabin, Primality, Sieve};
+#[cfg(feature = "multicore")]
+use crate::generic::par_sieve_and_find;
 
 /// Returns a random prime of size `bit_length` using [`OsRng`] as the RNG.
 ///
@@ -83,18 +84,8 @@ pub fn generate_prime_with_rng<T: Integer + RandomBits + RandomMod>(
     rng: &mut impl CryptoRngCore,
     bit_length: u32,
 ) -> T {
-    if bit_length < 2 {
-        panic!("`bit_length` must be 2 or greater.");
-    }
-    let bit_length = NonZero::new(bit_length).expect("`bit_length` should be non-zero");
-    // Empirically, this loop is traversed 1 time.
-    loop {
-        let start = random_odd_integer::<T>(rng, bit_length);
-        let mut sieve = Sieve::new(start.get(), bit_length, false);
-        if let Some(prime) = sieve.find(|num| is_prime_with_rng(rng, num)) {
-            return prime;
-        }
-    }
+    sieve_and_find(rng, &DefaultSieveFactory::new(bit_length, false), is_prime_with_rng)
+        .expect("will produce a result eventually")
 }
 
 /// Returns a random safe prime (that is, such that `(n - 1) / 2` is also prime)
@@ -107,19 +98,8 @@ pub fn generate_safe_prime_with_rng<T: Integer + RandomBits + RandomMod>(
     rng: &mut impl CryptoRngCore,
     bit_length: u32,
 ) -> T {
-    if bit_length < 3 {
-        panic!("`bit_length` must be 3 or greater.");
-    }
-    let bit_length = NonZero::new(bit_length).expect("`bit_length` should be non-zero");
-    loop {
-        let start = random_odd_integer::<T>(rng, bit_length);
-        let sieve = Sieve::new(start.get(), bit_length, true);
-        for num in sieve {
-            if is_safe_prime_with_rng(rng, &num) {
-                return num;
-            }
-        }
-    }
+    sieve_and_find(rng, &DefaultSieveFactory::new(bit_length, true), is_safe_prime_with_rng)
+        .expect("will produce a result eventually")
 }
 
 /// Returns a random prime of size `bit_length` using the provided RNG.
@@ -138,31 +118,13 @@ pub fn par_generate_prime_with_rng<T>(
 where
     T: Integer + RandomBits + RandomMod,
 {
-    if bit_length < 2 {
-        panic!("`bit_length` must be 2 or greater.");
-    }
-    let bit_length = NonZero::new(bit_length).expect("`bit_length` should be non-zero");
-
-    let threadpool = rayon::ThreadPoolBuilder::new()
-        .num_threads(threadcount)
-        .build()
-        .expect("If the platform can spawn threads, then this call will work.");
-    let start = random_odd_integer::<T>(rng, bit_length).get();
-    let sieve = Sieve::new(start, bit_length, false);
-
-    let prime = threadpool.install(|| {
-        sieve.par_bridge().find_any(|c| {
-            let mut rng = rng.clone();
-            is_prime_with_rng(&mut rng, c)
-        })
-    });
-    match prime {
-        Some(prime) => prime,
-        None => {
-            drop(threadpool);
-            par_generate_prime_with_rng(rng, bit_length.get(), threadcount)
-        }
-    }
+    par_sieve_and_find(
+        rng,
+        DefaultSieveFactory::new(bit_length, false),
+        is_prime_with_rng,
+        threadcount,
+    )
+    .expect("will produce a result eventually")
 }
 
 /// Returns a random safe prime (that is, such that `(n - 1) / 2` is also prime)
@@ -183,31 +145,13 @@ pub fn par_generate_safe_prime_with_rng<T>(
 where
     T: Integer + RandomBits + RandomMod,
 {
-    if bit_length < 2 {
-        panic!("`bit_length` must be 2 or greater.");
-    }
-    let bit_length = NonZero::new(bit_length).expect("`bit_length` should be non-zero");
-
-    let threadpool = rayon::ThreadPoolBuilder::new()
-        .num_threads(threadcount)
-        .build()
-        .expect("If the platform can spawn threads, then this call will work.");
-    let start = random_odd_integer::<T>(rng, bit_length).get();
-    let sieve = Sieve::new(start, bit_length, true);
-
-    let prime = threadpool.install(|| {
-        sieve.par_bridge().find_any(|c| {
-            let mut rng = rng.clone();
-            is_safe_prime_with_rng(&mut rng, c)
-        })
-    });
-    match prime {
-        Some(prime) => prime,
-        None => {
-            drop(threadpool);
-            par_generate_safe_prime_with_rng(rng, bit_length.get(), threadcount)
-        }
-    }
+    par_sieve_and_find(
+        rng,
+        DefaultSieveFactory::new(bit_length, true),
+        is_safe_prime_with_rng,
+        threadcount,
+    )
+    .expect("will produce a result eventually")
 }
 
 /// Probabilistically checks if the given number is prime using the provided RNG.
