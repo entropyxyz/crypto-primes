@@ -1,4 +1,4 @@
-#![no_std]
+// TODO(dp): undo before merge #![no_std]
 #![cfg_attr(docsrs, feature(doc_cfg, doc_auto_cfg))]
 #![doc = include_str!("../README.md")]
 #![deny(unsafe_code)]
@@ -29,3 +29,9 @@ pub use presets::{generate_prime, generate_safe_prime, is_prime, is_safe_prime};
 pub use presets::{par_generate_prime, par_generate_safe_prime};
 #[cfg(feature = "multicore")]
 pub use presets::{par_generate_prime_with_rng, par_generate_safe_prime_with_rng};
+
+#[allow(dead_code)]
+#[allow(unused)]
+#[allow(unused_variables)]
+/// TODO
+pub mod uniform_sieve;
