@@ -1,19 +1,12 @@
-use std::fmt::Debug;
-use std::ops::Index;
+use crypto_bigint::modular::Retrieve;
+use crypto_bigint::{
+    Bounded, Constants, FixedInteger, Integer, Monty, NonZero, Odd, PowBoundedExp, RandomBits, RandomMod, U1024, U128,
+    U2048, U256, U4096, U512, U64,
+};
+use rand::thread_rng;
 
 use crate::hazmat::precomputed::SMALL_PRIMES;
 use crate::{hazmat::binary_gcd, is_prime};
-
-use crypto_bigint::modular::Retrieve;
-use crypto_bigint::{
-    modular::{MontyForm, MontyParams},
-    Integer, Monty, Odd, U1024, U128, U2048, U256, U4096, U512, U64,
-};
-use crypto_bigint::{
-    BitOps, Bounded, Constants, Encoding, FixedInteger, NonZero, PowBoundedExp, RandomBits, RandomMod,
-};
-use rand::{thread_rng, Rng};
-
 /// Generate primes using a pseudo-uniform distribution.
 /// Actors in this play are:
 ///     n:	the number of bits in the prime we're looking for, e.g. 512
@@ -32,6 +25,10 @@ where
 {
     /// Generate a prime.
     fn generate_prime() -> T;
+    // TODO(dp): missing
+    // generate_prime_with_rng
+    // generate_safe_prime
+    // generate_safe_prime_with_rng
 }
 
 macro_rules! impl_generate_prime {
@@ -167,6 +164,7 @@ where
 // For U2048, 232 primes,   m = 0x2465A7BD85011E1C9E0527929FFF268C82EF7EFA416863BAA5ACDB0971DBA0CCAC3EE4999345029F2CF810B99E406AAC5FCE5DD69D1C717DAEA5D18AB913F456505679BC91C57D46D9888857862B36E2EDE2E473C1F0AB359DA25271AFFE15FF240E299D0B04F4CD0E4D7C0E47B1A7BA007DE89AAE848FD5BDCD7F9815564EB060AE14F19CB50C291F0BBD8ED1C4C7F8FC5FBA51662001939B532D92DAC844A8431D400C832D039F5F900B278A75219C2986140C79045D7759540854C31504DC56F1DF5EEBE7BEE447658B917BF696D6927F2E2428FBEB340E515CB9835D63871BE8BBE09CF13445799F2E67788151571A93B4C1EEE55D1B9072E0B2F5C4607F
 //                          λ(m) = 0x0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000099F002D0502D70DF7B64150D19B477A781987C56EBCDB7637842794D22D0D022010DC9BA1DB141FC9D07A9587E7A130D9DF6F9B67812800D00
 // TODO(dp): Would love for this to be `const`. Or not here at all. Does it have any value, in some form?
+#[allow(unused)]
 fn calculate_m_and_lambda_m<T>() -> (T, T)
 where
     T: FixedInteger + crypto_bigint::Gcd<Output = T>,
@@ -192,6 +190,7 @@ where
 }
 
 // Special case for u32s, given crypto-bigint does not provide such small uints.
+#[allow(unused)]
 fn calculate_m_and_lambda_m_32() -> (u32, u16) {
     // The product of the 9 first odd primes fits in a u32
     // Primes: 3, 5, 7, 11, 13, 17, 19, 23, 29
