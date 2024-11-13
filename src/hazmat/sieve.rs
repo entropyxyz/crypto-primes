@@ -258,6 +258,12 @@ impl DefaultSieveFactory {
     /// If `safe_primes` is `true`, additionally filters out such `n` that `(n - 1) / 2` are divisible
     /// by any of the small factors tested.
     pub fn new(max_bit_length: u32, safe_primes: bool) -> Self {
+        if !safe_primes && max_bit_length < 2 {
+            panic!("`bit_length` must be 2 or greater.");
+        }
+        if safe_primes && max_bit_length < 3 {
+            panic!("`bit_length` must be 3 or greater.");
+        }
         let max_bit_length = NonZero::new(max_bit_length).expect("`bit_length` should be non-zero");
         Self {
             max_bit_length,
@@ -269,13 +275,6 @@ impl DefaultSieveFactory {
 impl<T: Integer + RandomBits> SieveFactory<T> for DefaultSieveFactory {
     type Sieve = Sieve<T>;
     fn make_sieve(&self, rng: &mut impl CryptoRngCore, _previous_sieve: Option<&Self::Sieve>) -> Option<Self::Sieve> {
-        if !self.safe_primes && self.max_bit_length.get() < 2 {
-            panic!("`bit_length` must be 2 or greater.");
-        }
-        if self.safe_primes && self.max_bit_length.get() < 3 {
-            panic!("`bit_length` must be 3 or greater.");
-        }
-
         let start = random_odd_integer::<T>(rng, self.max_bit_length);
         Some(Sieve::new(start.get(), self.max_bit_length, self.safe_primes))
     }
@@ -293,7 +292,7 @@ mod tests {
     use rand_chacha::ChaCha8Rng;
     use rand_core::{OsRng, SeedableRng};
 
-    use super::{random_odd_integer, Sieve};
+    use super::{random_odd_integer, DefaultSieveFactory, Sieve};
     use crate::hazmat::precomputed::SMALL_PRIMES;
 
     #[test]
@@ -425,5 +424,17 @@ mod tests {
         let start = U64::MAX;
         let mut sieve = Sieve::new(start, NonZero::new(U64::BITS).unwrap(), false);
         assert!(sieve.next().is_none());
+    }
+
+    #[test]
+    #[should_panic(expected = "`bit_length` must be 2 or greater")]
+    fn too_few_bits_regular_primes() {
+        let _fac = DefaultSieveFactory::new(1, false);
+    }
+
+    #[test]
+    #[should_panic(expected = "`bit_length` must be 3 or greater")]
+    fn too_few_bits_safe_primes() {
+        let _fac = DefaultSieveFactory::new(2, true);
     }
 }

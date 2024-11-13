@@ -381,18 +381,6 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "`bit_length` must be 2 or greater")]
-    fn generate_prime_too_few_bits() {
-        let _p: U64 = generate_prime_with_rng(&mut OsRng, 1);
-    }
-
-    #[test]
-    #[should_panic(expected = "`bit_length` must be 3 or greater")]
-    fn generate_safe_prime_too_few_bits() {
-        let _p: U64 = generate_safe_prime_with_rng(&mut OsRng, 2);
-    }
-
-    #[test]
     #[should_panic(expected = "try_random_bits() failed: BitLengthTooLarge { bit_length: 65, bits_precision: 64 }")]
     fn generate_prime_too_many_bits() {
         let _p: U64 = generate_prime_with_rng(&mut OsRng, 65);
