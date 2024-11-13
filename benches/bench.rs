@@ -3,13 +3,16 @@ use core::num::NonZero;
 use criterion::{criterion_group, criterion_main, BatchSize, Criterion};
 use crypto_bigint::{nlimbs, BoxedUint, Integer, Odd, RandomBits, Uint, U1024, U128, U256};
 use rand_chacha::ChaCha8Rng;
-use rand_core::{CryptoRngCore, OsRng, RngCore, SeedableRng};
+use rand_core::{CryptoRngCore, OsRng, SeedableRng};
 
 #[cfg(feature = "tests-gmp")]
 use rug::{integer::Order, Integer as GmpInteger};
 
 #[cfg(feature = "tests-openssl")]
 use openssl::bn::BigNum;
+
+#[cfg(feature = "multicore")]
+use rand_core::RngCore;
 
 use crypto_primes::{
     generate_prime_with_rng, generate_safe_prime_with_rng,
@@ -26,6 +29,7 @@ fn make_rng() -> ChaCha8Rng {
     ChaCha8Rng::from_seed(*b"01234567890123456789012345678901")
 }
 
+#[cfg(feature = "multicore")]
 fn make_random_rng() -> ChaCha8Rng {
     let mut seed = <ChaCha8Rng as SeedableRng>::Seed::default();
     OsRng.fill_bytes(&mut seed);
