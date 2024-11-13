@@ -95,3 +95,61 @@ impl<'a, R: CryptoRngCore, T, S: SieveFactory<T>> Iterator for SieveIterator<'a,
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use rand_core::{CryptoRngCore, OsRng};
+
+    use super::sieve_and_find;
+    use crate::SieveFactory;
+
+    #[cfg(feature = "multicore")]
+    use super::par_sieve_and_find;
+
+    #[test]
+    fn test_exhaustable_sieve_factory() {
+        // Test the logic handling the case of the sieve factory not being able to produce new sieves.
+        struct TestSieveFactory {
+            count: usize,
+        }
+
+        impl SieveFactory<usize> for TestSieveFactory {
+            type Sieve = core::ops::Range<usize>;
+
+            fn make_sieve(
+                &mut self,
+                _rng: &mut impl CryptoRngCore,
+                previous_sieve: Option<&Self::Sieve>,
+            ) -> Option<Self::Sieve> {
+                self.count += 1;
+                if previous_sieve.is_none() {
+                    Some(self.count * 10..(self.count * 10 + 2))
+                } else {
+                    None
+                }
+            }
+        }
+
+        let factory = TestSieveFactory { count: 0 };
+        let result = sieve_and_find(&mut OsRng, factory, |_rng, num| *num == 11);
+        assert!(result.is_some());
+
+        #[cfg(feature = "multicore")]
+        {
+            let factory = TestSieveFactory { count: 0 };
+            let result = par_sieve_and_find(&mut OsRng, factory, |_rng, num| *num == 11, 1);
+            assert!(result.is_some());
+        }
+
+        let factory = TestSieveFactory { count: 0 };
+        let result = sieve_and_find(&mut OsRng, factory, |_rng, num| *num == 20);
+        assert!(result.is_none());
+
+        #[cfg(feature = "multicore")]
+        {
+            let factory = TestSieveFactory { count: 0 };
+            let result = par_sieve_and_find(&mut OsRng, factory, |_rng, num| *num == 20, 1);
+            assert!(result.is_none());
+        }
+    }
+}
