@@ -53,11 +53,13 @@ macro_rules! impl_generate_prime {
 }
 
 impl_generate_prime! {
-    // Here `l` is 32, i.e. 32/2, i.e. using a 32 bit `m` and a 32 bit `λ(m)`
+    // Here `l` is 32, i.e. 32/2, i.e. using a 32 bit `m` and a 16 bit `λ(m)`
     (U64,   "00000000C0CFD797", "000000000000D890", "0000000153E5645B")
     ,
-    // Here `l` is 64, i.e. 128/2, i.e. using a 64 bit `m` and a 32 bit `λ(m)`
-    (U128,  "0000000000000000E221F97C30E94E1D", "00000000000000000000000000FCF030", "000000000000000121CFE6CFC938B36A")
+    // Here `l` is 32, i.e. 128/4, i.e. using a 32 bit `m` and a 16 bit `λ(m)`
+    (U128,  "000000000000000000000000C0CFD797", "0000000000000000000000000000D890", "00000000000000000000000153E5645B")
+    // // Here `l` is 64, i.e. 128/2, i.e. using a 64 bit `m` and a 32 bit `λ(m)`
+    // (U128,  "0000000000000000E221F97C30E94E1D", "00000000000000000000000000FCF030", "000000000000000121CFE6CFC938B36A")
     ,
     // Here `l` is 128, i.e. 256/2, i.e. using a 128 bit `m` and a 64 bit `λ(m)`
     (U256,  "000000000000000000000000000000005797D47C51681549D734E4FC4C3EAF7F",
