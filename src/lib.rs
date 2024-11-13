@@ -15,6 +15,8 @@
 )]
 
 extern crate alloc;
+#[cfg(test)]
+extern crate std;
 
 pub mod hazmat;
 mod presets;
