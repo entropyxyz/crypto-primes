@@ -425,14 +425,13 @@ mod tests {
 
 #[cfg(all(test, feature = "multicore"))]
 mod multicore_tests {
-    use super::{is_prime, par_generate_prime_with_rng};
+    use super::{is_prime, par_generate_prime, par_generate_safe_prime};
     use crypto_bigint::{nlimbs, BoxedUint, U128};
 
-    use super::*;
     #[test]
     fn parallel_prime_generation() {
         for bit_length in (28..=128).step_by(10) {
-            let p: U128 = par_generate_prime_with_rng(&mut OsRng, bit_length, 4);
+            let p: U128 = par_generate_prime(bit_length, 4);
             assert!(p.bits_vartime() == bit_length);
             assert!(is_prime(&p));
         }
@@ -441,7 +440,7 @@ mod multicore_tests {
     #[test]
     fn parallel_prime_generation_boxed() {
         for bit_length in (28..=128).step_by(10) {
-            let p: BoxedUint = par_generate_prime_with_rng(&mut OsRng, bit_length, 2);
+            let p: BoxedUint = par_generate_prime(bit_length, 2);
             assert!(p.bits_vartime() == bit_length);
             assert!(p.to_words().len() == nlimbs!(bit_length));
             assert!(is_prime(&p));
@@ -451,7 +450,7 @@ mod multicore_tests {
     #[test]
     fn parallel_safe_prime_generation() {
         for bit_length in (28..=128).step_by(10) {
-            let p: U128 = par_generate_safe_prime_with_rng(&mut OsRng, bit_length, 8);
+            let p: U128 = par_generate_safe_prime(bit_length, 8);
             assert!(p.bits_vartime() == bit_length);
             assert!(is_prime(&p));
         }
@@ -460,7 +459,7 @@ mod multicore_tests {
     #[test]
     fn parallel_safe_prime_generation_boxed() {
         for bit_length in (28..=128).step_by(10) {
-            let p: BoxedUint = par_generate_safe_prime_with_rng(&mut OsRng, bit_length, 4);
+            let p: BoxedUint = par_generate_safe_prime(bit_length, 4);
             assert!(p.bits_vartime() == bit_length);
             assert!(p.to_words().len() == nlimbs!(bit_length));
             assert!(is_prime(&p));
