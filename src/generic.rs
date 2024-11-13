@@ -8,7 +8,7 @@ use crate::SieveFactory;
 /// Sieves through the results of `sieve_factory` and returns the first item for which `predicate` is `true`.
 ///
 /// If `sieve_factory` signals that no more results can be created, returns `None`.
-pub fn sieve_and_find<R, S, T>(rng: &mut R, sieve_factory: &S, predicate: impl Fn(&mut R, &T) -> bool) -> Option<T>
+pub fn sieve_and_find<R, S, T>(rng: &mut R, sieve_factory: S, predicate: impl Fn(&mut R, &T) -> bool) -> Option<T>
 where
     S: SieveFactory<T>,
     R: CryptoRngCore,
