@@ -42,14 +42,17 @@ fn make_presieved_num<const L: usize>(rng: &mut impl CryptoRngCore) -> Odd<Uint<
 fn bench_uniform_sieve(c: &mut Criterion) {
     use crypto_primes::uniform_sieve::UniformGeneratePrime;
     let mut group = c.benchmark_group("Uniform sieve");
+    let mut rng = make_rng();
     group.bench_function("(U128) Random prime", |b| {
-        b.iter(|| U128::generate_prime());
+        b.iter(|| U128::generate_prime_with_rng(&mut rng));
     });
+    let mut rng = make_rng();
     group.bench_function("(U1024) Random prime", |b| {
-        b.iter(|| U1024::generate_prime());
+        b.iter(|| U1024::generate_prime_with_rng(&mut rng));
     });
+    let mut rng = make_rng();
     group.bench_function("(U2048) Random prime", |b| {
-        b.iter(|| U2048::generate_prime());
+        b.iter(|| U2048::generate_prime_with_rng(&mut rng));
     });
 }
 fn bench_sieve(c: &mut Criterion) {
