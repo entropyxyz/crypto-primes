@@ -413,7 +413,7 @@ mod tests {
     fn sieve_derived_traits() {
         let s = SmallPrimesSieve::new(U64::ONE, NonZero::new(10).unwrap(), false);
         // Debug
-        assert!(format!("{s:?}").starts_with("Sieve"));
+        assert!(format!("{s:?}").starts_with("SmallPrimesSieve"));
         // Clone
         assert_eq!(s.clone(), s);
 
