@@ -274,7 +274,11 @@ impl SmallPrimesSieveFactory {
 
 impl<T: Integer + RandomBits> SieveFactory<T> for SmallPrimesSieveFactory {
     type Sieve = SmallPrimesSieve<T>;
-    fn make_sieve(&self, rng: &mut impl CryptoRngCore, _previous_sieve: Option<&Self::Sieve>) -> Option<Self::Sieve> {
+    fn make_sieve(
+        &mut self,
+        rng: &mut impl CryptoRngCore,
+        _previous_sieve: Option<&Self::Sieve>,
+    ) -> Option<Self::Sieve> {
         let start = random_odd_integer::<T>(rng, self.max_bit_length);
         Some(SmallPrimesSieve::new(
             start.get(),

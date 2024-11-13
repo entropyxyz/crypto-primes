@@ -11,7 +11,8 @@ pub trait SieveFactory<T> {
     /// Makes a sieve given an RNG and the previous exhausted sieve (if any).
     ///
     /// Returning `None` signals that the prime generation should stop.
-    fn make_sieve(&self, rng: &mut impl CryptoRngCore, previous_sieve: Option<&Self::Sieve>) -> Option<Self::Sieve>;
+    fn make_sieve(&mut self, rng: &mut impl CryptoRngCore, previous_sieve: Option<&Self::Sieve>)
+        -> Option<Self::Sieve>;
 }
 
 /// Provides a generic way to access methods for random prime number generation

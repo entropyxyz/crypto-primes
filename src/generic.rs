@@ -16,6 +16,7 @@ where
     // We could use `SieveIterator` here, but it requires cloning the `rng`.
     // Unlike the parallel version, it is avoidable here.
 
+    let mut sieve_factory = sieve_factory;
     let mut sieve = sieve_factory.make_sieve(rng, None)?;
 
     loop {
@@ -71,6 +72,7 @@ pub struct SieveIterator<'a, R: CryptoRngCore, T, S: SieveFactory<T>> {
 impl<'a, R: CryptoRngCore, T, S: SieveFactory<T>> SieveIterator<'a, R, T, S> {
     /// Creates a new chained iterator producing results from sieves returned from `sieve_factory`.
     pub fn new(rng: &'a mut R, sieve_factory: S) -> Option<Self> {
+        let mut sieve_factory = sieve_factory;
         let sieve = sieve_factory.make_sieve(rng, None)?;
         Some(Self {
             sieve_factory,
