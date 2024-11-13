@@ -40,7 +40,7 @@ const INCR_LIMIT: Residue = Residue::MAX - LAST_SMALL_PRIME as Residue + 1;
 /// An iterator returning numbers with up to and including given bit length,
 /// starting from a given number, that are not multiples of the first 2048 small primes.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Sieve<T: Integer> {
+pub struct SmallPrimesSieve<T: Integer> {
     // Instead of dividing a big integer by small primes every time (which is slow),
     // we keep a "base" and a small increment separately,
     // so that we can only calculate the residues of the increment.
@@ -55,7 +55,7 @@ pub struct Sieve<T: Integer> {
     last_round: bool,
 }
 
-impl<T: Integer> Sieve<T> {
+impl<T: Integer> SmallPrimesSieve<T> {
     /// Creates a new sieve, iterating from `start` and until the last number with `max_bit_length`
     /// bits, producing numbers that are not non-trivial multiples of a list of small primes in the
     /// range `[2, start)` (`safe_primes = false`) or `[2, start/2)` (`safe_primes = true`).
@@ -237,7 +237,7 @@ impl<T: Integer> Sieve<T> {
     }
 }
 
-impl<T: Integer> Iterator for Sieve<T> {
+impl<T: Integer> Iterator for SmallPrimesSieve<T> {
     type Item = T;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -247,12 +247,12 @@ impl<T: Integer> Iterator for Sieve<T> {
 
 /// A sieve returning numbers that are not multiples of a set of small factors.
 #[derive(Debug, Clone, Copy)]
-pub struct DefaultSieveFactory {
+pub struct SmallPrimesSieveFactory {
     max_bit_length: NonZeroU32,
     safe_primes: bool,
 }
 
-impl DefaultSieveFactory {
+impl SmallPrimesSieveFactory {
     /// Creates a factory that produces sieves returning numbers of `max_bit_length` bits (with the top bit set).
     ///
     /// If `safe_primes` is `true`, additionally filters out such `n` that `(n - 1) / 2` are divisible
@@ -272,11 +272,15 @@ impl DefaultSieveFactory {
     }
 }
 
-impl<T: Integer + RandomBits> SieveFactory<T> for DefaultSieveFactory {
-    type Sieve = Sieve<T>;
+impl<T: Integer + RandomBits> SieveFactory<T> for SmallPrimesSieveFactory {
+    type Sieve = SmallPrimesSieve<T>;
     fn make_sieve(&self, rng: &mut impl CryptoRngCore, _previous_sieve: Option<&Self::Sieve>) -> Option<Self::Sieve> {
         let start = random_odd_integer::<T>(rng, self.max_bit_length);
-        Some(Sieve::new(start.get(), self.max_bit_length, self.safe_primes))
+        Some(SmallPrimesSieve::new(
+            start.get(),
+            self.max_bit_length,
+            self.safe_primes,
+        ))
     }
 }
 
@@ -292,7 +296,7 @@ mod tests {
     use rand_chacha::ChaCha8Rng;
     use rand_core::{OsRng, SeedableRng};
 
-    use super::{random_odd_integer, DefaultSieveFactory, Sieve};
+    use super::{random_odd_integer, SmallPrimesSieve, SmallPrimesSieveFactory};
     use crate::hazmat::precomputed::SMALL_PRIMES;
 
     #[test]
@@ -301,7 +305,7 @@ mod tests {
 
         let mut rng = ChaCha8Rng::from_seed(*b"01234567890123456789012345678901");
         let start = random_odd_integer::<U64>(&mut rng, NonZero::new(32).unwrap()).get();
-        for num in Sieve::new(start, NonZero::new(32).unwrap(), false).take(100) {
+        for num in SmallPrimesSieve::new(start, NonZero::new(32).unwrap(), false).take(100) {
             let num_u64 = u64::from(num);
             assert!(num_u64.leading_zeros() == 32);
 
@@ -318,7 +322,7 @@ mod tests {
         let mut rng = ChaCha8Rng::from_seed(*b"01234567890123456789012345678901");
         let start = random_odd_integer::<crypto_bigint::BoxedUint>(&mut rng, NonZero::new(32).unwrap()).get();
 
-        for num in Sieve::new(start, NonZero::new(32).unwrap(), false).take(100) {
+        for num in SmallPrimesSieve::new(start, NonZero::new(32).unwrap(), false).take(100) {
             // For 32-bit targets
             #[allow(clippy::useless_conversion)]
             let num_u64: u64 = num.as_words()[0].into();
@@ -332,7 +336,8 @@ mod tests {
     }
 
     fn check_sieve(start: u32, bit_length: u32, safe_prime: bool, reference: &[u32]) {
-        let test = Sieve::new(U64::from(start), NonZero::new(bit_length).unwrap(), safe_prime).collect::<Vec<_>>();
+        let test =
+            SmallPrimesSieve::new(U64::from(start), NonZero::new(bit_length).unwrap(), safe_prime).collect::<Vec<_>>();
         assert_eq!(test.len(), reference.len());
         for (x, y) in test.iter().zip(reference.iter()) {
             assert_eq!(x, &U64::from(*y));
@@ -387,7 +392,7 @@ mod tests {
     #[test]
     #[should_panic(expected = "The requested bit length (65) is larger than the precision of `start`")]
     fn sieve_too_many_bits() {
-        let _sieve = Sieve::new(U64::ONE, NonZero::new(65).unwrap(), false);
+        let _sieve = SmallPrimesSieve::new(U64::ONE, NonZero::new(65).unwrap(), false);
     }
 
     #[test]
@@ -406,35 +411,35 @@ mod tests {
 
     #[test]
     fn sieve_derived_traits() {
-        let s = Sieve::new(U64::ONE, NonZero::new(10).unwrap(), false);
+        let s = SmallPrimesSieve::new(U64::ONE, NonZero::new(10).unwrap(), false);
         // Debug
         assert!(format!("{s:?}").starts_with("Sieve"));
         // Clone
         assert_eq!(s.clone(), s);
 
         // PartialEq
-        let s2 = Sieve::new(U64::ONE, NonZero::new(10).unwrap(), false);
+        let s2 = SmallPrimesSieve::new(U64::ONE, NonZero::new(10).unwrap(), false);
         assert_eq!(s, s2);
-        let s3 = Sieve::new(U64::ONE, NonZero::new(12).unwrap(), false);
+        let s3 = SmallPrimesSieve::new(U64::ONE, NonZero::new(12).unwrap(), false);
         assert_ne!(s, s3);
     }
 
     #[test]
     fn sieve_with_max_start() {
         let start = U64::MAX;
-        let mut sieve = Sieve::new(start, NonZero::new(U64::BITS).unwrap(), false);
+        let mut sieve = SmallPrimesSieve::new(start, NonZero::new(U64::BITS).unwrap(), false);
         assert!(sieve.next().is_none());
     }
 
     #[test]
     #[should_panic(expected = "`bit_length` must be 2 or greater")]
     fn too_few_bits_regular_primes() {
-        let _fac = DefaultSieveFactory::new(1, false);
+        let _fac = SmallPrimesSieveFactory::new(1, false);
     }
 
     #[test]
     #[should_panic(expected = "`bit_length` must be 3 or greater")]
     fn too_few_bits_safe_primes() {
-        let _fac = DefaultSieveFactory::new(2, true);
+        let _fac = SmallPrimesSieveFactory::new(2, true);
     }
 }

@@ -6,6 +6,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Changed
+
+- Renamed `Sieve` to `SmallPrimesSieve`. ([#64])
+
+
 ### Added
 
 - Parallel prime finding methods and a "multicore" feature ([#60])

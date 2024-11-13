@@ -6,7 +6,7 @@ use rand_core::OsRng;
 
 use crate::{
     generic::sieve_and_find,
-    hazmat::{lucas_test, AStarBase, DefaultSieveFactory, LucasCheck, MillerRabin, Primality},
+    hazmat::{lucas_test, AStarBase, LucasCheck, MillerRabin, Primality, SmallPrimesSieveFactory},
 };
 
 #[cfg(feature = "multicore")]
@@ -84,7 +84,7 @@ pub fn generate_prime_with_rng<T: Integer + RandomBits + RandomMod>(
     rng: &mut impl CryptoRngCore,
     bit_length: u32,
 ) -> T {
-    sieve_and_find(rng, &DefaultSieveFactory::new(bit_length, false), is_prime_with_rng)
+    sieve_and_find(rng, &SmallPrimesSieveFactory::new(bit_length, false), is_prime_with_rng)
         .expect("will produce a result eventually")
 }
 
@@ -98,8 +98,12 @@ pub fn generate_safe_prime_with_rng<T: Integer + RandomBits + RandomMod>(
     rng: &mut impl CryptoRngCore,
     bit_length: u32,
 ) -> T {
-    sieve_and_find(rng, &DefaultSieveFactory::new(bit_length, true), is_safe_prime_with_rng)
-        .expect("will produce a result eventually")
+    sieve_and_find(
+        rng,
+        &SmallPrimesSieveFactory::new(bit_length, true),
+        is_safe_prime_with_rng,
+    )
+    .expect("will produce a result eventually")
 }
 
 /// Returns a random prime of size `bit_length` using the provided RNG.
@@ -120,7 +124,7 @@ where
 {
     par_sieve_and_find(
         rng,
-        DefaultSieveFactory::new(bit_length, false),
+        SmallPrimesSieveFactory::new(bit_length, false),
         is_prime_with_rng,
         threadcount,
     )
@@ -147,7 +151,7 @@ where
 {
     par_sieve_and_find(
         rng,
-        DefaultSieveFactory::new(bit_length, true),
+        SmallPrimesSieveFactory::new(bit_length, true),
         is_safe_prime_with_rng,
         threadcount,
     )
