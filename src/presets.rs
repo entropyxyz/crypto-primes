@@ -84,7 +84,7 @@ pub fn generate_prime_with_rng<T: Integer + RandomBits + RandomMod>(
     rng: &mut impl CryptoRngCore,
     bit_length: u32,
 ) -> T {
-    sieve_and_find(rng, SmallPrimesSieveFactory::new(bit_length, false), is_prime_with_rng)
+    sieve_and_find(rng, SmallPrimesSieveFactory::new(bit_length), is_prime_with_rng)
         .expect("will produce a result eventually")
 }
 
@@ -100,7 +100,7 @@ pub fn generate_safe_prime_with_rng<T: Integer + RandomBits + RandomMod>(
 ) -> T {
     sieve_and_find(
         rng,
-        SmallPrimesSieveFactory::new(bit_length, true),
+        SmallPrimesSieveFactory::new_safe_primes(bit_length),
         is_safe_prime_with_rng,
     )
     .expect("will produce a result eventually")
@@ -124,7 +124,7 @@ where
 {
     par_sieve_and_find(
         rng,
-        SmallPrimesSieveFactory::new(bit_length, false),
+        SmallPrimesSieveFactory::new(bit_length),
         is_prime_with_rng,
         threadcount,
     )
@@ -151,7 +151,7 @@ where
 {
     par_sieve_and_find(
         rng,
-        SmallPrimesSieveFactory::new(bit_length, true),
+        SmallPrimesSieveFactory::new_safe_primes(bit_length),
         is_safe_prime_with_rng,
         threadcount,
     )

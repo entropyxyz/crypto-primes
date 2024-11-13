@@ -253,11 +253,7 @@ pub struct SmallPrimesSieveFactory {
 }
 
 impl SmallPrimesSieveFactory {
-    /// Creates a factory that produces sieves returning numbers of `max_bit_length` bits (with the top bit set).
-    ///
-    /// If `safe_primes` is `true`, additionally filters out such `n` that `(n - 1) / 2` are divisible
-    /// by any of the small factors tested.
-    pub fn new(max_bit_length: u32, safe_primes: bool) -> Self {
+    fn new_impl(max_bit_length: u32, safe_primes: bool) -> Self {
         if !safe_primes && max_bit_length < 2 {
             panic!("`bit_length` must be 2 or greater.");
         }
@@ -269,6 +265,18 @@ impl SmallPrimesSieveFactory {
             max_bit_length,
             safe_primes,
         }
+    }
+
+    /// Creates a factory that produces sieves returning numbers of `max_bit_length` bits (with the top bit set)
+    /// that are not divisible by a number of small factors.
+    pub fn new(max_bit_length: u32) -> Self {
+        Self::new_impl(max_bit_length, false)
+    }
+
+    /// Creates a factory that produces sieves returning numbers `n` of `max_bit_length` bits (with the top bit set)
+    /// such that neither `n` nor `(n - 1) / 2` are divisible by a number of small factors.
+    pub fn new_safe_primes(max_bit_length: u32) -> Self {
+        Self::new_impl(max_bit_length, true)
     }
 }
 
@@ -438,12 +446,12 @@ mod tests {
     #[test]
     #[should_panic(expected = "`bit_length` must be 2 or greater")]
     fn too_few_bits_regular_primes() {
-        let _fac = SmallPrimesSieveFactory::new(1, false);
+        let _fac = SmallPrimesSieveFactory::new(1);
     }
 
     #[test]
     #[should_panic(expected = "`bit_length` must be 3 or greater")]
     fn too_few_bits_safe_primes() {
-        let _fac = SmallPrimesSieveFactory::new(2, true);
+        let _fac = SmallPrimesSieveFactory::new_safe_primes(2);
     }
 }
