@@ -4,6 +4,8 @@ use crypto_bigint::{
     U2048, U256, U4096, U512, U64,
 };
 use rand_core::CryptoRngCore;
+#[cfg(feature = "default-rng")]
+use rand_core::OsRng;
 
 use crate::hazmat::precomputed::SMALL_PRIMES;
 use crate::{hazmat::binary_gcd, is_prime};
@@ -23,10 +25,18 @@ pub trait UniformGeneratePrime<T>
 where
     T: Integer + Constants + Bounded + RandomBits + RandomMod + Copy,
 {
-    /// Generate a prime.
+    /// Returns a random prime using the provided RNG.
+    ///
+    /// See [`is_prime_with_rng`][crate::presets::is_prime_with_rng] for details about the performed checks.
     fn generate_prime_with_rng(rng: &mut impl CryptoRngCore) -> T;
+
+    /// Returns a random prime using [`OsRng`] as the RNG.
+    ///
+    /// See [`is_prime_with_rng`][crate::presets::is_prime_with_rng] for details about the performed checks.
+    #[cfg(feature = "default-rng")]
+    fn generate_prime() -> T;
+
     // TODO(dp): missing
-    // generate_prime_with_rng
     // generate_safe_prime
     // generate_safe_prime_with_rng
 }
@@ -35,8 +45,7 @@ macro_rules! impl_generate_prime {
     ($(($name:ident, $m:expr, $lambda_m:expr, $a_max:expr)),+) => {
         $(
             impl UniformGeneratePrime<$name> for $name {
-                fn generate_prime_with_rng(rng: &mut impl CryptoRngCore) -> $name {
-                    debug_assert!($m.len() == (2*$name::BITS/8) as usize, "expected m to be {} long, instead it's {}", 2*$name::BITS/8, $m.len());
+                fn generate_prime_with_rng(rng: &mut impl CryptoRngCore) -> Self {
                     const M: $name = $name::from_be_hex($m);
                     const LAMBDA_M: $name = $name::from_be_hex($lambda_m);
                     const A_MAX: $name = $name::from_be_hex($a_max);
@@ -45,6 +54,11 @@ macro_rules! impl_generate_prime {
                     algorithm2_faster_but_why(rng, unit, M, &a_max)
                     // algorithm2(rng, unit, M, &a_max)
 
+                }
+
+                #[cfg(feature = "default-rng")]
+                fn generate_prime() -> Self {
+                    Self::generate_prime_with_rng(&mut OsRng)
                 }
             }
         )+
@@ -280,11 +294,15 @@ mod tests {
     use super::*;
     use core::ops::Div;
     use crypto_bigint::{U1024, U128, U2048, U256, U512, U64};
+    use rand::SeedableRng;
+    use rand_chacha::ChaCha8Rng;
     use tracing::{debug, info};
 
+    #[ignore = "not an actual test"]
     #[test_log::test]
     fn debug_jp06() {
         type T = U64;
+        let mut rng = ChaCha8Rng::from_seed(*b"01234567890123456789012345678901");
         let hex_m = "00000000C0CFD797";
         let hex_lambda_m = "000000000000D890";
         // type T = U1024;
@@ -298,7 +316,7 @@ mod tests {
         let mut count = 0u64;
         let mut start = std::time::Instant::now();
         loop {
-            let _unit = jp06_unitgen(m, lambda_m);
+            let _unit = jp06_unitgen(&mut rng, m, lambda_m);
             count += 1;
             if count % 10_000 == 0 {
                 debug!("10k iters in {:?}", start.elapsed());
@@ -307,14 +325,16 @@ mod tests {
         }
     }
 
+    #[ignore = "not an actual test"]
     #[test_log::test]
     fn debug_algo2() {
         type T = U64;
+        let mut rng = ChaCha8Rng::from_seed(*b"01234567890123456789012345678901");
         let hex_m = "00000000C0CFD797";
         let hex_lambda_m = "000000000000D890";
         let m = T::from_be_hex(hex_m);
         let lambda_m = T::from_be_hex(hex_lambda_m);
-        let unit = jp06_unitgen(m, lambda_m);
+        let unit = jp06_unitgen(&mut rng, m, lambda_m);
 
         let mut count = 0u64;
         let mut start = std::time::Instant::now();
@@ -323,9 +343,9 @@ mod tests {
             NonZero::new(T::MAX.div(m_nz) - T::ONE).expect("m is known, pre-calculated, non-zero, odd, larger than 1");
         info!("a_max={a_max:?}");
         loop {
-            // let _ = algorithm2(unit, m, &a_max);
+            // let _ = algorithm2(&mut rng, unit, m, &a_max);
             // This is 4x faster than `algorithm2`
-            let _ = algorithm2_faster_but_why(unit, m, &a_max);
+            let _ = algorithm2_faster_but_why(&mut rng, unit, m, &a_max);
             count += 1;
             if count % 10_000 == 0 {
                 debug!("10k iters in {:?}", start.elapsed());
@@ -334,6 +354,7 @@ mod tests {
         }
     }
     // This isn't actually a test, just here to generate constants
+    #[ignore = "not an actual test"]
     #[test_log::test]
     fn generate_constants() {
         let (m, lambda_m, a_max) = calculate_constants_u32();
@@ -372,11 +393,12 @@ mod tests {
         let p = U2048::generate_prime();
         info!("2048 bit prime={p:?}");
         // This is very slow
-        let p = U4096::generate_prime();
-        info!("4096 bit prime={p:?}");
+        // let p = U4096::generate_prime();
+        // info!("4096 bit prime={p:?}");
     }
 
-    // TODO(dp): test for statisical properties
+    // TODO(dp): test for statistical properties
+    #[ignore = "tbd"]
     #[test_log::test]
     fn entropy() {
         // Let x = 2^k, and let Mk be the set of odd numbers in the interval [x/2..x[, i.e. the set
