@@ -20,6 +20,7 @@ glass_pumpkin = { version = "1", optional = true }
 rayon = { version = "1", optional = true }
 # TODO(dp): why needed?
 rand = "0.8"
+tracing = { version = "0.1", default-features = false }
 
 [dev-dependencies]
 # need `crypto-bigint` with `alloc` to test `BoxedUint`
@@ -32,6 +33,7 @@ num-integer = "0.1"
 proptest = "1"
 num-prime = "0.4.3"
 num_cpus = "1.16"
+test-log = { version = "0.2.16", default-features = false, features = ["trace", "color"] }
 
 [features]
 default = ["default-rng"]
