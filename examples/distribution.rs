@@ -1,8 +1,8 @@
-use crypto_bigint::{FixedInteger, NonZero, RandomBits, RandomMod, U1024, U128, U64};
+use crypto_bigint::{FixedInteger, NonZero, RandomBits, RandomMod};
 use crypto_primes::uniform_sieve::UniformGeneratePrime;
 use statrs::distribution::{ChiSquared, ContinuousCDF};
 
-//! Chi-squared statistical test for some collection of primes.
+/// Chi-squared statistical test for some collection of primes.
 
 fn main() {
     let sample_count = 5000;
@@ -28,7 +28,6 @@ fn main() {
         println!("The prime distribution is close to uniform.");
     }
 }
-
 
 // Divide interval and count primes in each subinterval. Returns stats and the time elapsed.
 fn distribution<T>(num_primes: usize, intervals: usize, end: T) -> (Vec<u64>, std::time::Duration)
