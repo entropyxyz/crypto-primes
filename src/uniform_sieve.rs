@@ -15,13 +15,11 @@ use crate::is_prime;
 ///     n:	the number of bits in the prime we're looking for, e.g. 512
 ///     l:	the number of top bits that are re-sampled on every iteration, e.g. 64
 ///     m:	a product of all small odd primes up to a bound ß chosen such that the bit size of m is n - l, e.g. ß = 512 - 64
-///     b:	picked uniformely at random among integers less than m and coprime to m (use unit generation algorithm from JP06)
+///     b:	picked uniformly at random among integers less than m and coprime to m (use unit generation algorithm from JP06)
 ///     λ:	Carmichael's function: the LCM of the λ(p)s for each prime used to compute m. Each λ(p) is simply p-1 because each prime appears once and we exclude 2.
 
 // TODO(dp): Proper docs here, explaining when this is useful and why, discussion about the distribution quality etc.
-// TODO(dp): The `l` value isn't used anywhere and instead I'm assuming we want to re-sample
-// `T::BITS/2` bits on every iteration, so for a 128-bit prime, resample 64 bits. I think this is
-// way too much, but need more benchmarking + statistics to know what a "good" value actually means.
+// TODO(dp): The `l` value isn't used anywhere but will be necessary to include so we can look for primes of the desired bit size.
 pub trait UniformGeneratePrime<T>
 where
     T: Integer + Constants + Bounded + RandomBits + RandomMod + Copy,
@@ -38,6 +36,7 @@ where
     fn generate_prime() -> T;
 
     // TODO(dp): missing
+    // bit size of desired prime
     // generate_safe_prime
     // generate_safe_prime_with_rng
 }
@@ -52,9 +51,7 @@ macro_rules! impl_generate_prime {
                     const A_MAX: $name = $name::from_be_hex($a_max);
                     let unit = jp06_unitgen(rng, M, LAMBDA_M);
                     let a_max = NonZero::new(A_MAX).expect("A_MAX is pre-calculated and known-good");
-                    // algorithm2_faster_but_why(rng, unit, M, &a_max)
                     algorithm2(rng, unit, M, &a_max).0
-
                 }
 
                 #[cfg(feature = "default-rng")]
@@ -191,30 +188,9 @@ where
 // 11:  until p is prime
 // 12:  return p
 // NOTE: Steps 1-7 are implemented in `jp06_unitgen`, where `b` is referred to as `k`.
-// TODO(dp): probably should unify the two functions.
 #[allow(unused)]
 #[inline(always)]
 fn algorithm2<T>(rng: &mut impl CryptoRngCore, b: T, m: T, a_max: &NonZero<T>) -> (T, u64)
-where
-    T: Integer + Constants + RandomMod + Copy + Bounded,
-{
-    let mut a = T::random_mod(rng, a_max);
-    let mut p = a * m + b;
-    let mut primality_tests = 1;
-    while !is_prime(&p) {
-        a = T::random_mod(rng, a_max);
-        p = a * m + b;
-        primality_tests += 1;
-    }
-    trace!("[algo2-a] {} bits. Needed {} primality tests", T::BITS, primality_tests);
-    (p, primality_tests)
-}
-
-// TODO(dp): Why is this faster? Is something wrong here? It's almost exactly 4x faster than the correct version.
-// It seems like `T::random_mod` is a lot slower than `T::random_bits` + bounds check&retries. A regression? Expected?
-#[allow(unused)]
-#[inline(always)]
-fn algorithm2_faster_but_why<T>(rng: &mut impl CryptoRngCore, b: T, m: T, a_max: &NonZero<T>) -> (T, u64)
 where
     T: Integer + Bounded + RandomBits + RandomMod + Copy,
 {
@@ -341,7 +317,6 @@ mod tests {
         type T = U1024;
         let mut rng = ChaCha8Rng::from_seed(*b"01234567890123456789012345678901");
         let mut rng1 = ChaCha8Rng::from_seed(*b"01234567890123456789012345678901");
-        let mut rng2 = ChaCha8Rng::from_seed(*b"01234567890123456789012345678901");
         // U1024
         let hex_m = "00000000000000016CC3AC9DC18F442E3F73D34147E253920667D800DA63CE9FEA167C22335097E1B207A8BAE729F4AB07F1BA5062481BC1166E2E5A42FF2393A9D7A7F5A195FB3FA7318A51407B138E9C8C54557AD65B9080FF8DB0F7672097CBC0DBC6EDA3CF451C20ACF1D003D909D87DA7BDA10D2C4772F7EEF762520D17";
         let hex_lambda_m = "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000291A6B42D1C7D2A7184D13E36F65773BBEFB4FA7996101300D49F09962A361F00";
@@ -361,29 +336,22 @@ mod tests {
         let mut count = 0u64;
         let a_max_nz = NonZero::new(a_max).expect("m is known, pre-calculated, non-zero, odd, larger than 1");
         info!("T::BITS={}, a_max={a_max:?} ", T::BITS);
-        let mut tests_algo2_a = 0;
-        let mut tests_algo2_b = 0;
+        let mut tests_algo2 = 0;
         let mut start = std::time::Instant::now();
         loop {
-            // This is 4x faster than `algorithm2`
             let (a1, tests_a) = algorithm2(&mut rng1, unit, m, &a_max_nz);
-            let (a2, tests_b) = algorithm2_faster_but_why(&mut rng2, unit, m, &a_max_nz);
-            debug!("algo2-a:\t{a1:?}, tests={tests_a}");
-            debug!("algo2-b:\t{a2:?}, tests={tests_b}");
+            debug!("algo2:\t{a1:?}, tests={tests_a}");
             count += 1;
-            tests_algo2_a += tests_a;
-            tests_algo2_b += tests_b;
+            tests_algo2 += tests_a;
             if count % 100 == 0 {
                 info!("{count} iters in {:?}", start.elapsed());
-                info!("algo2-a:\tprimality tests: {}", tests_algo2_a / count);
-                info!("algo2-b:\tprimality tests: {}", tests_algo2_b / count);
+                info!("algo2:\tprimality tests: {}", tests_algo2 / count);
                 start = std::time::Instant::now();
             }
         }
     }
 
-    // This isn't actually a test, just here to generate constants
-    #[ignore = "not an actual test"]
+    #[ignore = "not an actual test, just here to generate constants"]
     #[test_log::test]
     fn generate_constants() {
         let (m, lambda_m, a_max) = calculate_constants::<U64>();
