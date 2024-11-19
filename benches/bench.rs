@@ -1,7 +1,7 @@
 use core::num::NonZero;
 
 use criterion::{criterion_group, criterion_main, BatchSize, Criterion};
-use crypto_bigint::{nlimbs, BoxedUint, Integer, Odd, RandomBits, Uint, U1024, U128, U2048, U256};
+use crypto_bigint::{nlimbs, BoxedUint, Integer, Odd, RandomBits, Uint, U1024, U128, U2048, U256, U512};
 use rand_chacha::ChaCha8Rng;
 use rand_core::{CryptoRngCore, OsRng, SeedableRng};
 
@@ -42,14 +42,27 @@ fn make_presieved_num<const L: usize>(rng: &mut impl CryptoRngCore) -> Odd<Uint<
 fn bench_uniform_sieve(c: &mut Criterion) {
     use crypto_primes::uniform_sieve::UniformGeneratePrime;
     let mut group = c.benchmark_group("Uniform sieve");
+
     let mut rng = make_rng();
     group.bench_function("(U128) Random prime", |b| {
         b.iter(|| U128::generate_prime_with_rng(&mut rng));
     });
+
+    let mut rng = make_rng();
+    group.bench_function("(U256) Random prime", |b| {
+        b.iter(|| U256::generate_prime_with_rng(&mut rng));
+    });
+
+    let mut rng = make_rng();
+    group.bench_function("(U512) Random prime", |b| {
+        b.iter(|| U256::generate_prime_with_rng(&mut rng));
+    });
+
     let mut rng = make_rng();
     group.bench_function("(U1024) Random prime", |b| {
         b.iter(|| U1024::generate_prime_with_rng(&mut rng));
     });
+
     let mut rng = make_rng();
     group.bench_function("(U2048) Random prime", |b| {
         b.iter(|| U2048::generate_prime_with_rng(&mut rng));
@@ -241,6 +254,16 @@ fn bench_presets(c: &mut Criterion) {
     let mut rng = make_rng();
     group.bench_function("(U128) Random prime", |b| {
         b.iter(|| generate_prime_with_rng::<U128>(&mut rng, 128))
+    });
+
+    let mut rng = make_rng();
+    group.bench_function("(U256) Random prime", |b| {
+        b.iter(|| generate_prime_with_rng::<U256>(&mut rng, 128))
+    });
+
+    let mut rng = make_rng();
+    group.bench_function("(U512) Random prime", |b| {
+        b.iter(|| generate_prime_with_rng::<U512>(&mut rng, 128))
     });
 
     let mut rng = make_rng();
