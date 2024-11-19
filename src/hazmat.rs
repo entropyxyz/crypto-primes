@@ -15,7 +15,6 @@ mod sieve;
 pub use lucas::{lucas_test, AStarBase, BruteForceBase, LucasBase, LucasCheck, SelfridgeBase};
 pub use miller_rabin::MillerRabin;
 
-pub(crate) use gcd::binary_gcd;
 pub use sieve::{random_odd_integer, Sieve};
 
 /// Possible results of various primality tests.
