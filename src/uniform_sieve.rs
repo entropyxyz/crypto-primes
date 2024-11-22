@@ -279,6 +279,8 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::stat_utils::uniform_distro;
+
     use crypto_bigint::{U1024, U128, U2048, U256, U512, U64};
     use rand::SeedableRng;
     use rand_chacha::ChaCha8Rng;
@@ -425,22 +427,30 @@ mod tests {
         // info!("4096 bit prime={p:?}");
     }
 
-    // TODO(dp): test for statistical properties
-    #[ignore = "tbd"]
     #[test_log::test]
-    fn entropy() {
-        // Let x = 2^k, and let Mk be the set of odd numbers in the interval [x/2..x[, i.e. the set
-        // of odd numbers of bit length precisely k.
-        // The optimal output distribution of primes is the uniform distribution over the primes in Mk, since
-        // it has maximal entropy. By the prime number theorem, this maximal value is about
-        //      Hmax(x) = log(x/(2*log(x)) for large x.
-
-        // Theorem 1.
-        // Let H be the entropy of the output distribution.
-        // Let Hmax be the maximal possible value of H.
-        // Then, under Hardy and Littlewoods’ prime r-tuple conjecture[11] and Gallagher’s
-        // heuristic[10], we have for any n >= 256:
-        //      Hmax − H < (1−γ) / ln 2 < 0.609949
-        // where γ is the Euler-Mascheroni constant[22].
+    fn uniform_distro_u64() {
+        uniform_distro::<U64>();
+    }
+    #[test_log::test]
+    fn uniform_distro_u128() {
+        uniform_distro::<U128>();
+    }
+    #[test_log::test]
+    fn uniform_distro_u256() {
+        uniform_distro::<U256>();
+    }
+    #[test_log::test]
+    fn uniform_distro_u512() {
+        uniform_distro::<U512>();
+    }
+    #[cfg(feature = "tests-exhaustive")]
+    #[test_log::test]
+    fn uniform_distro_u1024() {
+        uniform_distro::<U1024>();
+    }
+    #[cfg(feature = "tests-exhaustive")]
+    #[test_log::test]
+    fn uniform_distro_u2048() {
+        uniform_distro::<U2048>();
     }
 }
