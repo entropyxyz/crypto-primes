@@ -6,7 +6,7 @@ use tracing::{debug, info};
 use crate::uniform_sieve::UniformGeneratePrime;
 
 /// Calculate the distribution quality for a prime generator.
-pub fn uniform_distro<T>()
+pub fn check_distribution_quality<T>()
 where
     T: Integer + Copy + Bounded + Constants + RandomBits + RandomMod + UniformGeneratePrime<T>,
 {

@@ -279,7 +279,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::stat_utils::uniform_distro;
+    use crate::stat_utils::check_distribution_quality;
 
     use crypto_bigint::{U1024, U128, U2048, U256, U512, U64};
     use rand::SeedableRng;
@@ -428,29 +428,29 @@ mod tests {
     }
 
     #[test_log::test]
-    fn uniform_distro_u64() {
-        uniform_distro::<U64>();
+    fn check_distribution_quality_u64() {
+        check_distribution_quality::<U64>();
     }
     #[test_log::test]
-    fn uniform_distro_u128() {
-        uniform_distro::<U128>();
+    fn check_distribution_quality_u128() {
+        check_distribution_quality::<U128>();
     }
     #[test_log::test]
-    fn uniform_distro_u256() {
-        uniform_distro::<U256>();
+    fn check_distribution_quality_u256() {
+        check_distribution_quality::<U256>();
     }
     #[test_log::test]
-    fn uniform_distro_u512() {
-        uniform_distro::<U512>();
-    }
-    #[cfg(feature = "tests-exhaustive")]
-    #[test_log::test]
-    fn uniform_distro_u1024() {
-        uniform_distro::<U1024>();
+    fn check_distribution_quality_u512() {
+        check_distribution_quality::<U512>();
     }
     #[cfg(feature = "tests-exhaustive")]
     #[test_log::test]
-    fn uniform_distro_u2048() {
-        uniform_distro::<U2048>();
+    fn check_distribution_quality_u1024() {
+        check_distribution_quality::<U1024>();
+    }
+    #[cfg(feature = "tests-exhaustive")]
+    #[test_log::test]
+    fn check_distribution_quality_u2048() {
+        check_distribution_quality::<U2048>();
     }
 }
