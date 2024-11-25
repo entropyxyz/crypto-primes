@@ -10,6 +10,29 @@ use tracing::trace;
 
 use crate::is_prime;
 /// Generate primes using a pseudo-uniform distribution.
+///
+/// The algorithm used in this module is described in two papers:
+/// 1. ["Fast Generation of Prime Numbers on Portable Devices: An
+///    Update"](https://marcjoye.github.io/papers/JP06pgen.pdf), aka JP06
+/// 2. ["Close to Uniform Prime Number Generation With Fewer Random
+///    Bits"](https://eprint.iacr.org/2011/481.pdf)
+///
+/// The second paper builds and improves on the first.
+///
+/// The motivation for the papers and algorithms is to provide a close to uniform prime generation
+/// algorithm that is at the same time performant and consumes as little randomness as possible. The
+/// yardstick here is searching for primes by random sampling (which is trivially uniform, given a
+/// uniform CSPRNG). Compared to the main algorithm provided by this crate (known in literature as
+/// "PRIMEINC"), this algorithm is much slower. Depending on the bitsize and parameter selection,
+/// it's between 1.3 to 5x slower.
+///
+/// The main use case for this prime generator is when a large number of primes need to be generated
+/// using the same sieve and/or on platforms with limited amounts of available entropy (e.g. IoT
+/// devices, TEEs etc).
+///
+/// The available API is not complete; notably this generator samples primes in the whole bitspace
+/// of the Uint and does not support searching for safe primes. PRs welcome!
+///
 /// Actors in this play are:
 ///     n: the number of bits in the prime we're looking for, e.g. 512
 ///     l: the number of top bits that are re-sampled on every iteration, e.g. 64
@@ -23,12 +46,12 @@ pub trait UniformSieve<T>
 where
     T: Integer + Constants + Bounded + RandomBits + RandomMod + Copy,
 {
-    /// Returns a random prime using the provided RNG.
+    /// Returns a random prime using the provided CSPRNG.
     ///
     /// See [`is_prime_with_rng`][crate::presets::is_prime_with_rng] for details about the performed checks.
     fn generate_prime_with_rng(rng: &mut impl CryptoRngCore) -> T;
 
-    /// Returns a random prime using [`OsRng`] as the RNG.
+    /// Returns a random prime using [`OsRng`] as the CSPRNG.
     ///
     /// See [`is_prime_with_rng`][crate::presets::is_prime_with_rng] for details about the performed checks.
     #[cfg(feature = "default-rng")]
@@ -63,9 +86,9 @@ macro_rules! impl_generate_prime {
     };
 }
 
-// `uint type`, `m`, `λ(m)`, `a_max`
+// Macro arguments: `uint type`, `m`, `λ(m)`, `a_max`
 impl_generate_prime! {
-    // Here `l` is 32, i.e. 32/2, i.e. using a 32 bit `m` and a 16 bit `λ(m)`
+    // Here `l` is 32, i.e. 64/2, i.e. using a 32 bit `m` and a 16 bit `λ(m)`
     (U64,   "00000017592B1B49", "000000000000D890", "000000000AF6E233")
     ,
     // Here `l` is 64, i.e. 128/2, i.e. using a 64 bit `m`, a 32 bit `λ(m)`, resulting in an `a_max` that fits in 64 bits
@@ -94,7 +117,7 @@ impl_generate_prime! {
             "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000013682DE4C81E1A88DA9A9C674E3B34E1FEDD57D8A8F9F52AA39390FFE682B454EC328F9A1C455977E59489DE32175FEED2696B12E43100",
             "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000004AC6A9A539EF07EDCED266DC673757")
     ,
-    // Here `l` is 1024
+    // Here `l` is 1024. Again, this is a rather surprising result, but the speedup is real and consistent compared to 64, 128, 256, 512 and 1024 bits
     (U4096, "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000029D24EFCB456540B7F56DF456A5AE69A265A164BCA43EE254756A73D5602520588A9C2E7B352D4FE5E15AB0103EA4E9CD3819FE76A97031810A118EBF9B15F349A8DE319B7863465A2BC14B24EF6E81D5C8F2540C0DC75C4E5C65CBB49CC01AEA791972EEBB02CB82BE2AF30AACDD7A5615FE5690448CC4E1E7DF448D1DBCC308E22EF51E01BAFD7F98B9175542931645CCE165681D0164466A24EEA419693B9CDADBE07BC3E11881ECE8FD6E60E96B1C5E026DFD241882CC74C66FEDC34509A0E8BB3184FFD4AB5C5650652FC1AE4D3F09F145F8A0CA17A6DC945C63F68A2B84EC79CB99AB75C88A6AEA2B60452C0DDDDA4FEA54AEEF0465DEC92DD581819365FC29378F05AFCCEC8D6378BA416D79C94B6E548C06801700AFAD22ED70F297F9F962B2A888798DEF444DAE08C7C6C1451AA2915B794471B71725005C7ABAE35563F05D5400497C64219C7F84BE819AE3EF3392227572A7C86569B057E1CCC0E5D175E0880C50D621EED19E68ED72228624E1D7F33A060C5B987DCF18ACAD38D9",
             "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001E16878440322FD1A0A8949F895ADA13E884B2EA9EB0DB3320A87B4A9A5653D89D36C428CDABF68B6F86A69BDBCF709FAD8207D78607C99FBC822BF7E8941CAE4F15ECB065A7623FD58C3162F00CDA0C5583E0152D00",
             "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000061F0A4B463AE4066954ADFEF304499A3A0CD686F8DD5B809EC68A0C774374E6356DBA3A66D71E6511E5AEDC4E16FD63695812261AE39EA1813B3E1FF274B4B5DA00D8439FEF0C49D5582537CDBC876A8701358FFD5C24B1ABB27ABF926A97EEE22707ABE31B2EA950DD23732723322D95657CF7192F37D2F851E1211334783E8")
@@ -110,7 +133,6 @@ impl_generate_prime! {
 //  (b) Set k ← k + rU (mod m)
 //  (c) Go to Step 2
 // 4. Output k
-// TODO(dp): probably unify this with "algorithm2" yeah?
 #[inline(always)]
 fn jp06_unitgen<T>(rng: &mut impl CryptoRngCore, m: T, lambda_m: T) -> T
 where
@@ -153,7 +175,7 @@ where
 }
 
 // From https://eprint.iacr.org/2011/481.pdf, page 4:
-// Algorithm 2 More eﬃcient method
+// "Algorithm 2 More eﬃcient method"
 // 1:   b $← {1,…, m−1}
 // 2:   u ← (1−b^λ(m)) mod m
 // 3:   if u != 0 then
@@ -169,7 +191,7 @@ where
 // NOTE: Steps 1-7 are implemented in `jp06_unitgen`, where `b` is referred to as `k`.
 #[allow(unused)]
 #[inline(always)]
-fn algorithm2<T>(rng: &mut impl CryptoRngCore, b: T, m: T, a_max: &NonZero<T>) -> (T, u64)
+fn algorithm2<T>(rng: &mut impl CryptoRngCore, b: T, m: T, a_max: &NonZero<T>) -> T
 where
     T: Integer + Bounded + RandomBits + RandomMod + Copy,
 {
@@ -181,17 +203,14 @@ where
     }
 
     let mut p = a * m + b;
-    let mut primality_tests = 1;
     while !is_prime(&p) {
         a = T::random_bits(rng, a_max_bits);
         while a >= a_max {
             a = T::random_bits(rng, a_max_bits);
         }
         p = a * m + b;
-        primality_tests += 1;
     }
-    trace!("[algo2-b] {} bits. Needed {} primality tests", T::BITS, primality_tests);
-    (p, primality_tests)
+    p
 }
 
 // Calculates three constants, `m`, `λ(m)` and `a_max`, used in the uniform sieving algorithms.
@@ -264,76 +283,7 @@ mod tests {
     use crate::stat_utils::check_distribution_quality;
 
     use crypto_bigint::{U1024, U128, U2048, U256, U512, U64};
-    use rand::SeedableRng;
-    use rand_chacha::ChaCha8Rng;
-    use tracing::{debug, info};
-
-    #[ignore = "not an actual test"]
-    #[test_log::test]
-    fn debug_jp06() {
-        type T = U1024;
-        let mut rng = ChaCha8Rng::from_seed(*b"01234567890123456789012345678901");
-        // let hex_m = "00000017592B1B49";
-        // let hex_lambda_m = "000000000000D890";
-        let hex_m =
-        "00000000000000016CC3AC9DC18F442E3F73D34147E253920667D800DA63CE9FEA167C22335097E1B207A8BAE729F4AB07F1BA5062481BC1166E2E5A42FF2393A9D7A7F5A195FB3FA7318A51407B138E9C8C54557AD65B9080FF8DB0F7672097CBC0DBC6EDA3CF451C20ACF1D003D909D87DA7BDA10D2C4772F7EEF762520D17";
-        let hex_lambda_m =
-        "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000291A6B42D1C7D2A7184D13E36F65773BBEFB4FA7996101300D49F09962A361F00";
-        let m = T::from_be_hex(hex_m);
-        let lambda_m = T::from_be_hex(hex_lambda_m);
-
-        let mut count = 0u64;
-        let rep = 100;
-        let mut start = std::time::Instant::now();
-        loop {
-            let _unit = jp06_unitgen(&mut rng, m, lambda_m);
-            count += 1;
-            if count % rep == 0 {
-                info!("{rep} iters in {:?}", start.elapsed());
-                start = std::time::Instant::now();
-            }
-        }
-    }
-
-    #[ignore = "not an actual test"]
-    #[test_log::test]
-    fn debug_algo2() {
-        type T = U1024;
-        let mut rng = ChaCha8Rng::from_seed(*b"01234567890123456789012345678901");
-        let mut rng1 = ChaCha8Rng::from_seed(*b"01234567890123456789012345678901");
-        // U1024
-        let hex_m = "00000000000000016CC3AC9DC18F442E3F73D34147E253920667D800DA63CE9FEA167C22335097E1B207A8BAE729F4AB07F1BA5062481BC1166E2E5A42FF2393A9D7A7F5A195FB3FA7318A51407B138E9C8C54557AD65B9080FF8DB0F7672097CBC0DBC6EDA3CF451C20ACF1D003D909D87DA7BDA10D2C4772F7EEF762520D17";
-        let hex_lambda_m = "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000291A6B42D1C7D2A7184D13E36F65773BBEFB4FA7996101300D49F09962A361F00";
-        let a_max = T::from_be_hex("000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000B3AAAB7FFC52941B");
-        // U128
-        // let hex_m = "00000000000000341DD47F9F45C500AF";
-        // let hex_lambda_m = "0000000000000000000000001CA73570";
-        // let a_max = T::from_be_hex("000000000000000004E97D6751832168");
-        // U64
-        // let hex_m = "00000017592B1B49";
-        // let hex_lambda_m = "000000000000D890";
-        // let a_max = T::from_be_hex("000000000AF6E233");
-        let m = T::from_be_hex(hex_m);
-        let lambda_m = T::from_be_hex(hex_lambda_m);
-        let unit = jp06_unitgen(&mut rng, m, lambda_m);
-
-        let mut count = 0u64;
-        let a_max_nz = NonZero::new(a_max).expect("m is known, pre-calculated, non-zero, odd, larger than 1");
-        info!("T::BITS={}, a_max={a_max:?} ", T::BITS);
-        let mut tests_algo2 = 0;
-        let mut start = std::time::Instant::now();
-        loop {
-            let (a1, tests_a) = algorithm2(&mut rng1, unit, m, &a_max_nz);
-            debug!("algo2:\t{a1:?}, tests={tests_a}");
-            count += 1;
-            tests_algo2 += tests_a;
-            if count % 100 == 0 {
-                info!("{count} iters in {:?}", start.elapsed());
-                info!("algo2:\tprimality tests: {}", tests_algo2 / count);
-                start = std::time::Instant::now();
-            }
-        }
-    }
+    use tracing::info;
 
     #[test_log::test]
     fn generate_constants() {
@@ -384,7 +334,7 @@ mod tests {
     }
 
     #[test_log::test]
-    fn genprime() {
+    fn uniform_sieve_primes() {
         let p: U64 = U64::generate_prime();
         info!("64 bit prime={p:?}");
         assert!(is_prime(&p));
