@@ -1,5 +1,6 @@
 use alloc::{vec, vec::Vec};
 use crypto_bigint::{Bounded, Constants, Integer, NonZero, RandomBits, RandomMod};
+use rand_core::OsRng;
 use statrs::distribution::{ChiSquared, ContinuousCDF};
 use tracing::{debug, info};
 
@@ -25,8 +26,8 @@ where
         "Sampled {sample_count} {} bit primes. p={p_value}, chi_squared={chi_square_stat}",
         T::BITS
     );
-    assert!(p_value > 0.05, "Expected a p_value larger than 0.05, instead found {p_value}, failing to prove that the distribution is uniform.");
-    assert!(chi_square_stat < 16.92, "For p 0.05, the critical chi-square value is 16.92, instead we got {chi_square_stat}, failing the hypothesis that the distribution is uniform.");
+    assert!(p_value > 0.05, "Expected a p_value larger than 0.05, instead found {p_value}, failing to prove that the distribution is uniform. Histogram: {counts:?}");
+    assert!(chi_square_stat < 16.919, "For p 0.05, the critical chi-square value is 16.919, instead we got {chi_square_stat} (and p was {p_value}), failing the hypothesis that the distribution is uniform.");
 }
 
 // Count primes in each subinterval. Returns stats.
@@ -54,7 +55,7 @@ where
     T: Integer + Copy + Bounded + Constants + RandomBits + RandomMod + UniformSieve<T>,
 {
     (0..num_primes).fold(Vec::with_capacity(num_primes), |mut acc, _| {
-        acc.push(T::generate_prime());
+        acc.push(T::generate_prime_with_rng(&mut OsRng));
         acc
     })
 }
