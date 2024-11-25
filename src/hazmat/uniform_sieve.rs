@@ -40,7 +40,7 @@ use rand_core::CryptoRngCore;
 #[cfg(feature = "default-rng")]
 use rand_core::OsRng;
 
-use crate::is_prime;
+use crate::is_prime_with_rng;
 
 /// Prime search using a uniform sieve.
 pub trait UniformSieve<T>
@@ -204,7 +204,7 @@ where
     }
 
     let mut p = a * m + b;
-    while !is_prime(&p) {
+    while !is_prime_with_rng(rng, &p) {
         a = T::random_bits(rng, a_max_bits);
         while a >= a_max {
             a = T::random_bits(rng, a_max_bits);
