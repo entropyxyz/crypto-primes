@@ -1,5 +1,5 @@
 use crypto_bigint::{FixedInteger, NonZero, RandomBits, RandomMod};
-use crypto_primes::uniform_sieve::UniformSieve;
+use crypto_primes::hazmat::UniformSieve;
 use statrs::distribution::{ChiSquared, ContinuousCDF};
 
 /// Chi-squared statistical test for some collection of primes.

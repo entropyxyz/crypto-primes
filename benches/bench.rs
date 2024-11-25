@@ -40,7 +40,7 @@ fn make_presieved_num<const L: usize>(rng: &mut impl CryptoRngCore) -> Odd<Uint<
 }
 
 fn bench_uniform_sieve(c: &mut Criterion) {
-    use crypto_primes::uniform_sieve::UniformSieve;
+    use crypto_primes::hazmat::UniformSieve;
     let mut group = c.benchmark_group("Uniform sieve");
 
     let mut rng = make_rng();

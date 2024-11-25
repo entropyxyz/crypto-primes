@@ -35,6 +35,3 @@ pub use presets::{par_generate_prime_with_rng, par_generate_safe_prime_with_rng}
 #[cfg(test)]
 /// Statistical helpers.
 pub mod stat_utils;
-
-/// TODO docs
-pub mod uniform_sieve;

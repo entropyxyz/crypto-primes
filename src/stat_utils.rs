@@ -3,9 +3,10 @@ use crypto_bigint::{Bounded, Constants, Integer, NonZero, RandomBits, RandomMod}
 use statrs::distribution::{ChiSquared, ContinuousCDF};
 use tracing::{debug, info};
 
-use crate::uniform_sieve::UniformSieve;
+use crate::hazmat::UniformSieve;
 
-/// Calculate the distribution quality for a prime generator.
+/// Calculate the distribution quality for a prime generator. In this example the we work with the
+/// [`UniformSieve`].
 pub fn check_distribution_quality<T>()
 where
     T: Integer + Copy + Bounded + Constants + RandomBits + RandomMod + UniformSieve<T>,
