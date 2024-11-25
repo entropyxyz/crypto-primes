@@ -339,31 +339,31 @@ mod tests {
     fn uniform_sieve_primes() {
         let p: U64 = U64::generate_prime();
         info!("64 bit prime={p:?}");
-        assert!(is_prime(&p));
+        assert!(is_prime_with_rng(&mut OsRng, &p));
 
         let p = U128::generate_prime();
         info!("128 bit prime={p:?}");
-        assert!(is_prime(&p));
+        assert!(is_prime_with_rng(&mut OsRng, &p));
 
         let p = U256::generate_prime();
         info!("256 bit prime={p:?}");
-        assert!(is_prime(&p));
+        assert!(is_prime_with_rng(&mut OsRng, &p));
 
         let p = U512::generate_prime();
         info!("512 bit prime={p:?}");
-        assert!(is_prime(&p));
+        assert!(is_prime_with_rng(&mut OsRng, &p));
 
         let p = U1024::generate_prime();
         info!("1024 bit prime={p:?}");
-        assert!(is_prime(&p));
+        assert!(is_prime_with_rng(&mut OsRng, &p));
 
         let p = U2048::generate_prime();
         info!("2048 bit prime={p:?}");
-        assert!(is_prime(&p));
+        assert!(is_prime_with_rng(&mut OsRng, &p));
         // // This is very slow
         // let p = U4096::generate_prime();
         // info!("4096 bit prime={p:?}");
-        // assert!(is_prime(&p));
+        // assert!(is_prime_with_rng(&mut OsRng, &p));
     }
 
     #[test_log::test]
@@ -378,6 +378,7 @@ mod tests {
     fn check_distribution_quality_u256() {
         check_distribution_quality::<U256>();
     }
+    #[cfg(feature = "tests-exhaustive")]
     #[test_log::test]
     fn check_distribution_quality_u512() {
         check_distribution_quality::<U512>();

@@ -25,7 +25,7 @@ where
         "Sampled {sample_count} {} bit primes. p={p_value}, chi_squared={chi_square_stat}",
         T::BITS
     );
-    assert!(p_value > 0.05);
+    assert!(p_value > 0.05, "Expected a p_value larger than 0.05, instead found {p_value}, failing to prove that the distribution is uniform.");
     assert!(chi_square_stat < 16.92, "For p 0.05, the critical chi-square value is 16.92, instead we got {chi_square_stat}, failing the hypothesis that the distribution is uniform.");
 }
 
