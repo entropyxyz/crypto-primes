@@ -18,6 +18,7 @@ pub use miller_rabin::MillerRabin;
 
 pub use sieve::{random_odd_integer, Sieve};
 pub use uniform_sieve::UniformSieve;
+
 /// Possible results of various primality tests.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Primality {
