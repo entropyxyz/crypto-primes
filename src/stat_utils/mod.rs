@@ -3,14 +3,14 @@ use crypto_bigint::{Bounded, Constants, Integer, NonZero, RandomBits, RandomMod}
 use statrs::distribution::{ChiSquared, ContinuousCDF};
 use tracing::{debug, info};
 
-use crate::uniform_sieve::UniformGeneratePrime;
+use crate::uniform_sieve::UniformSieve;
 
 /// Calculate the distribution quality for a prime generator.
 pub fn check_distribution_quality<T>()
 where
-    T: Integer + Copy + Bounded + Constants + RandomBits + RandomMod + UniformGeneratePrime<T>,
+    T: Integer + Copy + Bounded + Constants + RandomBits + RandomMod + UniformSieve<T>,
 {
-    let sample_count = 500;
+    let sample_count = 1000;
     let num_intervals = 10;
     let expected_count = sample_count as f64 / num_intervals as f64;
 
@@ -50,7 +50,7 @@ where
 // Collect primes
 fn collect_primes<T>(num_primes: usize) -> Vec<T>
 where
-    T: Integer + Copy + Bounded + Constants + RandomBits + RandomMod + UniformGeneratePrime<T>,
+    T: Integer + Copy + Bounded + Constants + RandomBits + RandomMod + UniformSieve<T>,
 {
     (0..num_primes).fold(Vec::with_capacity(num_primes), |mut acc, _| {
         acc.push(T::generate_prime());

@@ -1,5 +1,5 @@
 use crypto_bigint::{FixedInteger, NonZero, RandomBits, RandomMod};
-use crypto_primes::uniform_sieve::UniformGeneratePrime;
+use crypto_primes::uniform_sieve::UniformSieve;
 use statrs::distribution::{ChiSquared, ContinuousCDF};
 
 /// Chi-squared statistical test for some collection of primes.
@@ -33,7 +33,7 @@ fn main() {
 fn distribution<T>(num_primes: usize, intervals: usize, end: T) -> (Vec<u64>, std::time::Duration)
 where
     T: FixedInteger + RandomBits + RandomMod,
-    T: UniformGeneratePrime<T>,
+    T: UniformSieve<T>,
 {
     let now = std::time::Instant::now();
     let primes: Vec<T> = collect_primes(num_primes);
@@ -64,7 +64,7 @@ where
 fn collect_primes<T>(num_primes: usize) -> Vec<T>
 where
     T: FixedInteger + RandomBits + RandomMod,
-    T: UniformGeneratePrime<T>,
+    T: UniformSieve<T>,
 {
     (0..num_primes).fold(Vec::with_capacity(num_primes), |mut acc, _| {
         acc.push(T::generate_prime());
