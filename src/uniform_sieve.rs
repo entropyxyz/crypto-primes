@@ -1,14 +1,3 @@
-use crypto_bigint::modular::Retrieve;
-use crypto_bigint::{
-    Bounded, Constants, FixedInteger, Integer, Monty, NonZero, Odd, PowBoundedExp, RandomBits, RandomMod, U1024, U128,
-    U2048, U256, U4096, U512, U64,
-};
-use rand_core::CryptoRngCore;
-#[cfg(feature = "default-rng")]
-use rand_core::OsRng;
-use tracing::trace;
-
-use crate::is_prime;
 /// Generate primes using a pseudo-uniform distribution.
 ///
 /// The algorithm used in this module is described in two papers:
@@ -36,12 +25,24 @@ use crate::is_prime;
 /// Actors in this play are:
 ///     n: the number of bits in the prime we're looking for, e.g. 512
 ///     l: the number of top bits that are re-sampled on every iteration, e.g. 64
-///     m: a product of all small odd primes up to a bound ß chosen such that the bit size of m is n - l, e.g. ß = 512 - 64
-///     b: picked uniformly at random among integers less than m and coprime to m (use unit generation algorithm from JP06)
-///     λ: Carmichael's function: the LCM of the λ(p)s for each prime used to compute m. Each λ(p) is simply p-1 because each prime appears once and we exclude 2.
+///     m: a product of all small odd primes up to a bound ß chosen such that the bit size of m is
+///     `n - l`, e.g. ß = 512 - 64
+///     b: picked uniformly at random among integers less than m and coprime to m (use unit
+///     generation algorithm from JP06)
+///     λ: Carmichael's function: the LCM of the λ(p)s for each prime used to compute m. Each λ(p)
+///     is simply p-1 because each prime appears once and we exclude 2.
+use crypto_bigint::modular::Retrieve;
+use crypto_bigint::{
+    Bounded, Constants, FixedInteger, Integer, Monty, NonZero, Odd, PowBoundedExp, RandomBits, RandomMod, U1024, U128,
+    U2048, U256, U4096, U512, U64,
+};
+use rand_core::CryptoRngCore;
+#[cfg(feature = "default-rng")]
+use rand_core::OsRng;
 
-// TODO(dp): Proper docs here, explaining when this is useful and why, discussion about the distribution quality etc.
-// TODO(dp): The `l` value isn't used anywhere but will be necessary to include so we can look for primes of the desired bit size.
+use crate::is_prime;
+
+/// Prime search using a uniform sieve.
 pub trait UniformSieve<T>
 where
     T: Integer + Constants + Bounded + RandomBits + RandomMod + Copy,
@@ -73,7 +74,7 @@ macro_rules! impl_generate_prime {
                     const A_MAX: $name = $name::from_be_hex($a_max);
                     let unit = jp06_unitgen(rng, M, LAMBDA_M);
                     let a_max = NonZero::new(A_MAX).expect("A_MAX is pre-calculated and known-good");
-                    algorithm2(rng, unit, M, &a_max).0
+                    algorithm2(rng, unit, M, &a_max)
                 }
 
                 #[cfg(feature = "default-rng")]
@@ -225,6 +226,7 @@ where
     T: FixedInteger + crypto_bigint::Gcd<Output = T>,
 {
     use crate::hazmat::precomputed::SMALL_PRIMES;
+    use tracing::trace;
 
     let mut m = T::ONE;
     let mut lambda_m = T::ONE;
