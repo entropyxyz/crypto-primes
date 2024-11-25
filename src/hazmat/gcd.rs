@@ -42,7 +42,7 @@ pub(crate) fn gcd_vartime<T: Integer>(n: &T, m: NonZero<Word>) -> Word {
 // As GCD is commutative `gcd(n, m) = gcd(m, n)` those identities still apply if the operands are swapped.
 //
 // [1]: https://en.wikipedia.org/wiki/Binary_GCD_algorithm
-fn binary_gcd(mut n: Word, mut m: Word) -> Word {
+pub(crate) fn binary_gcd(mut n: Word, mut m: Word) -> Word {
     // Using identities 2 and 3:
     // gcd(2ⁱn, 2ʲm) = 2ᵏ gcd(n, m) with n, m odd and k = min(i, j)
     // 2ᵏ is the greatest power of two that divides both 2ⁱn and 2ʲm

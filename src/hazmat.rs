@@ -5,16 +5,19 @@ mod gcd;
 mod jacobi;
 mod lucas;
 mod miller_rabin;
-mod precomputed;
+pub(crate) mod precomputed;
 #[cfg(test)]
 pub(crate) mod primes;
 #[cfg(test)]
 pub(crate) mod pseudoprimes;
 mod sieve;
+mod uniform_sieve;
 
 pub use lucas::{lucas_test, AStarBase, BruteForceBase, LucasBase, LucasCheck, SelfridgeBase};
 pub use miller_rabin::MillerRabin;
+
 pub use sieve::{random_odd_integer, Sieve};
+pub use uniform_sieve::UniformSieve;
 
 /// Possible results of various primality tests.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]

@@ -18,8 +18,10 @@ openssl = { version = "0.10.39", optional = true, features = ["vendored"] }
 rug = { version = "1.26", default-features = false, features = ["integer"], optional = true }
 glass_pumpkin = { version = "1", optional = true }
 rayon = { version = "1", optional = true }
+tracing = { version = "0.1", default-features = false }
 
 [dev-dependencies]
+rand = "0.8"
 # need `crypto-bigint` with `alloc` to test `BoxedUint`
 crypto-bigint = { version = "0.6.0-rc.6", default-features = false, features = ["alloc"] }
 rand_chacha = "0.3"
@@ -30,6 +32,8 @@ num-integer = "0.1"
 proptest = "1"
 num-prime = "0.4.3"
 num_cpus = "1.16"
+test-log = { version = "0.2.16", default-features = false, features = ["trace", "color"] }
+statrs = "0.17.1"
 
 [features]
 default = ["default-rng"]
@@ -49,3 +53,10 @@ rustdoc-args = ["--cfg", "docsrs"]
 [[bench]]
 name = "bench"
 harness = false
+
+[profile.bench]
+lto = true
+codegen-units = 1
+
+[[example]]
+name = "distribution"
