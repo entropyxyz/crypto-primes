@@ -220,6 +220,7 @@ where
 // our case, each λ(p) is simply p-1 because each prime appears once (and we exclude 2).
 // `a_max` is the upper bound on the part of a prime candidate that is re-randomized on each iteration and set to 2^n/m -1
 // Find constant values for common `T`s sized from 64 to 4096 in the test `generate_constants`.
+// TODO: make const one fine day (i.e. when `const impl From<Word>` is stable)
 #[cfg(test)]
 fn calculate_constants<T>(a_max_bits: u32) -> (T, T, T)
 where
