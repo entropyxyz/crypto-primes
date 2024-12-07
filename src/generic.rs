@@ -40,13 +40,13 @@ where
 ///
 /// If `sieve_factory` signals that no more results can be created, returns `None`.
 #[cfg(feature = "multicore")]
-pub fn par_sieve_and_find<R, S, T, F>(rng: &mut R, sieve_factory: S, predicate: F, threadcount: usize) -> Option<T>
+pub fn par_sieve_and_find<R, S, F>(rng: &mut R, sieve_factory: S, predicate: F, threadcount: usize) -> Option<S::Item>
 where
     R: CryptoRngCore + Clone + Send + Sync,
-    T: Send,
-    S: Send + Sync + SieveFactory<T>,
+    S: Send + Sync + SieveFactory,
     S::Sieve: Send,
-    F: Sync + Fn(&mut R, &T) -> bool,
+    S::Item: Send,
+    F: Sync + Fn(&mut R, &S::Item) -> bool,
 {
     let threadpool = rayon::ThreadPoolBuilder::new()
         .num_threads(threadcount)
@@ -86,7 +86,7 @@ impl<'a, R: CryptoRngCore, S: SieveFactory> SieveIterator<'a, R, S> {
     }
 }
 
-impl<'a, R: CryptoRngCore, S: SieveFactory> Iterator for SieveIterator<'a, R, S> {
+impl<R: CryptoRngCore, S: SieveFactory> Iterator for SieveIterator<'_, R, S> {
     type Item = S::Item;
 
     fn next(&mut self) -> Option<Self::Item> {
