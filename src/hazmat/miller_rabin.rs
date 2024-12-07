@@ -147,7 +147,7 @@ mod tests {
     use num_prime::nt_funcs::is_prime64;
 
     use super::MillerRabin;
-    use crate::hazmat::{primes, pseudoprimes, random_odd_integer, Sieve};
+    use crate::hazmat::{primes, pseudoprimes, random_odd_integer, SmallPrimesSieve};
 
     #[test]
     fn miller_rabin_derived_traits() {
@@ -197,7 +197,7 @@ mod tests {
     fn trivial() {
         let mut rng = ChaCha8Rng::from_seed(*b"01234567890123456789012345678901");
         let start = random_odd_integer::<U1024>(&mut rng, NonZero::new(1024).unwrap());
-        for num in Sieve::new(start.get(), NonZero::new(1024).unwrap(), false).take(10) {
+        for num in SmallPrimesSieve::new(start.get(), NonZero::new(1024).unwrap(), false).take(10) {
             let mr = MillerRabin::new(Odd::new(num).unwrap());
 
             // Trivial tests, must always be true.

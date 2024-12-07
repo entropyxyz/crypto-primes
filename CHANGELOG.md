@@ -6,10 +6,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Changed
+
+- Renamed `Sieve` to `SmallPrimesSieve`. ([#64])
+
+
 ### Added
+
 - Parallel prime finding methods and a "multicore" feature ([#60])
+- Generalized sieving: `SieveFactory` trait, `SieveIterator`, and the convenience functions `sieve_and_find()` and `par_sieve_and_find()`. ([#64])
+
 
 [#60]: https://github.com/entropyxyz/crypto-primes/pull/60
+[#64]: https://github.com/entropyxyz/crypto-primes/pull/64
+
 
 ## [0.6.0-pre.2] - 2024-10-18
 
