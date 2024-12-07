@@ -4,9 +4,12 @@ use rand_core::CryptoRngCore;
 use crate::{generate_prime_with_rng, generate_safe_prime_with_rng, is_prime_with_rng, is_safe_prime_with_rng};
 
 /// A type producing sieves for random prime generation.
-pub trait SieveFactory<T> {
+pub trait SieveFactory {
+    /// The type of items returning by the sieves.
+    type Item;
+
     /// The resulting sieve.
-    type Sieve: Iterator<Item = T>;
+    type Sieve: Iterator<Item = Self::Item>;
 
     /// Makes a sieve given an RNG and the previous exhausted sieve (if any).
     ///

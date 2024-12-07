@@ -8,9 +8,13 @@ use crate::SieveFactory;
 /// Sieves through the results of `sieve_factory` and returns the first item for which `predicate` is `true`.
 ///
 /// If `sieve_factory` signals that no more results can be created, returns `None`.
-pub fn sieve_and_find<R, S, T>(rng: &mut R, sieve_factory: S, predicate: impl Fn(&mut R, &T) -> bool) -> Option<T>
+pub fn sieve_and_find<R, S>(
+    rng: &mut R,
+    sieve_factory: S,
+    predicate: impl Fn(&mut R, &S::Item) -> bool,
+) -> Option<S::Item>
 where
-    S: SieveFactory<T>,
+    S: SieveFactory,
     R: CryptoRngCore,
 {
     // We could use `SieveIterator` here, but it requires cloning the `rng`.
@@ -63,13 +67,13 @@ where
 /// A structure that chains the creation of sieves, returning the results from one until it is exhausted,
 /// and then creating a new one.
 #[derive(Debug)]
-pub struct SieveIterator<'a, R: CryptoRngCore, T, S: SieveFactory<T>> {
+pub struct SieveIterator<'a, R: CryptoRngCore, S: SieveFactory> {
     sieve_factory: S,
     sieve: S::Sieve,
     rng: &'a mut R,
 }
 
-impl<'a, R: CryptoRngCore, T, S: SieveFactory<T>> SieveIterator<'a, R, T, S> {
+impl<'a, R: CryptoRngCore, S: SieveFactory> SieveIterator<'a, R, S> {
     /// Creates a new chained iterator producing results from sieves returned from `sieve_factory`.
     pub fn new(rng: &'a mut R, sieve_factory: S) -> Option<Self> {
         let mut sieve_factory = sieve_factory;
@@ -82,8 +86,8 @@ impl<'a, R: CryptoRngCore, T, S: SieveFactory<T>> SieveIterator<'a, R, T, S> {
     }
 }
 
-impl<'a, R: CryptoRngCore, T, S: SieveFactory<T>> Iterator for SieveIterator<'a, R, T, S> {
-    type Item = T;
+impl<'a, R: CryptoRngCore, S: SieveFactory> Iterator for SieveIterator<'a, R, S> {
+    type Item = S::Item;
 
     fn next(&mut self) -> Option<Self::Item> {
         loop {
@@ -113,7 +117,8 @@ mod tests {
             count: usize,
         }
 
-        impl SieveFactory<usize> for TestSieveFactory {
+        impl SieveFactory for TestSieveFactory {
+            type Item = usize;
             type Sieve = core::ops::Range<usize>;
 
             fn make_sieve(

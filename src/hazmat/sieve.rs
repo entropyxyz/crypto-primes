@@ -2,6 +2,7 @@
 //! before proceeding with slower tests.
 
 use alloc::{vec, vec::Vec};
+use core::marker::PhantomData;
 use core::num::{NonZero, NonZeroU32};
 
 use crypto_bigint::{Integer, Odd, RandomBits};
@@ -247,12 +248,13 @@ impl<T: Integer> Iterator for SmallPrimesSieve<T> {
 
 /// A sieve returning numbers that are not multiples of a set of small factors.
 #[derive(Debug, Clone, Copy)]
-pub struct SmallPrimesSieveFactory {
+pub struct SmallPrimesSieveFactory<T> {
     max_bit_length: NonZeroU32,
     safe_primes: bool,
+    phantom: PhantomData<T>,
 }
 
-impl SmallPrimesSieveFactory {
+impl<T: Integer + RandomBits> SmallPrimesSieveFactory<T> {
     fn new_impl(max_bit_length: u32, safe_primes: bool) -> Self {
         if !safe_primes && max_bit_length < 2 {
             panic!("`bit_length` must be 2 or greater.");
@@ -264,6 +266,7 @@ impl SmallPrimesSieveFactory {
         Self {
             max_bit_length,
             safe_primes,
+            phantom: PhantomData,
         }
     }
 
@@ -280,7 +283,8 @@ impl SmallPrimesSieveFactory {
     }
 }
 
-impl<T: Integer + RandomBits> SieveFactory<T> for SmallPrimesSieveFactory {
+impl<T: Integer + RandomBits> SieveFactory for SmallPrimesSieveFactory<T> {
+    type Item = T;
     type Sieve = SmallPrimesSieve<T>;
     fn make_sieve(
         &mut self,
@@ -446,12 +450,12 @@ mod tests {
     #[test]
     #[should_panic(expected = "`bit_length` must be 2 or greater")]
     fn too_few_bits_regular_primes() {
-        let _fac = SmallPrimesSieveFactory::new(1);
+        let _fac = SmallPrimesSieveFactory::<U64>::new(1);
     }
 
     #[test]
     #[should_panic(expected = "`bit_length` must be 3 or greater")]
     fn too_few_bits_safe_primes() {
-        let _fac = SmallPrimesSieveFactory::new_safe_primes(2);
+        let _fac = SmallPrimesSieveFactory::<U64>::new_safe_primes(2);
     }
 }
