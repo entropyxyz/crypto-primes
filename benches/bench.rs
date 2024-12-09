@@ -11,10 +11,14 @@ use rug::{integer::Order, Integer as GmpInteger};
 #[cfg(feature = "tests-openssl")]
 use openssl::bn::BigNum;
 
+#[cfg(feature = "multicore")]
+use rand_core::RngCore;
+
 use crypto_primes::{
     generate_prime_with_rng, generate_safe_prime_with_rng,
     hazmat::{
-        lucas_test, random_odd_integer, AStarBase, BruteForceBase, LucasCheck, MillerRabin, SelfridgeBase, Sieve,
+        lucas_test, random_odd_integer, AStarBase, BruteForceBase, LucasCheck, MillerRabin, SelfridgeBase,
+        SmallPrimesSieve,
     },
     is_prime_with_rng, is_safe_prime_with_rng,
 };
@@ -25,13 +29,20 @@ fn make_rng() -> ChaCha8Rng {
     ChaCha8Rng::from_seed(*b"01234567890123456789012345678901")
 }
 
+#[cfg(feature = "multicore")]
+fn make_random_rng() -> ChaCha8Rng {
+    let mut seed = <ChaCha8Rng as SeedableRng>::Seed::default();
+    OsRng.fill_bytes(&mut seed);
+    ChaCha8Rng::from_seed(seed)
+}
+
 fn random_odd_uint<T: RandomBits + Integer>(rng: &mut impl CryptoRngCore, bit_length: u32) -> Odd<T> {
     random_odd_integer::<T>(rng, NonZero::new(bit_length).unwrap())
 }
 
-fn make_sieve<const L: usize>(rng: &mut impl CryptoRngCore) -> Sieve<Uint<L>> {
+fn make_sieve<const L: usize>(rng: &mut impl CryptoRngCore) -> SmallPrimesSieve<Uint<L>> {
     let start = random_odd_uint::<Uint<L>>(rng, Uint::<L>::BITS);
-    Sieve::new(start.get(), NonZero::new(Uint::<L>::BITS).unwrap(), false)
+    SmallPrimesSieve::new(start.get(), NonZero::new(Uint::<L>::BITS).unwrap(), false)
 }
 
 fn make_presieved_num<const L: usize>(rng: &mut impl CryptoRngCore) -> Odd<Uint<L>> {
@@ -49,7 +60,7 @@ fn bench_sieve(c: &mut Criterion) {
     group.bench_function("(U128) creation", |b| {
         b.iter_batched(
             || random_odd_uint::<U128>(&mut OsRng, 128),
-            |start| Sieve::new(start.get(), NonZero::new(128).unwrap(), false),
+            |start| SmallPrimesSieve::new(start.get(), NonZero::new(128).unwrap(), false),
             BatchSize::SmallInput,
         )
     });
@@ -70,7 +81,7 @@ fn bench_sieve(c: &mut Criterion) {
     group.bench_function("(U1024) creation", |b| {
         b.iter_batched(
             || random_odd_uint::<U1024>(&mut OsRng, 1024),
-            |start| Sieve::new(start.get(), NonZero::new(1024).unwrap(), false),
+            |start| SmallPrimesSieve::new(start.get(), NonZero::new(1024).unwrap(), false),
             BatchSize::SmallInput,
         )
     });
@@ -282,38 +293,58 @@ fn bench_presets(c: &mut Criterion) {
 #[cfg(feature = "multicore")]
 fn bench_multicore_presets(c: &mut Criterion) {
     let mut group = c.benchmark_group("Presets (multicore)");
-    let mut rng = make_rng();
+
     group.bench_function("(U128) Random prime", |b| {
-        b.iter(|| par_generate_prime_with_rng::<U128>(&mut rng, 128, num_cpus::get()))
+        b.iter_batched(
+            make_random_rng,
+            |mut rng| par_generate_prime_with_rng::<U128>(&mut rng, 128, num_cpus::get()),
+            BatchSize::SmallInput,
+        )
     });
 
-    let mut rng = make_rng();
     group.bench_function("(U1024) Random prime", |b| {
-        b.iter(|| par_generate_prime_with_rng::<U1024>(&mut rng, 1024, num_cpus::get()))
+        b.iter_batched(
+            make_random_rng,
+            |mut rng| par_generate_prime_with_rng::<U1024>(&mut rng, 1024, num_cpus::get()),
+            BatchSize::SmallInput,
+        )
     });
 
-    let mut rng = make_rng();
     group.bench_function("(U128) Random safe prime", |b| {
-        b.iter(|| par_generate_safe_prime_with_rng::<U128>(&mut rng, 128, num_cpus::get()))
+        b.iter_batched(
+            make_random_rng,
+            |mut rng| par_generate_safe_prime_with_rng::<U128>(&mut rng, 128, num_cpus::get()),
+            BatchSize::SmallInput,
+        )
     });
 
     group.sample_size(20);
-    let mut rng = make_rng();
     group.bench_function("(U1024) Random safe prime", |b| {
-        b.iter(|| par_generate_safe_prime_with_rng::<U1024>(&mut rng, 1024, num_cpus::get()))
+        b.iter_batched(
+            make_random_rng,
+            |mut rng| par_generate_safe_prime_with_rng::<U1024>(&mut rng, 1024, num_cpus::get()),
+            BatchSize::SmallInput,
+        )
     });
 
-    let mut rng = make_rng();
     group.bench_function("(Boxed128) Random safe prime", |b| {
-        b.iter(|| par_generate_safe_prime_with_rng::<BoxedUint>(&mut rng, 128, num_cpus::get()))
+        b.iter_batched(
+            make_random_rng,
+            |mut rng| par_generate_safe_prime_with_rng::<BoxedUint>(&mut rng, 128, num_cpus::get()),
+            BatchSize::SmallInput,
+        )
     });
 
     group.sample_size(20);
-    let mut rng = make_rng();
     group.bench_function("(Boxed1024) Random safe prime", |b| {
-        b.iter(|| par_generate_safe_prime_with_rng::<BoxedUint>(&mut rng, 1024, num_cpus::get()))
+        b.iter_batched(
+            make_random_rng,
+            |mut rng| par_generate_safe_prime_with_rng::<BoxedUint>(&mut rng, 1024, num_cpus::get()),
+            BatchSize::SmallInput,
+        )
     });
 }
+
 #[cfg(not(feature = "multicore"))]
 fn bench_multicore_presets(_c: &mut Criterion) {}
 
@@ -419,7 +450,7 @@ fn bench_glass_pumpkin(c: &mut Criterion) {
     fn prime_like_gp(bit_length: u32, rng: &mut impl CryptoRngCore) -> BoxedUint {
         loop {
             let start = random_odd_integer::<BoxedUint>(rng, NonZero::new(bit_length).unwrap()).get();
-            let sieve = Sieve::new(start, NonZero::new(bit_length).unwrap(), false);
+            let sieve = SmallPrimesSieve::new(start, NonZero::new(bit_length).unwrap(), false);
             for num in sieve {
                 let odd_num = Odd::new(num.clone()).unwrap();
 
@@ -443,7 +474,7 @@ fn bench_glass_pumpkin(c: &mut Criterion) {
     fn safe_prime_like_gp(bit_length: u32, rng: &mut impl CryptoRngCore) -> BoxedUint {
         loop {
             let start = random_odd_integer::<BoxedUint>(rng, NonZero::new(bit_length).unwrap()).get();
-            let sieve = Sieve::new(start, NonZero::new(bit_length).unwrap(), true);
+            let sieve = SmallPrimesSieve::new(start, NonZero::new(bit_length).unwrap(), true);
             for num in sieve {
                 let odd_num = Odd::new(num.clone()).unwrap();
 

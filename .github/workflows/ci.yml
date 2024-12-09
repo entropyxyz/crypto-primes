@@ -22,7 +22,7 @@ jobs:
         target:
           - wasm32-unknown-unknown
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
@@ -31,11 +31,11 @@ jobs:
           override: true
       - run: cargo build --target ${{ matrix.target }} --release --no-default-features
 
-  codecov:
+  test-and-coverage:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions-rs/toolchain@v1
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@v1
         with:
           profile: minimal
           toolchain: stable
@@ -44,37 +44,13 @@ jobs:
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@cargo-llvm-cov
       - name: Generate code coverage
-        run: cargo llvm-cov --workspace --lcov --output-path lcov.info
+        run: cargo llvm-cov --features default-rng,multicore --workspace --lcov --output-path lcov.info
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: lcov.info
           fail_ci_if_error: true
-
-  tests:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        include:
-          # 32-bit Linux
-          - target: i686-unknown-linux-gnu
-            rust: stable
-            deps: sudo apt update && sudo apt install gcc-multilib
-
-          # 64-bit Linux
-          - target: x86_64-unknown-linux-gnu
-            rust: stable
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: ${{ matrix.rust }}
-          target: ${{ matrix.target }}
-          profile: minimal
-          override: true
-      - run: ${{ matrix.deps }}
-      - run: cargo test --target ${{ matrix.target }}
 
   slow-tests:
     runs-on: ubuntu-latest
@@ -91,7 +67,7 @@ jobs:
             rust: stable
             deps: sudo apt update && sudo apt install gcc-multilib
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: ${{ matrix.rust }}
@@ -99,15 +75,15 @@ jobs:
           profile: minimal
           override: true
       - run: ${{ matrix.deps }}
-      - run: cargo test --target ${{ matrix.target }} --release --features tests-all
+      - run: cargo test --target ${{ matrix.target }} --release --all-features
 
   clippy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: actions-rs/toolchain@v1
         with:
-          toolchain: stable
+          toolchain: 1.81.0 # MSRV
           components: clippy
           override: true
           profile: minimal
@@ -116,7 +92,7 @@ jobs:
   rustfmt:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
@@ -128,21 +104,10 @@ jobs:
           command: fmt
           args: --all -- --check
 
-  # just building them to check that they're up to date with the API
-  build-benchmarks:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: 1.81.0
-          profile: minimal
-      - run: cargo build --all-features --benches
-
   cargo-careful:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: nightly

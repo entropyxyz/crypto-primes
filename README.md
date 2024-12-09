@@ -54,8 +54,8 @@ The following features are available:
 [docs-image]: https://docs.rs/crypto-primes/badge.svg
 [docs-link]: https://docs.rs/crypto-primes/
 [license-image]: https://img.shields.io/crates/l/crypto-primes
-[build-image]: https://github.com/entropyxyz/crypto-primes/workflows/crypto-primes/badge.svg?branch=master&event=push
-[build-link]: https://github.com/entropyxyz/crypto-primes/actions?query=workflow%3Acrypto-primes
+[build-image]: https://github.com/entropyxyz/crypto-primes/workflows/ci/badge.svg?branch=master&event=push
+[build-link]: https://github.com/entropyxyz/crypto-primes/actions?query=workflow%3Aci
 [coverage-image]: https://codecov.io/gh/entropyxyz/crypto-primes/branch/master/graph/badge.svg
 [coverage-link]: https://codecov.io/gh/entropyxyz/crypto-primes
 [hazmat-lnk]: https://docs.rs/crypto-primes/latest/crypto_primes/hazmat
