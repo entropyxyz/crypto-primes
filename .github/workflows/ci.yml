@@ -1,4 +1,4 @@
-name: crypto-primes
+name: ci
 on:
   workflow_dispatch:
   pull_request:
