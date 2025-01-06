@@ -1,6 +1,6 @@
-use std::{io::BufRead, sync::mpsc::Iter};
+use std::io::BufRead;
 
-use criterion::{black_box, criterion_group, criterion_main, BatchSize, Criterion};
+use criterion::{criterion_group, criterion_main, BatchSize, Criterion};
 use crypto_bigint::U1024;
 use rand_chacha::ChaCha8Rng;
 
@@ -78,7 +78,7 @@ fn bench_cctv(c: &mut Criterion) {
 
     group.bench_function("factory API", |b| {
         b.iter_batched(
-            || HardcodedSieve::new(),
+            HardcodedSieve::new,
             |sieve| sieve_and_find(&mut rng, sieve, is_prime_with_rng),
             BatchSize::SmallInput,
         );
