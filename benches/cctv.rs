@@ -11,6 +11,7 @@ struct HardcodedSieve {
     candidates: Vec<String>,
     idx: usize,
 }
+
 impl HardcodedSieve {
     fn new() -> Self {
         Self {
@@ -23,6 +24,7 @@ impl HardcodedSieve {
         }
     }
 }
+
 impl Iterator for HardcodedSieve {
     type Item = U1024;
     fn next(&mut self) -> Option<Self::Item> {
@@ -45,6 +47,7 @@ impl SieveFactory for HardcodedSieve {
         })
     }
 }
+
 /// CCTV stands for Community Cryptography Test Vectors[1]. This benchmark uses the
 /// "rsa.bench.2048.txt" test vector, which is a file of 708 1024-bit long candidates for prime
 /// testing. The series of candidates in the test vecotr is an average representative sequence of
@@ -55,6 +58,9 @@ impl SieveFactory for HardcodedSieve {
 /// [1]: https://github.com/C2SP/CCTV
 fn bench_cctv(c: &mut Criterion) {
     let mut group = c.benchmark_group("CCTV RSA 1024-bit candidates");
+    group
+        .sample_size(10)
+        .measurement_time(std::time::Duration::from_secs(10));
     let mut rng = ChaCha8Rng::from_seed([123; 32]);
     let candidates: Vec<U1024> = std::fs::read("./benches/rsa.bench.2048.txt")
         .expect("file present")
@@ -63,17 +69,13 @@ fn bench_cctv(c: &mut Criterion) {
         .collect();
 
     group.bench_function("manual", |b| {
-        b.iter_batched(
-            || candidates.clone(),
-            |candidates| {
-                for candidate in candidates {
-                    if is_prime_with_rng(&mut rng, &candidate) {
-                        break;
-                    }
+        b.iter(|| {
+            for candidate in &candidates {
+                if is_prime_with_rng(&mut rng, candidate) {
+                    break;
                 }
-            },
-            BatchSize::SmallInput,
-        );
+            }
+        });
     });
 
     group.bench_function("factory API", |b| {
