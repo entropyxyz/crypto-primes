@@ -49,3 +49,7 @@ rustdoc-args = ["--cfg", "docsrs"]
 [[bench]]
 name = "bench"
 harness = false
+
+[[bench]]
+name = "cctv"
+harness = false
