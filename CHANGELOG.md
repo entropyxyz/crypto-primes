@@ -28,11 +28,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Bumped `crypto-bigint` to 0.6.0-rc.6 and MSRV to 1.81. ([#55])
 - Switch to binary GCD for improved performance ([#54])
 - Remove bit precision from the public API ([#46])
+- Bumped `crypto-bigint` to 0.6.0-rc.7 and MSRV to 1.83. ([#67])
 
 
 [#55]: https://github.com/entropyxyz/crypto-primes/pull/55
 [#54]: https://github.com/entropyxyz/crypto-primes/pull/54
 [#46]: https://github.com/entropyxyz/crypto-primes/pull/46
+[#67]: https://github.com/entropyxyz/crypto-primes/pull/67
 
 
 ## [0.6.0-pre.1] - 2024-10-03
