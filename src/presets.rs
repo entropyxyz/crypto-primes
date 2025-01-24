@@ -6,7 +6,7 @@ use rand_core::OsRng;
 
 use crate::{
     generic::sieve_and_find,
-    hazmat::{lucas_test, AStarBase, LucasCheck, MillerRabin, Primality, SmallPrimesSieveFactory},
+    hazmat::{lucas_test, AStarBase, LucasCheck, MillerRabin, Primality, SetBits, SmallPrimesSieveFactory},
 };
 
 #[cfg(feature = "multicore")]
@@ -84,8 +84,12 @@ pub fn generate_prime_with_rng<T: Integer + RandomBits + RandomMod>(
     rng: &mut impl CryptoRngCore,
     bit_length: u32,
 ) -> T {
-    sieve_and_find(rng, SmallPrimesSieveFactory::new(bit_length), is_prime_with_rng)
-        .expect("will produce a result eventually")
+    sieve_and_find(
+        rng,
+        SmallPrimesSieveFactory::new(bit_length, SetBits::Msb),
+        is_prime_with_rng,
+    )
+    .expect("will produce a result eventually")
 }
 
 /// Returns a random safe prime (that is, such that `(n - 1) / 2` is also prime)
@@ -100,7 +104,7 @@ pub fn generate_safe_prime_with_rng<T: Integer + RandomBits + RandomMod>(
 ) -> T {
     sieve_and_find(
         rng,
-        SmallPrimesSieveFactory::new_safe_primes(bit_length),
+        SmallPrimesSieveFactory::new_safe_primes(bit_length, SetBits::Msb),
         is_safe_prime_with_rng,
     )
     .expect("will produce a result eventually")
@@ -124,7 +128,7 @@ where
 {
     par_sieve_and_find(
         rng,
-        SmallPrimesSieveFactory::new(bit_length),
+        SmallPrimesSieveFactory::new(bit_length, SetBits::Msb),
         is_prime_with_rng,
         threadcount,
     )
@@ -151,7 +155,7 @@ where
 {
     par_sieve_and_find(
         rng,
-        SmallPrimesSieveFactory::new_safe_primes(bit_length),
+        SmallPrimesSieveFactory::new_safe_primes(bit_length, SetBits::Msb),
         is_safe_prime_with_rng,
         threadcount,
     )
@@ -385,13 +389,13 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "try_random_bits() failed: BitLengthTooLarge { bit_length: 65, bits_precision: 64 }")]
+    #[should_panic(expected = "random_odd_integer() failed: BitLengthTooLarge { bit_length: 65, bits_precision: 64 }")]
     fn generate_prime_too_many_bits() {
         let _p: U64 = generate_prime_with_rng(&mut OsRng, 65);
     }
 
     #[test]
-    #[should_panic(expected = "try_random_bits() failed: BitLengthTooLarge { bit_length: 65, bits_precision: 64 }")]
+    #[should_panic(expected = "random_odd_integer() failed: BitLengthTooLarge { bit_length: 65, bits_precision: 64 }")]
     fn generate_safe_prime_too_many_bits() {
         let _p: U64 = generate_safe_prime_with_rng(&mut OsRng, 65);
     }
@@ -478,7 +482,7 @@ mod tests_openssl {
     use rand_core::OsRng;
 
     use super::{generate_prime, is_prime};
-    use crate::hazmat::random_odd_integer;
+    use crate::hazmat::{random_odd_integer, SetBits};
 
     fn openssl_is_prime(num: &BigNum, ctx: &mut BigNumContext) -> bool {
         num.is_prime(64, ctx).unwrap()
@@ -513,7 +517,7 @@ mod tests_openssl {
 
         // Generate random numbers, check if our test agrees with OpenSSL
         for _ in 0..100 {
-            let p = random_odd_integer::<U128>(&mut OsRng, NonZero::new(128).unwrap());
+            let p = random_odd_integer::<U128>(&mut OsRng, NonZero::new(128).unwrap(), SetBits::Msb).unwrap();
             let actual = is_prime(p.as_ref());
             let p_bn = to_openssl(&p);
             let expected = openssl_is_prime(&p_bn, &mut ctx);
@@ -538,7 +542,7 @@ mod tests_gmp {
     };
 
     use super::{generate_prime, is_prime};
-    use crate::hazmat::random_odd_integer;
+    use crate::hazmat::{random_odd_integer, SetBits};
 
     fn gmp_is_prime(num: &Integer) -> bool {
         matches!(num.is_probably_prime(25), IsPrime::Yes | IsPrime::Probably)
@@ -563,7 +567,7 @@ mod tests_gmp {
 
         // Generate primes with GMP, check them
         for _ in 0..100 {
-            let start = random_odd_integer::<U128>(&mut OsRng, NonZero::new(128).unwrap());
+            let start = random_odd_integer::<U128>(&mut OsRng, NonZero::new(128).unwrap(), SetBits::Msb).unwrap();
             let start_bn = to_gmp(&start);
             let p_bn = start_bn.next_prime();
             let p = from_gmp(&p_bn);
@@ -572,7 +576,7 @@ mod tests_gmp {
 
         // Generate random numbers, check if our test agrees with GMP
         for _ in 0..100 {
-            let p = random_odd_integer::<U128>(&mut OsRng, NonZero::new(128).unwrap());
+            let p = random_odd_integer::<U128>(&mut OsRng, NonZero::new(128).unwrap(), SetBits::Msb).unwrap();
             let actual = is_prime(p.as_ref());
             let p_bn = to_gmp(&p);
             let expected = gmp_is_prime(&p_bn);

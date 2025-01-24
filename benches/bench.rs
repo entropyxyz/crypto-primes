@@ -17,7 +17,7 @@ use rand_core::RngCore;
 use crypto_primes::{
     generate_prime_with_rng, generate_safe_prime_with_rng,
     hazmat::{
-        lucas_test, random_odd_integer, AStarBase, BruteForceBase, LucasCheck, MillerRabin, SelfridgeBase,
+        lucas_test, random_odd_integer, AStarBase, BruteForceBase, LucasCheck, MillerRabin, SelfridgeBase, SetBits,
         SmallPrimesSieve,
     },
     is_prime_with_rng, is_safe_prime_with_rng,
@@ -37,7 +37,7 @@ fn make_random_rng() -> ChaCha8Rng {
 }
 
 fn random_odd_uint<T: RandomBits + Integer>(rng: &mut impl CryptoRngCore, bit_length: u32) -> Odd<T> {
-    random_odd_integer::<T>(rng, NonZero::new(bit_length).unwrap())
+    random_odd_integer::<T>(rng, NonZero::new(bit_length).unwrap(), SetBits::Msb).unwrap()
 }
 
 fn make_sieve<const L: usize>(rng: &mut impl CryptoRngCore) -> SmallPrimesSieve<Uint<L>> {
@@ -449,7 +449,9 @@ fn bench_glass_pumpkin(c: &mut Criterion) {
     // Mimics the sequence of checks `glass-pumpkin` does to find a prime.
     fn prime_like_gp(bit_length: u32, rng: &mut impl CryptoRngCore) -> BoxedUint {
         loop {
-            let start = random_odd_integer::<BoxedUint>(rng, NonZero::new(bit_length).unwrap()).get();
+            let start = random_odd_integer::<BoxedUint>(rng, NonZero::new(bit_length).unwrap(), SetBits::Msb)
+                .unwrap()
+                .get();
             let sieve = SmallPrimesSieve::new(start, NonZero::new(bit_length).unwrap(), false);
             for num in sieve {
                 let odd_num = Odd::new(num.clone()).unwrap();
@@ -473,7 +475,9 @@ fn bench_glass_pumpkin(c: &mut Criterion) {
     // Mimics the sequence of checks `glass-pumpkin` does to find a safe prime.
     fn safe_prime_like_gp(bit_length: u32, rng: &mut impl CryptoRngCore) -> BoxedUint {
         loop {
-            let start = random_odd_integer::<BoxedUint>(rng, NonZero::new(bit_length).unwrap()).get();
+            let start = random_odd_integer::<BoxedUint>(rng, NonZero::new(bit_length).unwrap(), SetBits::Msb)
+                .unwrap()
+                .get();
             let sieve = SmallPrimesSieve::new(start, NonZero::new(bit_length).unwrap(), true);
             for num in sieve {
                 let odd_num = Odd::new(num.clone()).unwrap();
