@@ -187,7 +187,7 @@ fn equals_primitive<T: Integer>(num: &T, primitive: Word) -> bool {
 ///       "Strengthening the Baillie-PSW primality test",
 ///       Math. Comp. 90 1931-1955 (2021),
 ///       DOI: [10.1090/mcom/3616](https://doi.org/10.1090/mcom/3616)
-pub fn is_prime_with_rng<T: Integer + RandomMod>(rng: &mut (impl CryptoRng + ?Sized), candidate: &T) -> bool {
+pub fn is_prime_with_rng<T: Integer + RandomMod>(_rng: &mut (impl CryptoRng + ?Sized), candidate: &T) -> bool {
     if equals_primitive(candidate, 1) {
         return false;
     }
@@ -207,18 +207,11 @@ pub fn is_prime_with_rng<T: Integer + RandomMod>(rng: &mut (impl CryptoRng + ?Si
         return false;
     }
 
-    match lucas_test(odd_candidate, AStarBase, LucasCheck::Strong) {
-        Primality::Composite => return false,
-        Primality::Prime => return true,
-        _ => {}
+    match lucas_test(odd_candidate, AStarBase, LucasCheck::Bpsw21) {
+        Primality::Composite => false,
+        Primality::Prime => true,
+        Primality::ProbablyPrime => true,
     }
-
-    // The random base test only makes sense when `num > 3`.
-    if !equals_primitive(candidate, 3) && !mr.test_random_base(rng).is_probably_prime() {
-        return false;
-    }
-
-    true
 }
 
 /// Probabilistically checks if the given number is a safe prime using the provided RNG.

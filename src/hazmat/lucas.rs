@@ -300,6 +300,18 @@ pub enum LucasCheck {
     ///   Math. Comp. 90 1931-1955 (2021),
     ///   DOI: [10.1090/mcom/3616](https://doi.org/10.1090/mcom/3616)
     LucasV,
+
+    /// The Lucas part of the improved BPSW test proposed by Baillie et al[^Baillie2021].
+    ///
+    /// Performs [`Strong`] and [`LucasV`] checks, and applies the Euler criterion,
+    /// checking if `Q^((n+1)/2) == Q * (Q/n) mod n`. If either of those fail,
+    /// the candidate is considered composite.
+    ///
+    /// [^Baillie2021]: R. Baillie, A. Fiori, S. S. Wagstaff,
+    ///   "Strengthening the Baillie-PSW primality test",
+    ///   Math. Comp. 90 1931-1955 (2021),
+    ///   DOI: [10.1090/mcom/3616](https://doi.org/10.1090/mcom/3616)
+    Bpsw21,
 }
 
 /// Performs the primality test based on Lucas sequence.
@@ -459,7 +471,7 @@ pub fn lucas_test<T: Integer>(candidate: Odd<T>, base: impl LucasBase, check: Lu
 
     // The `V_d == ±2 mod n` criterion.
     //
-    // Note that this criterion only applies if `Q = 1`, since it is a consequence
+    // Note that the first identity only applies if `Q = 1`, since it is a consequence
     // of a property of Lucas series: `V_k^2 - 4 Q^k = D U_k^2 mod n`.
     // If `Q = 1` we can easily decompose the left side of the equation
     // leading to the check above.
@@ -469,8 +481,6 @@ pub fn lucas_test<T: Integer>(candidate: Odd<T>, base: impl LucasBase, check: Lu
     let vk_equals_two = !q_is_one || (vk == two || vk == minus_two);
 
     // Early exit for some of the checks.
-    // If the conditions are not satisfied, we have to continue propagating the Lucas sequence.
-
     if check == LucasCheck::Strong && ud_equals_zero {
         return Primality::ProbablyPrime;
     }
@@ -486,7 +496,8 @@ pub fn lucas_test<T: Integer>(candidate: Odd<T>, base: impl LucasBase, check: Lu
         return Primality::ProbablyPrime;
     }
 
-    // Propagate the Lucas sequence from `d` to `n+1`, exiting early for some of the checks.
+    // Propagate `V_k` up to `V_{n+1}`.
+    // For the checks which require it, check if V_{2^t d} == 0 mod n for some 0 <= t < s.
 
     let mut one_of_vk_equals_zero = vk == zero;
 
@@ -499,7 +510,10 @@ pub fn lucas_test<T: Integer>(candidate: Odd<T>, base: impl LucasBase, check: Lu
     for _ in 1..s {
         // Optimization: V_k = ±2 is a fixed point for V_k' = V_k^2 - 2 Q^k with Q = 1,
         // so if V_k = ±2, we can stop: we will never find a future V_k == 0.
-        if (check == LucasCheck::Strong || check == LucasCheck::ExtraStrong || check == LucasCheck::AlmostExtraStrong)
+        if (check == LucasCheck::Strong
+            || check == LucasCheck::ExtraStrong
+            || check == LucasCheck::AlmostExtraStrong
+            || check == LucasCheck::Bpsw21)
             && q_is_one
             && (vk == two || vk == minus_two)
         {
@@ -531,6 +545,10 @@ pub fn lucas_test<T: Integer>(candidate: Odd<T>, base: impl LucasBase, check: Lu
         return Primality::Composite;
     }
 
+    if check == LucasCheck::Bpsw21 && !ud_equals_zero && !one_of_vk_equals_zero {
+        return Primality::Composite;
+    }
+
     // At this point:
     //   vk = V_{d * 2^(s-1)} == V_{(n + 1) / 2}.
     //   qk = Q^{(n + 1) / 2}
@@ -547,11 +565,11 @@ pub fn lucas_test<T: Integer>(candidate: Odd<T>, base: impl LucasBase, check: Lu
         }
     }
 
+    // Double the index again:
+    vk = vk.square() - &qk - &qk; // now `vk = V_{d * 2^s} = V_{n+1}`
+
     // Lucas-V check[^Baillie2021]: if `V_{n+1} != 2 Q`, report `n` as composite.
     if check == LucasCheck::LucasV {
-        // Double the index again:
-        vk = vk.square() - &qk.double(); // now `vk = V_{d * 2^s} = V_{n+1}`
-
         if vk != q.double() {
             return Primality::Composite;
         } else {
@@ -559,7 +577,21 @@ pub fn lucas_test<T: Integer>(candidate: Odd<T>, base: impl LucasBase, check: Lu
         }
     }
 
-    Primality::Composite
+    debug_assert!(check == LucasCheck::Bpsw21);
+
+    // Euler criterion: if `Q^((n+1)/2) != Q * (Q/n) mod n`, report `n` as composite.
+    let q_jacobi = jacobi_symbol_vartime(abs_q, q_is_negative, &candidate);
+    let t = match q_jacobi {
+        JacobiSymbol::Zero => zero,
+        JacobiSymbol::One => q,
+        JacobiSymbol::MinusOne => -q,
+    };
+
+    if qk == t {
+        Primality::ProbablyPrime
+    } else {
+        Primality::Composite
+    }
 }
 
 #[cfg(test)]
