@@ -5,29 +5,64 @@ use alloc::{vec, vec::Vec};
 use core::marker::PhantomData;
 use core::num::{NonZero, NonZeroU32};
 
-use crypto_bigint::{Integer, Odd, RandomBits};
+use crypto_bigint::{Integer, Odd, RandomBits, RandomBitsError};
 use rand_core::CryptoRngCore;
 
 use crate::hazmat::precomputed::{SmallPrime, LAST_SMALL_PRIME, RECIPROCALS, SMALL_PRIMES};
 use crate::traits::SieveFactory;
 
-/// Returns a random odd integer with given bit length
-/// (that is, with both `0` and `bit_length-1` bits set).
+/// Decide how prime candidates are manipulated by setting certain bits before primality testing,
+/// influencing the range of the prime.
+#[derive(Debug, Clone, Copy)]
+pub enum SetBits {
+    /// Set the most significant bit, thus limiting the range to `[MAX/2 + 1, MAX]`.
+    ///
+    /// In other words, all candidates will have the same bit size.
+    Msb,
+    /// Set two most significant bits, limiting the range to `[MAX - MAX/4 + 1, MAX]`.
+    ///
+    /// This is useful in the RSA case because a product of two such numbers will have a guaranteed bit size.
+    TwoMsb,
+    /// No additional bits set; uses the full range `[1, MAX]`.
+    None,
+}
+
+/// Returns a random odd integer up to the given bit length.
 ///
-/// *Panics*: if the `bit_length` is bigger than the bits available in the `Integer`, e.g. 37 for a
-/// `U32`.
-pub fn random_odd_integer<T: Integer + RandomBits>(rng: &mut impl CryptoRngCore, bit_length: NonZeroU32) -> Odd<T> {
+/// The `set_bits` parameter decides which extra bits are set, which decides the range of the number.
+///
+/// Returns an error variant if `bit_length` is greater than the maximum allowed for `T`
+/// (applies to fixed-length types).
+pub fn random_odd_integer<T: Integer + RandomBits>(
+    rng: &mut impl CryptoRngCore,
+    bit_length: NonZeroU32,
+    set_bits: SetBits,
+) -> Result<Odd<T>, RandomBitsError> {
     let bit_length = bit_length.get();
 
-    let mut random = T::random_bits(rng, bit_length);
+    let mut random = T::try_random_bits(rng, bit_length)?;
+
     // Make it odd
+    // `bit_length` is non-zero, so the 0-th bit exists.
     random.set_bit_vartime(0, true);
 
-    // Make sure it's the correct bit size
-    // Will not overflow since `bit_length` is ensured to be within the size of the integer.
-    random.set_bit_vartime(bit_length - 1, true);
+    // Will not overflow since `bit_length` is ensured to be within the size of the integer
+    // (checked within the `T::try_random_bits()` call).
+    // `bit_length - 1`-th bit exists since `bit_length` is non-zero.
+    match set_bits {
+        SetBits::None => {}
+        SetBits::Msb => random.set_bit_vartime(bit_length - 1, true),
+        SetBits::TwoMsb => {
+            random.set_bit_vartime(bit_length - 1, true);
+            // We could panic here, but since the primary purpose of `TwoMsb` is to ensure the bit length
+            // of the product of two numbers, ignoring this for `bit_length = 1` leads to the desired result.
+            if bit_length > 1 {
+                random.set_bit_vartime(bit_length - 2, true);
+            }
+        }
+    }
 
-    Odd::new(random).expect("the number is odd by construction")
+    Ok(Odd::new(random).expect("the number is odd by construction"))
 }
 
 // The type we use to calculate incremental residues.
@@ -251,11 +286,12 @@ impl<T: Integer> Iterator for SmallPrimesSieve<T> {
 pub struct SmallPrimesSieveFactory<T> {
     max_bit_length: NonZeroU32,
     safe_primes: bool,
+    set_bits: SetBits,
     phantom: PhantomData<T>,
 }
 
 impl<T: Integer + RandomBits> SmallPrimesSieveFactory<T> {
-    fn new_impl(max_bit_length: u32, safe_primes: bool) -> Self {
+    fn new_impl(max_bit_length: u32, set_bits: SetBits, safe_primes: bool) -> Self {
         if !safe_primes && max_bit_length < 2 {
             panic!("`bit_length` must be 2 or greater.");
         }
@@ -266,20 +302,21 @@ impl<T: Integer + RandomBits> SmallPrimesSieveFactory<T> {
         Self {
             max_bit_length,
             safe_primes,
+            set_bits,
             phantom: PhantomData,
         }
     }
 
     /// Creates a factory that produces sieves returning numbers of `max_bit_length` bits (with the top bit set)
     /// that are not divisible by a number of small factors.
-    pub fn new(max_bit_length: u32) -> Self {
-        Self::new_impl(max_bit_length, false)
+    pub fn new(max_bit_length: u32, set_bits: SetBits) -> Self {
+        Self::new_impl(max_bit_length, set_bits, false)
     }
 
     /// Creates a factory that produces sieves returning numbers `n` of `max_bit_length` bits (with the top bit set)
     /// such that neither `n` nor `(n - 1) / 2` are divisible by a number of small factors.
-    pub fn new_safe_primes(max_bit_length: u32) -> Self {
-        Self::new_impl(max_bit_length, true)
+    pub fn new_safe_primes(max_bit_length: u32, set_bits: SetBits) -> Self {
+        Self::new_impl(max_bit_length, set_bits, true)
     }
 }
 
@@ -291,7 +328,8 @@ impl<T: Integer + RandomBits> SieveFactory for SmallPrimesSieveFactory<T> {
         rng: &mut impl CryptoRngCore,
         _previous_sieve: Option<&Self::Sieve>,
     ) -> Option<Self::Sieve> {
-        let start = random_odd_integer::<T>(rng, self.max_bit_length);
+        let start =
+            random_odd_integer::<T>(rng, self.max_bit_length, self.set_bits).expect("random_odd_integer() failed");
         Some(SmallPrimesSieve::new(
             start.get(),
             self.max_bit_length,
@@ -312,7 +350,7 @@ mod tests {
     use rand_chacha::ChaCha8Rng;
     use rand_core::{OsRng, SeedableRng};
 
-    use super::{random_odd_integer, SmallPrimesSieve, SmallPrimesSieveFactory};
+    use super::{random_odd_integer, SetBits, SmallPrimesSieve, SmallPrimesSieveFactory};
     use crate::hazmat::precomputed::SMALL_PRIMES;
 
     #[test]
@@ -320,7 +358,9 @@ mod tests {
         let max_prime = SMALL_PRIMES[SMALL_PRIMES.len() - 1];
 
         let mut rng = ChaCha8Rng::from_seed(*b"01234567890123456789012345678901");
-        let start = random_odd_integer::<U64>(&mut rng, NonZero::new(32).unwrap()).get();
+        let start = random_odd_integer::<U64>(&mut rng, NonZero::new(32).unwrap(), SetBits::Msb)
+            .unwrap()
+            .get();
         for num in SmallPrimesSieve::new(start, NonZero::new(32).unwrap(), false).take(100) {
             let num_u64 = u64::from(num);
             assert!(num_u64.leading_zeros() == 32);
@@ -336,7 +376,9 @@ mod tests {
         let max_prime = SMALL_PRIMES[SMALL_PRIMES.len() - 1];
 
         let mut rng = ChaCha8Rng::from_seed(*b"01234567890123456789012345678901");
-        let start = random_odd_integer::<crypto_bigint::BoxedUint>(&mut rng, NonZero::new(32).unwrap()).get();
+        let start = random_odd_integer::<crypto_bigint::BoxedUint>(&mut rng, NonZero::new(32).unwrap(), SetBits::Msb)
+            .unwrap()
+            .get();
 
         for num in SmallPrimesSieve::new(start, NonZero::new(32).unwrap(), false).take(100) {
             // For 32-bit targets
@@ -414,15 +456,16 @@ mod tests {
     #[test]
     fn random_below_max_length() {
         for _ in 0..10 {
-            let r = random_odd_integer::<U64>(&mut OsRng, NonZero::new(50).unwrap()).get();
+            let r = random_odd_integer::<U64>(&mut OsRng, NonZero::new(50).unwrap(), SetBits::Msb)
+                .unwrap()
+                .get();
             assert_eq!(r.bits(), 50);
         }
     }
 
     #[test]
-    #[should_panic(expected = "try_random_bits() failed: BitLengthTooLarge { bit_length: 65, bits_precision: 64 }")]
     fn random_odd_uint_too_many_bits() {
-        let _p = random_odd_integer::<U64>(&mut OsRng, NonZero::new(65).unwrap());
+        assert!(random_odd_integer::<U64>(&mut OsRng, NonZero::new(65).unwrap(), SetBits::Msb).is_err());
     }
 
     #[test]
@@ -450,12 +493,41 @@ mod tests {
     #[test]
     #[should_panic(expected = "`bit_length` must be 2 or greater")]
     fn too_few_bits_regular_primes() {
-        let _fac = SmallPrimesSieveFactory::<U64>::new(1);
+        let _fac = SmallPrimesSieveFactory::<U64>::new(1, SetBits::Msb);
     }
 
     #[test]
     #[should_panic(expected = "`bit_length` must be 3 or greater")]
     fn too_few_bits_safe_primes() {
-        let _fac = SmallPrimesSieveFactory::<U64>::new_safe_primes(2);
+        let _fac = SmallPrimesSieveFactory::<U64>::new_safe_primes(2, SetBits::Msb);
+    }
+
+    #[test]
+    fn set_bits() {
+        for _ in 0..10 {
+            let x = random_odd_integer::<U64>(&mut OsRng, NonZero::new(64).unwrap(), SetBits::Msb).unwrap();
+            assert!(bool::from(x.bit(63)));
+        }
+
+        for _ in 0..10 {
+            let x = random_odd_integer::<U64>(&mut OsRng, NonZero::new(64).unwrap(), SetBits::TwoMsb).unwrap();
+            assert!(bool::from(x.bit(63)));
+            assert!(bool::from(x.bit(62)));
+        }
+
+        // 1 in 2^30 chance of spurious failure... good enough?
+        assert!((0..30)
+            .map(|_| { random_odd_integer::<U64>(&mut OsRng, NonZero::new(64).unwrap(), SetBits::None).unwrap() })
+            .any(|x| !bool::from(x.bit(63))));
+    }
+
+    #[test]
+    fn set_two_msb_small_bit_length() {
+        // Check that when technically there isn't a second most significant bit,
+        // `random_odd_integer()` still returns a number.
+        let x = random_odd_integer::<U64>(&mut OsRng, NonZero::new(1).unwrap(), SetBits::TwoMsb)
+            .unwrap()
+            .get();
+        assert_eq!(x, U64::ONE);
     }
 }

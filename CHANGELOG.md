@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Renamed `Sieve` to `SmallPrimesSieve`. ([#64])
 - Bumped `crypto-bigint` to 0.6.0-rc.7 and MSRV to 1.83. ([#67])
 - Bumped `crypto-bigint` to 0.6. ([#68])
+- `random_odd_integer()` takes an additional `SetBits` argument. ([#69])
+- `random_odd_integer()` now returns a `Result` instead of panicking. ([#69])
 
 
 ### Added
@@ -23,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [#64]: https://github.com/entropyxyz/crypto-primes/pull/64
 [#67]: https://github.com/entropyxyz/crypto-primes/pull/67
 [#68]: https://github.com/entropyxyz/crypto-primes/pull/68
+[#69]: https://github.com/entropyxyz/crypto-primes/pull/69
 
 
 ## [0.6.0-pre.2] - 2024-10-18
