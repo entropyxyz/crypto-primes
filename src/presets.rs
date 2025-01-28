@@ -193,7 +193,7 @@ pub fn is_prime_with_rng<T: Integer + RandomMod>(rng: &mut impl CryptoRngCore, n
     }
 
     match Odd::new(num.clone()).into() {
-        Some(x) => _is_prime_with_rng(rng, x),
+        Some(x) => _is_prime_with_rng_bpsw21(rng, x),
         None => false,
     }
 }
@@ -211,7 +211,7 @@ pub fn is_safe_prime_with_rng<T: Integer + RandomMod>(rng: &mut impl CryptoRngCo
 
     // Safe primes are always of the form 4k + 3 (i.e. n ≡ 3 mod 4)
     // The last two digits of a binary number give you its value modulo 4.
-    // Primes p=4n+3 will always end in 11​ in binary because p ≡ 3 mod 4.
+    // Primes p=4n+3 will always end in `11` in binary because p ≡ 3 mod 4.
     if num.as_ref()[0].0 & 3 != 3 {
         return false;
     }
@@ -220,7 +220,7 @@ pub fn is_safe_prime_with_rng<T: Integer + RandomMod>(rng: &mut impl CryptoRngCo
     let odd_num = Odd::new(num.clone()).expect("`num` is odd here given the checks above");
     let odd_half_num = Odd::new(num.wrapping_shr_vartime(1)).expect("The binary rep of `num` ends in `11`, so shifting right by one is guaranteed leave a `1` at the end, so it's odd");
 
-    _is_prime_with_rng(rng, odd_num) && _is_prime_with_rng(rng, odd_half_num)
+    _is_prime_with_rng_bpsw21(rng, odd_num) && _is_prime_with_rng_bpsw21(rng, odd_half_num)
 }
 
 /// Checks for primality.
@@ -228,7 +228,7 @@ pub fn is_safe_prime_with_rng<T: Integer + RandomMod>(rng: &mut impl CryptoRngCo
 /// If the outcome of M-R is "probably prime", then run a Lucas test
 /// If the Lucas test is inconclusive, run a Miller-Rabin with random base and unless this second
 /// M-R test finds it's composite, then conclude that it's prime.
-fn _is_prime_with_rng<T: Integer + RandomMod>(rng: &mut impl CryptoRngCore, candidate: Odd<T>) -> bool {
+fn _is_prime_with_rng_fips<T: Integer + RandomMod>(rng: &mut impl CryptoRngCore, candidate: Odd<T>) -> bool {
     let mr = MillerRabin::new(candidate.clone());
 
     if !mr.test_base_two().is_probably_prime() {
@@ -247,6 +247,20 @@ fn _is_prime_with_rng<T: Integer + RandomMod>(rng: &mut impl CryptoRngCore, cand
     }
 
     true
+}
+
+fn _is_prime_with_rng_bpsw21<T: Integer + RandomMod>(_rng: &mut impl CryptoRngCore, candidate: Odd<T>) -> bool {
+    let mr = MillerRabin::new(candidate.clone());
+
+    if !mr.test_base_two().is_probably_prime() {
+        return false;
+    }
+
+    match lucas_test(candidate, AStarBase, LucasCheck::Bpsw21) {
+        Primality::Composite => false,
+        Primality::Prime => true,
+        Primality::ProbablyPrime => true,
+    }
 }
 
 #[cfg(test)]

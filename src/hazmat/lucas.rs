@@ -282,6 +282,18 @@ pub enum LucasCheck {
     ///   Math. Comp. 90 1931-1955 (2021),
     ///   DOI: [10.1090/mcom/3616](https://doi.org/10.1090/mcom/3616)
     LucasV,
+
+    /// The Lucas part of the improved BPSW test proposed by Baillie et al[^Baillie2021].
+    ///
+    /// Performs [`Strong`] and [`LucasV`] checks, and applies the Euler criterion,
+    /// checking if `Q^((n+1)/2) == Q * (Q/n) mod n`. If either of those fail,
+    /// the candidate is considered composite.
+    ///
+    /// [^Baillie2021]: R. Baillie, A. Fiori, S. S. Wagstaff,
+    ///   "Strengthening the Baillie-PSW primality test",
+    ///   Math. Comp. 90 1931-1955 (2021),
+    ///   DOI: [10.1090/mcom/3616](https://doi.org/10.1090/mcom/3616)
+    Bpsw21,
 }
 
 /// Performs the primality test based on Lucas sequence.
@@ -430,49 +442,58 @@ pub fn lucas_test<T: Integer>(candidate: Odd<T>, base: impl LucasBase, check: Lu
 
     // Now k=d, so vk = V_d and uk = U_d.
 
-    // Check for the first sufficient condition in various strong checks.
+    // The `U_d == 0` criterion.
+    let ud_equals_zero = uk == zero;
 
-    if check == LucasCheck::Strong && uk == zero {
-        // Strong check: `U_d == 0 mod n`.
+    // The `V_d == ±2 mod n` criterion.
+    //
+    // Note that the first identity only applies if `Q = 1`, since it is a consequence
+    // of a property of Lucas series: `V_k^2 - 4 Q^k = D U_k^2 mod n`.
+    // If `Q = 1` we can easily decompose the left side of the equation
+    // leading to the check above.
+    //
+    // If `Q != 1` we just consider it passed (we don't have a corresponding
+    // pseudoprime list anyway).
+    let vk_equals_two = !q_is_one || (vk == two || vk == minus_two);
+
+    // Early exit for some of the checks.
+
+    if check == LucasCheck::Strong && ud_equals_zero {
         return Primality::ProbablyPrime;
-    } else if check == LucasCheck::ExtraStrong || check == LucasCheck::AlmostExtraStrong {
-        // Extra strong check (from [^Mo1993]): `V_d == ±2 mod n` and `U_d == 0 mod n`.
-        //
-        // Note that the first identity only applies if `Q = 1`, since it is a consequence
-        // of a property of Lucas series: `V_k^2 - 4 Q^k = D U_k^2 mod n`.
-        // If `Q = 1` we can easily decompose the left side of the equation
-        // leading to the check above.
-        //
-        // If `Q != 1` we just consider it passed (we don't have a corresponding
-        // pseudoprime list anyway).
-
-        let vk_equals_two = !q_is_one || (vk == two || vk == minus_two);
-
-        if check == LucasCheck::ExtraStrong && uk == zero && vk_equals_two {
-            return Primality::ProbablyPrime;
-        }
-
-        // "Almost extra strong" check skips the `U_d` check.
-        // Since we have `U_d` anyway, it does not improve performance,
-        // so it is only here for testing purposes, since we have a corresponding pseudoprime list.
-        if check == LucasCheck::AlmostExtraStrong && vk_equals_two {
-            return Primality::ProbablyPrime;
-        }
     }
 
-    // Second sufficient condition requires further propagating `V_k` up to `V_{n+1}`.
+    if check == LucasCheck::ExtraStrong && ud_equals_zero && vk_equals_two {
+        return Primality::ProbablyPrime;
+    }
 
-    // Check if V_{2^t d} == 0 mod n for some 0 <= t < s.
-    // (unless we're in Lucas-V mode, then we just propagate V_k)
+    // "Almost extra strong" check skips the `U_d` check.
+    // Since we have `U_d` anyway, it does not improve performance,
+    // so it is only here for testing purposes, since we have a corresponding pseudoprime list.
+    if check == LucasCheck::AlmostExtraStrong && vk_equals_two {
+        return Primality::ProbablyPrime;
+    }
 
-    if check != LucasCheck::LucasV && vk == zero {
+    // Propagate `V_k` up to `V_{n+1}`.
+    // For the checks which require it, check if V_{2^t d} == 0 mod n for some 0 <= t < s.
+
+    let mut one_of_vk_equals_zero = vk == zero;
+
+    if (check == LucasCheck::Strong || check == LucasCheck::ExtraStrong || check == LucasCheck::AlmostExtraStrong)
+        && one_of_vk_equals_zero
+    {
         return Primality::ProbablyPrime;
     }
 
     for _ in 1..s {
         // Optimization: V_k = ±2 is a fixed point for V_k' = V_k^2 - 2 Q^k with Q = 1,
         // so if V_k = ±2, we can stop: we will never find a future V_k == 0.
-        if check != LucasCheck::LucasV && q_is_one && (vk == two || vk == minus_two) {
+        if (check == LucasCheck::Strong
+            || check == LucasCheck::ExtraStrong
+            || check == LucasCheck::AlmostExtraStrong
+            || check == LucasCheck::Bpsw21)
+            && q_is_one
+            && (vk == two || vk == minus_two)
+        {
             return Primality::Composite;
         }
 
@@ -480,7 +501,11 @@ pub fn lucas_test<T: Integer>(candidate: Odd<T>, base: impl LucasBase, check: Lu
         // V_{k'} = V_k^2 - 2 Q^k
         vk = vk.square() - &qk - &qk;
 
-        if check != LucasCheck::LucasV && vk == zero {
+        one_of_vk_equals_zero |= vk == zero;
+
+        if (check == LucasCheck::Strong || check == LucasCheck::ExtraStrong || check == LucasCheck::AlmostExtraStrong)
+            && one_of_vk_equals_zero
+        {
             return Primality::ProbablyPrime;
         }
 
@@ -489,18 +514,43 @@ pub fn lucas_test<T: Integer>(candidate: Odd<T>, base: impl LucasBase, check: Lu
         }
     }
 
-    if check == LucasCheck::LucasV {
-        // At this point vk = V_{d * 2^(s-1)}.
-        // Double the index again:
-        vk = vk.square() - &qk - &qk; // now vk = V_{d * 2^s} = V_{n+1}
-
-        // Lucas-V check[^Baillie2021]: if V_{n+1} == 2 Q, report `n` as prime.
-        if vk == q.clone() + &q {
-            return Primality::ProbablyPrime;
-        }
+    if check == LucasCheck::Strong || check == LucasCheck::ExtraStrong || check == LucasCheck::AlmostExtraStrong {
+        return Primality::Composite;
     }
 
-    Primality::Composite
+    if check == LucasCheck::Bpsw21 && !ud_equals_zero && !one_of_vk_equals_zero {
+        return Primality::Composite;
+    }
+
+    // At this point:
+    //   vk = V_{d * 2^(s-1)} == V_{(n + 1) / 2}.
+    //   qk = Q^{(n + 1) / 2}
+
+    // Double the index again:
+    vk = vk.square() - &qk - &qk; // now `vk = V_{d * 2^s} = V_{n+1}`
+
+    // Lucas-V check[^Baillie2021]: if `V_{n+1} != 2 Q`, report `n` as composite.
+    if vk != q.clone() + &q {
+        return Primality::Composite;
+    }
+
+    if check == LucasCheck::LucasV {
+        return Primality::ProbablyPrime;
+    }
+
+    // Euler criterion: if `Q^((n+1)/2) != Q * (Q/n) mod n`, report `n` as composite.
+    let q_jacobi = jacobi_symbol_vartime(abs_q, q_is_negative, &candidate);
+    let t = match q_jacobi {
+        JacobiSymbol::Zero => zero,
+        JacobiSymbol::One => q,
+        JacobiSymbol::MinusOne => -q,
+    };
+
+    if qk == t {
+        Primality::ProbablyPrime
+    } else {
+        Primality::Composite
+    }
 }
 
 #[cfg(test)]
