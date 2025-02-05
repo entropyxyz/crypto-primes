@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `LucasCheck::Regular` (the recommended one from the FIPS-186.5 standard). ([#72])
 - `hamzat::minimum_mr_iterations()` (to calculate the number of MR checks according to the FIPS-186.5 standard). ([#72])
+- Add `fips_is_prime_with_rng()` and `fips_is_safe_prime_with_rng()`. ([#72])
 
 
 [#72]: https://github.com/entropyxyz/crypto-primes/pull/72
