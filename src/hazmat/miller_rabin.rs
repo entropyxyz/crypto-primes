@@ -129,15 +129,6 @@ impl<T: Integer + RandomMod> MillerRabin<T> {
             .expect("addition should not overflow by construction");
         self.test(&random)
     }
-
-    /// Returns the number of bits necessary to represent the candidate.
-    /// NOTE: This is different than the number of bits of *storage* the integer takes up.
-    ///
-    /// For example, a U512 type occupies 8 64-bit words, but the number `7` contained in such a type
-    /// has a bit length of 3 because 7 is `b111`.
-    pub(crate) fn bits(&self) -> u32 {
-        self.bits
-    }
 }
 
 /**

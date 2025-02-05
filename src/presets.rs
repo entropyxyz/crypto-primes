@@ -1,4 +1,4 @@
-use crypto_bigint::{Integer, Limb, Odd, RandomBits, RandomMod};
+use crypto_bigint::{Integer, Odd, RandomBits, RandomMod, Word};
 use rand_core::CryptoRng;
 
 #[cfg(feature = "default-rng")]
@@ -156,6 +156,10 @@ where
     .expect("will produce a result eventually")
 }
 
+fn equals_primitive<T: Integer>(num: &T, primitive: Word) -> bool {
+    num.bits_vartime() <= u16::BITS && num.as_ref()[0].0 == primitive
+}
+
 /// Probabilistically checks if the given number is prime using the provided RNG.
 ///
 /// Performed checks:
@@ -181,66 +185,59 @@ where
 ///       "Strengthening the Baillie-PSW primality test",
 ///       Math. Comp. 90 1931-1955 (2021),
 ///       DOI: [10.1090/mcom/3616](https://doi.org/10.1090/mcom/3616)
-pub fn is_prime_with_rng<T: Integer + RandomMod, R: CryptoRng + ?Sized>(rng: &mut R, num: &T) -> bool {
-    if num == &T::from_limb_like(Limb::from(2u32), num) {
-        return true;
-    }
-
-    match Odd::new(num.clone()).into() {
-        Some(x) => _is_prime_with_rng(rng, x),
-        None => false,
-    }
-}
-
-/// Probabilistically checks if the given number is a safe prime using the provided RNG.
-///
-/// See [`is_prime_with_rng`] for details about the performed checks.
-pub fn is_safe_prime_with_rng<T: Integer + RandomMod, R: CryptoRng + ?Sized>(rng: &mut R, num: &T) -> bool {
-    // Since, by the definition of safe prime, `(num - 1) / 2` must also be prime,
-    // and therefore odd, `num` has to be equal to 3 modulo 4.
-    // 5 is the only exception, so we check for it.
-    if num == &T::from_limb_like(Limb::from(5u32), num) {
-        return true;
-    }
-
-    // Safe primes are always of the form 4k + 3 (i.e. n ≡ 3 mod 4)
-    // The last two digits of a binary number give you its value modulo 4.
-    // Primes p=4n+3 will always end in 11​ in binary because p ≡ 3 mod 4.
-    if num.as_ref()[0].0 & 3 != 3 {
+pub fn is_prime_with_rng<T: Integer + RandomMod>(rng: &mut (impl CryptoRng + ?Sized), candidate: &T) -> bool {
+    if equals_primitive(candidate, 1) {
         return false;
     }
 
-    // These are ensured to be odd by the check above.
-    let odd_num = Odd::new(num.clone()).expect("`num` is odd here given the checks above");
-    let odd_half_num = Odd::new(num.wrapping_shr_vartime(1)).expect("The binary rep of `num` ends in `11`, so shifting right by one is guaranteed leave a `1` at the end, so it's odd");
+    if equals_primitive(candidate, 2) {
+        return true;
+    }
 
-    _is_prime_with_rng(rng, odd_num) && _is_prime_with_rng(rng, odd_half_num)
-}
+    let odd_candidate: Odd<T> = match Odd::new(candidate.clone()).into() {
+        Some(x) => x,
+        None => return false,
+    };
 
-/// Checks for primality.
-/// First run a Miller-Rabin test with base 2
-/// If the outcome of M-R is "probably prime", then run a Lucas test
-/// If the Lucas test is inconclusive, run a Miller-Rabin with random base and unless this second
-/// M-R test finds it's composite, then conclude that it's prime.
-fn _is_prime_with_rng<T: Integer + RandomMod, R: CryptoRng + ?Sized>(rng: &mut R, candidate: Odd<T>) -> bool {
-    let mr = MillerRabin::new(candidate.clone());
+    let mr = MillerRabin::new(odd_candidate.clone());
 
     if !mr.test_base_two().is_probably_prime() {
         return false;
     }
 
-    match lucas_test(candidate, AStarBase, LucasCheck::Strong) {
+    match lucas_test(odd_candidate, AStarBase, LucasCheck::Strong) {
         Primality::Composite => return false,
         Primality::Prime => return true,
         _ => {}
     }
 
     // The random base test only makes sense when `num > 3`.
-    if mr.bits() > 2 && !mr.test_random_base(rng).is_probably_prime() {
+    if !equals_primitive(candidate, 3) && !mr.test_random_base(rng).is_probably_prime() {
         return false;
     }
 
     true
+}
+
+/// Probabilistically checks if the given number is a safe prime using the provided RNG.
+///
+/// See [`is_prime_with_rng`] for details about the performed checks.
+pub fn is_safe_prime_with_rng<T: Integer + RandomMod>(rng: &mut (impl CryptoRng + ?Sized), candidate: &T) -> bool {
+    // Since, by the definition of safe prime, `(candidate - 1) / 2` must also be prime,
+    // and therefore odd, `candidate` has to be equal to 3 modulo 4.
+    // 5 is the only exception, so we check for it.
+    if equals_primitive(candidate, 5) {
+        return true;
+    }
+
+    // Safe primes are always of the form 4k + 3 (i.e. n ≡ 3 mod 4)
+    // The last two digits of a binary number give you its value modulo 4.
+    // Primes p=4n+3 will always end in 11 in binary because p ≡ 3 mod 4.
+    if candidate.as_ref()[0].0 & 3 != 3 {
+        return false;
+    }
+
+    is_prime_with_rng(rng, candidate) && is_prime_with_rng(rng, &candidate.wrapping_shr_vartime(1))
 }
 
 #[cfg(test)]
