@@ -8,7 +8,7 @@ use crypto_bigint::{U1536, U64};
 pub(crate) const EXHAUSTIVE_TEST_LIMIT: u32 = 500000;
 
 /// Extra strong Lucas pseudoprimes (OEIS:A217719) under `EXHAUSTIVE_TEST_LIMIT`.
-/// Should pass the strong Lucas test with Selfridge base (Baillie method A).
+/// Should pass the extra strong Lucas test with brute force base (Baillie method C).
 pub(crate) const EXTRA_STRONG_LUCAS: &[u32] = &[
     989, 3239, 5777, 10877, 27971, 29681, 30739, 31631, 39059, 72389, 73919, 75077, 100127, 113573, 125249, 137549,
     137801, 153931, 155819, 161027, 162133, 189419, 218321, 231703, 249331, 370229, 429479, 430127, 459191, 473891,
@@ -16,7 +16,7 @@ pub(crate) const EXTRA_STRONG_LUCAS: &[u32] = &[
 ];
 
 /// Strong Lucas pseudoprimes (OEIS:A217255) under `EXHAUSTIVE_TEST_LIMIT`.
-/// Should pass the extra strong Lucas test with brute force base (Baillie method C).
+/// Should pass the strong Lucas test with Selfridge base (Baillie method A).
 pub(crate) const STRONG_LUCAS: &[u32] = &[
     5459, 5777, 10877, 16109, 18971, 22499, 24569, 25199, 40309, 58519, 75077, 97439, 100127, 113573, 115639, 130139,
     155819, 158399, 161027, 162133, 176399, 176471, 189419, 192509, 197801, 224369, 230691, 231703, 243629, 253259,
@@ -24,6 +24,7 @@ pub(crate) const STRONG_LUCAS: &[u32] = &[
 ];
 
 /// Almost extra strong Lucas pseudoprimes under `EXHAUSTIVE_TEST_LIMIT`.
+/// Should pass the almost extra strong Lucas test with brute force base (Baillie method C).
 /// Taken from D. Jacobsen, "Pseudoprime Statistics, Tables, and Data",
 /// <http://ntheory.org/pseudoprimes.html>
 pub(crate) const ALMOST_EXTRA_STRONG_LUCAS: &[u32] = &[
