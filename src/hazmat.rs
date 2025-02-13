@@ -1,6 +1,7 @@
 //! Components to build your own primality test.
 //! Handle with care.
 
+mod float;
 mod gcd;
 mod jacobi;
 mod lucas;
@@ -13,7 +14,7 @@ pub(crate) mod pseudoprimes;
 mod sieve;
 
 pub use lucas::{lucas_test, AStarBase, BruteForceBase, LucasBase, LucasCheck, SelfridgeBase};
-pub use miller_rabin::MillerRabin;
+pub use miller_rabin::{minimum_mr_iterations, MillerRabin};
 pub use sieve::{random_odd_integer, SetBits, SmallPrimesSieve, SmallPrimesSieveFactory};
 
 /// Possible results of various primality tests.
