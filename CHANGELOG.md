@@ -11,6 +11,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Bumped `rand-core` to 0.9. ([#74])
 
 
+### Added
+
+- `LucasCheck::Regular` (the recommended one from the FIPS-186.5 standard). ([#72])
+
+
+[#72]: https://github.com/entropyxyz/crypto-primes/pull/72
 [#74]: https://github.com/entropyxyz/crypto-primes/pull/74
 
 
