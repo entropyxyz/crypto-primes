@@ -138,7 +138,7 @@ const fn create_reciprocals() -> [Reciprocal; SMALL_PRIMES.len()] {
     arr
 }
 
-pub(crate) const RECIPROCALS: [Reciprocal; SMALL_PRIMES.len()] = create_reciprocals();
+pub(crate) static RECIPROCALS: [Reciprocal; SMALL_PRIMES.len()] = create_reciprocals();
 
 #[cfg(test)]
 mod tests {
