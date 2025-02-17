@@ -105,7 +105,7 @@ impl<T: Integer + RandomMod> MillerRabin<T> {
     /// drawn using the provided RNG.
     ///
     /// Note: panics if `candidate == 3` (so the range above is empty).
-    pub fn test_random_base(&self, rng: &mut impl CryptoRngCore) -> Primality {
+    pub fn test_random_base(&self, rng: &mut (impl CryptoRngCore + ?Sized)) -> Primality {
         // We sample a random base from the range `[3, candidate-2]`:
         // - we have a separate method for base 2;
         // - the test holds trivially for bases 1 or `candidate-1`.
@@ -167,7 +167,11 @@ mod tests {
         pseudoprimes::STRONG_BASE_2.iter().any(|x| *x == num)
     }
 
-    fn random_checks<T: Integer + RandomMod>(rng: &mut impl CryptoRngCore, mr: &MillerRabin<T>, count: usize) -> usize {
+    fn random_checks<T: Integer + RandomMod>(
+        rng: &mut (impl CryptoRngCore + ?Sized),
+        mr: &MillerRabin<T>,
+        count: usize,
+    ) -> usize {
         (0..count)
             .map(|_| -> usize { mr.test_random_base(rng).is_probably_prime().into() })
             .sum()

@@ -15,7 +15,7 @@ pub fn sieve_and_find<R, S>(
 ) -> Option<S::Item>
 where
     S: SieveFactory,
-    R: CryptoRngCore,
+    R: CryptoRngCore + ?Sized,
 {
     // We could use `SieveIterator` here, but it requires cloning the `rng`.
     // Unlike the parallel version, it is avoidable here.
@@ -67,13 +67,13 @@ where
 /// A structure that chains the creation of sieves, returning the results from one until it is exhausted,
 /// and then creating a new one.
 #[derive(Debug)]
-pub struct SieveIterator<'a, R: CryptoRngCore, S: SieveFactory> {
+pub struct SieveIterator<'a, R: CryptoRngCore + ?Sized, S: SieveFactory> {
     sieve_factory: S,
     sieve: S::Sieve,
     rng: &'a mut R,
 }
 
-impl<'a, R: CryptoRngCore, S: SieveFactory> SieveIterator<'a, R, S> {
+impl<'a, R: CryptoRngCore + ?Sized, S: SieveFactory> SieveIterator<'a, R, S> {
     /// Creates a new chained iterator producing results from sieves returned from `sieve_factory`.
     pub fn new(rng: &'a mut R, sieve_factory: S) -> Option<Self> {
         let mut sieve_factory = sieve_factory;
@@ -123,7 +123,7 @@ mod tests {
 
             fn make_sieve(
                 &mut self,
-                _rng: &mut impl CryptoRngCore,
+                _rng: &mut (impl CryptoRngCore + ?Sized),
                 previous_sieve: Option<&Self::Sieve>,
             ) -> Option<Self::Sieve> {
                 self.count += 1;

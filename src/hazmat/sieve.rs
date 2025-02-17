@@ -34,7 +34,7 @@ pub enum SetBits {
 /// Returns an error variant if `bit_length` is greater than the maximum allowed for `T`
 /// (applies to fixed-length types).
 pub fn random_odd_integer<T: Integer + RandomBits>(
-    rng: &mut impl CryptoRngCore,
+    rng: &mut (impl CryptoRngCore + ?Sized),
     bit_length: NonZeroU32,
     set_bits: SetBits,
 ) -> Result<Odd<T>, RandomBitsError> {
@@ -325,7 +325,7 @@ impl<T: Integer + RandomBits> SieveFactory for SmallPrimesSieveFactory<T> {
     type Sieve = SmallPrimesSieve<T>;
     fn make_sieve(
         &mut self,
-        rng: &mut impl CryptoRngCore,
+        rng: &mut (impl CryptoRngCore + ?Sized),
         _previous_sieve: Option<&Self::Sieve>,
     ) -> Option<Self::Sieve> {
         let start =

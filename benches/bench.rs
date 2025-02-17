@@ -36,16 +36,16 @@ fn make_random_rng() -> ChaCha8Rng {
     ChaCha8Rng::from_seed(seed)
 }
 
-fn random_odd_uint<T: RandomBits + Integer>(rng: &mut impl CryptoRngCore, bit_length: u32) -> Odd<T> {
+fn random_odd_uint<T: RandomBits + Integer>(rng: &mut (impl CryptoRngCore + ?Sized), bit_length: u32) -> Odd<T> {
     random_odd_integer::<T>(rng, NonZero::new(bit_length).unwrap(), SetBits::Msb).unwrap()
 }
 
-fn make_sieve<const L: usize>(rng: &mut impl CryptoRngCore) -> SmallPrimesSieve<Uint<L>> {
+fn make_sieve<const L: usize>(rng: &mut (impl CryptoRngCore + ?Sized)) -> SmallPrimesSieve<Uint<L>> {
     let start = random_odd_uint::<Uint<L>>(rng, Uint::<L>::BITS);
     SmallPrimesSieve::new(start.get(), NonZero::new(Uint::<L>::BITS).unwrap(), false)
 }
 
-fn make_presieved_num<const L: usize>(rng: &mut impl CryptoRngCore) -> Odd<Uint<L>> {
+fn make_presieved_num<const L: usize>(rng: &mut (impl CryptoRngCore + ?Sized)) -> Odd<Uint<L>> {
     let mut sieve = make_sieve(rng);
     Odd::new(sieve.next().unwrap()).unwrap()
 }
@@ -352,7 +352,7 @@ fn bench_multicore_presets(_c: &mut Criterion) {}
 fn bench_gmp(c: &mut Criterion) {
     let mut group = c.benchmark_group("GMP");
 
-    fn random<const L: usize>(rng: &mut impl CryptoRngCore) -> GmpInteger {
+    fn random<const L: usize>(rng: &mut (impl CryptoRngCore + ?Sized)) -> GmpInteger {
         let num = random_odd_uint::<Uint<L>>(rng, Uint::<L>::BITS).get();
         GmpInteger::from_digits(num.as_words(), Order::Lsf)
     }
@@ -447,7 +447,7 @@ fn bench_glass_pumpkin(c: &mut Criterion) {
     }
 
     // Mimics the sequence of checks `glass-pumpkin` does to find a prime.
-    fn prime_like_gp(bit_length: u32, rng: &mut impl CryptoRngCore) -> BoxedUint {
+    fn prime_like_gp(bit_length: u32, rng: &mut (impl CryptoRngCore + ?Sized)) -> BoxedUint {
         loop {
             let start = random_odd_integer::<BoxedUint>(rng, NonZero::new(bit_length).unwrap(), SetBits::Msb)
                 .unwrap()
@@ -473,7 +473,7 @@ fn bench_glass_pumpkin(c: &mut Criterion) {
     }
 
     // Mimics the sequence of checks `glass-pumpkin` does to find a safe prime.
-    fn safe_prime_like_gp(bit_length: u32, rng: &mut impl CryptoRngCore) -> BoxedUint {
+    fn safe_prime_like_gp(bit_length: u32, rng: &mut (impl CryptoRngCore + ?Sized)) -> BoxedUint {
         loop {
             let start = random_odd_integer::<BoxedUint>(rng, NonZero::new(bit_length).unwrap(), SetBits::Msb)
                 .unwrap()
