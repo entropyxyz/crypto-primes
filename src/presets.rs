@@ -81,7 +81,7 @@ pub fn is_safe_prime<T: Integer + RandomMod>(num: &T) -> bool {
 ///
 /// See [`is_prime_with_rng`] for details about the performed checks.
 pub fn generate_prime_with_rng<T: Integer + RandomBits + RandomMod>(
-    rng: &mut impl CryptoRngCore,
+    rng: &mut (impl CryptoRngCore + ?Sized),
     bit_length: u32,
 ) -> T {
     sieve_and_find(
@@ -99,7 +99,7 @@ pub fn generate_prime_with_rng<T: Integer + RandomBits + RandomMod>(
 ///
 /// See [`is_prime_with_rng`] for details about the performed checks.
 pub fn generate_safe_prime_with_rng<T: Integer + RandomBits + RandomMod>(
-    rng: &mut impl CryptoRngCore,
+    rng: &mut (impl CryptoRngCore + ?Sized),
     bit_length: u32,
 ) -> T {
     sieve_and_find(
@@ -187,7 +187,7 @@ where
 ///       "Strengthening the Baillie-PSW primality test",
 ///       Math. Comp. 90 1931-1955 (2021),
 ///       DOI: [10.1090/mcom/3616](https://doi.org/10.1090/mcom/3616)
-pub fn is_prime_with_rng<T: Integer + RandomMod>(rng: &mut impl CryptoRngCore, num: &T) -> bool {
+pub fn is_prime_with_rng<T: Integer + RandomMod>(rng: &mut (impl CryptoRngCore + ?Sized), num: &T) -> bool {
     if num == &T::from_limb_like(Limb::from(2u32), num) {
         return true;
     }
@@ -201,7 +201,7 @@ pub fn is_prime_with_rng<T: Integer + RandomMod>(rng: &mut impl CryptoRngCore, n
 /// Probabilistically checks if the given number is a safe prime using the provided RNG.
 ///
 /// See [`is_prime_with_rng`] for details about the performed checks.
-pub fn is_safe_prime_with_rng<T: Integer + RandomMod>(rng: &mut impl CryptoRngCore, num: &T) -> bool {
+pub fn is_safe_prime_with_rng<T: Integer + RandomMod>(rng: &mut (impl CryptoRngCore + ?Sized), num: &T) -> bool {
     // Since, by the definition of safe prime, `(num - 1) / 2` must also be prime,
     // and therefore odd, `num` has to be equal to 3 modulo 4.
     // 5 is the only exception, so we check for it.
@@ -228,7 +228,7 @@ pub fn is_safe_prime_with_rng<T: Integer + RandomMod>(rng: &mut impl CryptoRngCo
 /// If the outcome of M-R is "probably prime", then run a Lucas test
 /// If the Lucas test is inconclusive, run a Miller-Rabin with random base and unless this second
 /// M-R test finds it's composite, then conclude that it's prime.
-fn _is_prime_with_rng<T: Integer + RandomMod>(rng: &mut impl CryptoRngCore, candidate: Odd<T>) -> bool {
+fn _is_prime_with_rng<T: Integer + RandomMod>(rng: &mut (impl CryptoRngCore + ?Sized), candidate: Odd<T>) -> bool {
     let mr = MillerRabin::new(candidate.clone());
 
     if !mr.test_base_two().is_probably_prime() {

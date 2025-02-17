@@ -1,6 +1,6 @@
 [package]
 name = "crypto-primes"
-version = "0.6.0"
+version = "0.6.1-dev"
 edition = "2021"
 license = "Apache-2.0 OR MIT"
 description = "Random prime number generation and primality checking library"
@@ -21,7 +21,7 @@ rayon = { version = "1", optional = true }
 
 [dev-dependencies]
 # need `crypto-bigint` with `alloc` to test `BoxedUint`
-crypto-bigint = { version = "0.6", default-features = false, features = ["alloc"] }
+crypto-bigint = { version = "0.6.1", default-features = false, features = ["alloc"] }
 rand_chacha = "0.3"
 criterion = { version = "0.5", features = ["html_reports"] }
 num-modular = { version = "0.5", features = ["num-bigint"] }
