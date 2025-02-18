@@ -4,6 +4,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.7.0] - in development
+
+### Changed
+
+- Bumped `rand-core` to 0.9. ([#74])
+
+
+[#74]: https://github.com/entropyxyz/crypto-primes/pull/74
+
+
 ## [0.6.1] - 2025-02-17
 
 ### Added
