@@ -143,7 +143,7 @@ pub(crate) static RECIPROCALS: [Reciprocal; SMALL_PRIMES.len()] = create_recipro
 #[cfg(test)]
 mod tests {
     use crypto_bigint::{NonZero, Random, U256};
-    use rand_core::OsRng;
+    use rand_core::{OsRng, TryRngCore};
 
     use super::{create_reciprocals, SMALL_PRIMES};
 
@@ -155,7 +155,7 @@ mod tests {
 
         for (reciprocal, prime) in reciprocals.iter().zip(SMALL_PRIMES.iter()) {
             for _ in 0..10 {
-                let x = U256::random(&mut OsRng);
+                let x = U256::random(&mut OsRng.unwrap_err());
                 let r_ref = (x % NonZero::new(U256::from(*prime)).unwrap()).as_limbs()[0];
                 let r_test = x.rem_limb_with_reciprocal(reciprocal);
                 assert_eq!(r_ref, r_test);

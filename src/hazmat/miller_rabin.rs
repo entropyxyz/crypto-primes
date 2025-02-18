@@ -1,7 +1,7 @@
 //! Miller-Rabin primality test.
 
 use crypto_bigint::{Integer, Limb, Monty, NonZero as CTNonZero, Odd, PowBoundedExp, RandomMod, Square};
-use rand_core::CryptoRngCore;
+use rand_core::CryptoRng;
 
 use super::Primality;
 
@@ -105,7 +105,7 @@ impl<T: Integer + RandomMod> MillerRabin<T> {
     /// drawn using the provided RNG.
     ///
     /// Note: panics if `candidate == 3` (so the range above is empty).
-    pub fn test_random_base(&self, rng: &mut (impl CryptoRngCore + ?Sized)) -> Primality {
+    pub fn test_random_base<R: CryptoRng + ?Sized>(&self, rng: &mut R) -> Primality {
         // We sample a random base from the range `[3, candidate-2]`:
         // - we have a separate method for base 2;
         // - the test holds trivially for bases 1 or `candidate-1`.
@@ -141,7 +141,7 @@ mod tests {
 
     use crypto_bigint::{Integer, Odd, RandomMod, Uint, U1024, U128, U1536, U64};
     use rand_chacha::ChaCha8Rng;
-    use rand_core::{CryptoRngCore, OsRng, SeedableRng};
+    use rand_core::{CryptoRng, OsRng, SeedableRng, TryRngCore};
 
     #[cfg(feature = "tests-exhaustive")]
     use num_prime::nt_funcs::is_prime64;
@@ -160,15 +160,15 @@ mod tests {
     #[should_panic(expected = "No suitable random base possible when `candidate == 3`; use the base 2 test.")]
     fn random_base_range_check() {
         let mr = MillerRabin::new(Odd::new(U64::from(3u32)).unwrap());
-        mr.test_random_base(&mut OsRng);
+        mr.test_random_base(&mut OsRng.unwrap_err());
     }
 
     fn is_spsp(num: u32) -> bool {
         pseudoprimes::STRONG_BASE_2.iter().any(|x| *x == num)
     }
 
-    fn random_checks<T: Integer + RandomMod>(
-        rng: &mut (impl CryptoRngCore + ?Sized),
+    fn random_checks<T: Integer + RandomMod, R: CryptoRng + ?Sized>(
+        rng: &mut R,
         mr: &MillerRabin<T>,
         count: usize,
     ) -> usize {
@@ -200,7 +200,7 @@ mod tests {
     #[test]
     fn trivial() {
         let mut rng = ChaCha8Rng::from_seed(*b"01234567890123456789012345678901");
-        let start = random_odd_integer::<U1024>(&mut rng, NonZero::new(1024).unwrap(), SetBits::Msb).unwrap();
+        let start = random_odd_integer::<U1024, _>(&mut rng, NonZero::new(1024).unwrap(), SetBits::Msb).unwrap();
         for num in SmallPrimesSieve::new(start.get(), NonZero::new(1024).unwrap(), false).take(10) {
             let mr = MillerRabin::new(Odd::new(num).unwrap());
 
