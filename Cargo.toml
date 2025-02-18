@@ -62,6 +62,3 @@ crypto-bigint = { git = "https://github.com/RustCrypto/crypto-bigint.git" }
 glass_pumpkin = { git = "https://github.com/baloo/agora-glass_pumpkin.git", branch = "baloo/rand-core/0.9" }
 # https://github.com/rust-num/num-bigint/pull/317
 num-bigint = { git = "https://github.com/bionicles/num-bigint.git" }
-
-# https://github.com/rust-random/rand/pull/1593
-rand_core = { git = "https://github.com/fjarri/rand.git", branch = "sized" }
