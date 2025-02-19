@@ -21,9 +21,6 @@ pub mod hazmat;
 mod presets;
 mod traits;
 
-#[doc(hidden)]
-pub mod rng;
-
 pub use generic::{sieve_and_find, SieveIterator};
 pub use presets::{generate_prime_with_rng, generate_safe_prime_with_rng, is_prime_with_rng, is_safe_prime_with_rng};
 pub use traits::{RandomPrimeWithRng, SieveFactory};

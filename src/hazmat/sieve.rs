@@ -328,8 +328,8 @@ impl<T: Integer + RandomBits> SieveFactory for SmallPrimesSieveFactory<T> {
         rng: &mut R,
         _previous_sieve: Option<&Self::Sieve>,
     ) -> Option<Self::Sieve> {
-        let start = random_odd_integer::<T, _>(&mut crate::rng::MaybeRng(rng), self.max_bit_length, self.set_bits)
-            .expect("random_odd_integer() failed");
+        let start =
+            random_odd_integer::<T, _>(rng, self.max_bit_length, self.set_bits).expect("random_odd_integer() failed");
         Some(SmallPrimesSieve::new(
             start.get(),
             self.max_bit_length,
