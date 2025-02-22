@@ -12,10 +12,10 @@ use rug::{integer::Order, Integer as GmpInteger};
 use openssl::bn::BigNum;
 
 use crypto_primes::{
-    generate_prime_with_rng, generate_safe_prime_with_rng,
+    fips_is_prime_with_rng, generate_prime_with_rng, generate_safe_prime_with_rng,
     hazmat::{
-        lucas_test, random_odd_integer, AStarBase, BruteForceBase, LucasCheck, MillerRabin, SelfridgeBase, SetBits,
-        SmallPrimesSieve,
+        lucas_test, minimum_mr_iterations, random_odd_integer, AStarBase, BruteForceBase, LucasCheck, MillerRabin,
+        SelfridgeBase, SetBits, SmallPrimesSieve,
     },
     is_prime_with_rng, is_safe_prime_with_rng,
 };
@@ -217,6 +217,23 @@ fn bench_presets(c: &mut Criterion) {
         b.iter_batched(
             || random_odd_uint::<U128, _>(&mut OsRng.unwrap_err(), 128),
             |num| is_prime_with_rng(&mut OsRng.unwrap_err(), num.as_ref()),
+            BatchSize::SmallInput,
+        )
+    });
+
+    group.bench_function("(U1024) Prime test", |b| {
+        b.iter_batched(
+            || random_odd_uint::<U1024, _>(&mut OsRng.unwrap_err(), 1024),
+            |num| is_prime_with_rng(&mut OsRng.unwrap_err(), num.as_ref()),
+            BatchSize::SmallInput,
+        )
+    });
+
+    let iters = minimum_mr_iterations(1024, 128).unwrap();
+    group.bench_function("(U1024) Prime test (FIPS, 1/2^128 failure bound)", |b| {
+        b.iter_batched(
+            || random_odd_uint::<U1024, _>(&mut OsRng.unwrap_err(), 1024),
+            |num| fips_is_prime_with_rng(&mut OsRng.unwrap_err(), num.as_ref(), iters, false),
             BatchSize::SmallInput,
         )
     });

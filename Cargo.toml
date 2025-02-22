@@ -1,6 +1,6 @@
 [package]
 name = "crypto-primes"
-version = "0.7.0-pre.0"
+version = "0.7.0-dev"
 edition = "2021"
 license = "Apache-2.0 OR MIT"
 description = "Random prime number generation and primality checking library"
@@ -30,6 +30,7 @@ num-integer = "0.1"
 proptest = "1"
 num-prime = "0.4.3"
 num_cpus = "1.16"
+float-cmp = "0.10"
 
 # Temporary old versions for `glass_pumpkin` tests. Remove when `glass_pumpking` switches to `rand_core=0.9`.
 rand_core_06 = { package = "rand_core", version = "0.6.4", default-features = false }
