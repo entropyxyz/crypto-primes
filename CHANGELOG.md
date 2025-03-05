@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.7.0] - in development
 
+### Changed
+
+- Replaced the default GMP-style primality check with the BPSW'21 check. ([#70])
+- Removed `is_prime_with_rng()` and `is_safe_prime_with_rng()` since the primality check is now deterministic. ([#70])
+
+
 ### Added
 
 - `LucasCheck::Regular` (the recommended one from the FIPS-186.5 standard). ([#72])
@@ -13,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add `fips_is_prime_with_rng()` and `fips_is_safe_prime_with_rng()`. ([#72])
 
 
+[#70]: https://github.com/entropyxyz/crypto-primes/pull/72
 [#72]: https://github.com/entropyxyz/crypto-primes/pull/72
 
 

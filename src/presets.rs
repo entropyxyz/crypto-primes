@@ -60,23 +60,6 @@ pub fn par_generate_safe_prime<T: Integer + RandomBits + RandomMod>(bit_length: 
     par_generate_safe_prime_with_rng(&mut OsRng.unwrap_err(), bit_length, threadcount)
 }
 
-/// Probabilistically checks if the given number is prime using [`OsRng`] as the RNG.
-///
-/// See [`is_prime_with_rng`] for details about the performed checks.
-#[cfg(feature = "default-rng")]
-pub fn is_prime<T: Integer + RandomMod>(num: &T) -> bool {
-    is_prime_with_rng(&mut OsRng.unwrap_err(), num)
-}
-
-/// Probabilistically checks if the given number is a safe prime (that is, such that `(n - 1) / 2` is
-/// also prime) using [`OsRng`] as the RNG.
-///
-/// See [`is_prime_with_rng`] for details about the performed checks.
-#[cfg(feature = "default-rng")]
-pub fn is_safe_prime<T: Integer + RandomMod>(num: &T) -> bool {
-    is_safe_prime_with_rng(&mut OsRng.unwrap_err(), num)
-}
-
 /// Returns a random prime of size `bit_length` using the provided RNG.
 ///
 /// Panics if `bit_length` is less than 2, or greater than the bit size of the target `Uint`.
@@ -89,7 +72,7 @@ pub fn generate_prime_with_rng<T: Integer + RandomBits + RandomMod, R: CryptoRng
     sieve_and_find(
         rng,
         SmallPrimesSieveFactory::new(bit_length, SetBits::Msb),
-        is_prime_with_rng,
+        |_rng, candidate| is_prime(candidate),
     )
     .expect("will produce a result eventually")
 }
@@ -107,7 +90,7 @@ pub fn generate_safe_prime_with_rng<T: Integer + RandomBits + RandomMod, R: Cryp
     sieve_and_find(
         rng,
         SmallPrimesSieveFactory::new_safe_primes(bit_length, SetBits::Msb),
-        is_safe_prime_with_rng,
+        |_rng, candidate| is_safe_prime(candidate),
     )
     .expect("will produce a result eventually")
 }
@@ -128,7 +111,7 @@ where
     par_sieve_and_find(
         rng,
         SmallPrimesSieveFactory::new(bit_length, SetBits::Msb),
-        is_prime_with_rng,
+        |_rng, candidate| is_prime(candidate),
         threadcount,
     )
     .expect("will produce a result eventually")
@@ -152,7 +135,7 @@ where
     par_sieve_and_find(
         rng,
         SmallPrimesSieveFactory::new_safe_primes(bit_length, SetBits::Msb),
-        is_safe_prime_with_rng,
+        |_rng, candidate| is_safe_prime(candidate),
         threadcount,
     )
     .expect("will produce a result eventually")
@@ -162,19 +145,18 @@ fn equals_primitive<T: Integer>(num: &T, primitive: Word) -> bool {
     num.bits_vartime() <= u16::BITS && num.as_ref()[0].0 == primitive
 }
 
-/// Probabilistically checks if the given number is prime using the provided RNG.
+/// Checks if the given number is prime.
 ///
-/// Performed checks:
-/// - Miller-Rabin check with base 2;
-/// - Strong Lucas check with A* base (see [`AStarBase`] for details);
-/// - Miller-Rabin check with a random base.
+/// Performed tests:
+/// - Miller-Rabin test with base 2;
+/// - [`LucasCheck::Bpsw21`] test with [`AStarBase`].
 ///
-/// See [`MillerRabin`] and [`lucas_test`] for more details about the checks.
+/// See [`MillerRabin`] and [`lucas_test`] for more details about the tests.
 ///
-/// The first two checks constitute the Baillie-PSW primality test[^Baillie1980];
-/// the third one is a precaution that follows the approach of GMP (as of v6.2.1).
-/// At the moment of the writing there are no known composites passing
-/// the Baillie-PSW test[^Baillie2021];
+/// This is the recommended approach by Baillie et al[^Baillie2021],
+/// improving on the BPSW'80 test[^Baillie1980].
+/// At the moment of the writing there are no known composites that are reported to be primes
+/// by either of the approaches[^Baillie2021];
 /// it is conjectured that they may exist, but their size is larger than the numbers
 /// that are used in practice.
 ///
@@ -187,7 +169,7 @@ fn equals_primitive<T: Integer>(num: &T, primitive: Word) -> bool {
 ///       "Strengthening the Baillie-PSW primality test",
 ///       Math. Comp. 90 1931-1955 (2021),
 ///       DOI: [10.1090/mcom/3616](https://doi.org/10.1090/mcom/3616)
-pub fn is_prime_with_rng<T: Integer + RandomMod>(rng: &mut (impl CryptoRng + ?Sized), candidate: &T) -> bool {
+pub fn is_prime<T: Integer + RandomMod>(candidate: &T) -> bool {
     if equals_primitive(candidate, 1) {
         return false;
     }
@@ -207,24 +189,17 @@ pub fn is_prime_with_rng<T: Integer + RandomMod>(rng: &mut (impl CryptoRng + ?Si
         return false;
     }
 
-    match lucas_test(odd_candidate, AStarBase, LucasCheck::Strong) {
-        Primality::Composite => return false,
-        Primality::Prime => return true,
-        _ => {}
+    match lucas_test(odd_candidate, AStarBase, LucasCheck::Bpsw21) {
+        Primality::Composite => false,
+        Primality::Prime => true,
+        Primality::ProbablyPrime => true,
     }
-
-    // The random base test only makes sense when `num > 3`.
-    if !equals_primitive(candidate, 3) && !mr.test_random_base(rng).is_probably_prime() {
-        return false;
-    }
-
-    true
 }
 
-/// Probabilistically checks if the given number is a safe prime using the provided RNG.
+/// Checks if the given number is a safe prime.
 ///
-/// See [`is_prime_with_rng`] for details about the performed checks.
-pub fn is_safe_prime_with_rng<T: Integer + RandomMod>(rng: &mut (impl CryptoRng + ?Sized), candidate: &T) -> bool {
+/// See [`is_prime`] for details about the performed checks.
+pub fn is_safe_prime<T: Integer + RandomMod>(candidate: &T) -> bool {
     // Since, by the definition of safe prime, `(candidate - 1) / 2` must also be prime,
     // and therefore odd, `candidate` has to be equal to 3 modulo 4.
     // 5 is the only exception, so we check for it.
@@ -239,7 +214,7 @@ pub fn is_safe_prime_with_rng<T: Integer + RandomMod>(rng: &mut (impl CryptoRng 
         return false;
     }
 
-    is_prime_with_rng(rng, candidate) && is_prime_with_rng(rng, &candidate.wrapping_shr_vartime(1))
+    is_prime(candidate) && is_prime(&candidate.wrapping_shr_vartime(1))
 }
 
 /// Probabilistically checks if the given number is prime using the provided RNG

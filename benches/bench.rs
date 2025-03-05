@@ -17,7 +17,7 @@ use crypto_primes::{
         lucas_test, minimum_mr_iterations, random_odd_integer, AStarBase, BruteForceBase, LucasCheck, MillerRabin,
         SelfridgeBase, SetBits, SmallPrimesSieve,
     },
-    is_prime_with_rng, is_safe_prime_with_rng,
+    is_prime, is_safe_prime,
 };
 
 #[cfg(feature = "multicore")]
@@ -216,7 +216,7 @@ fn bench_presets(c: &mut Criterion) {
     group.bench_function("(U128) Prime test", |b| {
         b.iter_batched(
             || random_odd_uint::<U128, _>(&mut OsRng.unwrap_err(), 128),
-            |num| is_prime_with_rng(&mut OsRng.unwrap_err(), num.as_ref()),
+            |num| is_prime(num.as_ref()),
             BatchSize::SmallInput,
         )
     });
@@ -224,12 +224,13 @@ fn bench_presets(c: &mut Criterion) {
     group.bench_function("(U1024) Prime test", |b| {
         b.iter_batched(
             || random_odd_uint::<U1024, _>(&mut OsRng.unwrap_err(), 1024),
-            |num| is_prime_with_rng(&mut OsRng.unwrap_err(), num.as_ref()),
+            |num| is_prime(num.as_ref()),
             BatchSize::SmallInput,
         )
     });
 
     let iters = minimum_mr_iterations(1024, 128).unwrap();
+
     group.bench_function("(U1024) Prime test (FIPS, 1/2^128 failure bound)", |b| {
         b.iter_batched(
             || random_odd_uint::<U1024, _>(&mut OsRng.unwrap_err(), 1024),
@@ -241,7 +242,7 @@ fn bench_presets(c: &mut Criterion) {
     group.bench_function("(U128) Safe prime test", |b| {
         b.iter_batched(
             || random_odd_uint::<U128, _>(&mut OsRng.unwrap_err(), 128),
-            |num| is_safe_prime_with_rng(&mut OsRng.unwrap_err(), num.as_ref()),
+            |num| is_safe_prime(num.as_ref()),
             BatchSize::SmallInput,
         )
     });

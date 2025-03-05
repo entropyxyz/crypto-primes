@@ -1,7 +1,7 @@
 use crypto_bigint::{Integer, RandomBits, RandomMod};
 use rand_core::CryptoRng;
 
-use crate::{generate_prime_with_rng, generate_safe_prime_with_rng, is_prime_with_rng, is_safe_prime_with_rng};
+use crate::{generate_prime_with_rng, generate_safe_prime_with_rng, is_prime, is_safe_prime};
 
 /// A type producing sieves for random prime generation.
 pub trait SieveFactory {
@@ -60,11 +60,11 @@ where
     fn generate_safe_prime_with_rng<R: CryptoRng + ?Sized>(rng: &mut R, bit_length: u32) -> Self {
         generate_safe_prime_with_rng(rng, bit_length)
     }
-    fn is_prime_with_rng<R: CryptoRng + ?Sized>(&self, rng: &mut R) -> bool {
-        is_prime_with_rng(rng, self)
+    fn is_prime_with_rng<R: CryptoRng + ?Sized>(&self, _rng: &mut R) -> bool {
+        is_prime(self)
     }
-    fn is_safe_prime_with_rng<R: CryptoRng + ?Sized>(&self, rng: &mut R) -> bool {
-        is_safe_prime_with_rng(rng, self)
+    fn is_safe_prime_with_rng<R: CryptoRng + ?Sized>(&self, _rng: &mut R) -> bool {
+        is_safe_prime(self)
     }
 }
 
