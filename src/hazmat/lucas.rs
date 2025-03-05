@@ -589,8 +589,7 @@ pub fn lucas_test<T: Integer>(candidate: Odd<T>, base: impl LucasBase, check: Lu
     // Euler criterion: if `Q^((n+1)/2) != Q * (Q/n) mod n`, report `n` as composite.
     let q_jacobi = jacobi_symbol_vartime(abs_q, q_is_negative, &candidate);
     let t = match q_jacobi {
-        // This branch is unreachable since we previously checked that either `Q = 1` or `gcd(Q, n) != 1`.
-        JacobiSymbol::Zero => zero,
+        JacobiSymbol::Zero => unreachable!("we previously checked that either `Q = 1` or `gcd(Q, n) != 1"),
         JacobiSymbol::One => q,
         JacobiSymbol::MinusOne => -q,
     };
