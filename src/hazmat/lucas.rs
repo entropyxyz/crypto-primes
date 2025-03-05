@@ -1,6 +1,6 @@
 //! Lucas primality test.
 use core::num::NonZero;
-use crypto_bigint::{Integer, Limb, Monty, Odd, Square, Word};
+use crypto_bigint::{Integer, Limb, Monty, MontyMultiplier, Odd, Square, Word};
 
 use super::{
     gcd::gcd_vartime,
@@ -436,37 +436,49 @@ where
     let mut uk = <T as Integer>::Monty::zero(params.clone()); // keeps U_k
     let mut qk = one.clone(); // keeps Q^k
 
+    let mut temp = <T as Integer>::Monty::zero(params.clone());
+
+    let mut mm = <<T as Integer>::Monty as Monty>::Multiplier::from(&params);
+
     // D in Montgomery representation - note that it can be negative.
-    let abs_d = <T as Integer>::Monty::new(to_integer(abs_d), params);
+    let abs_d = <T as Integer>::Monty::new(to_integer(abs_d), params.clone());
     let d_m = if d_is_negative { -abs_d } else { abs_d };
 
     for i in (0..d.bits_vartime()).rev() {
-        // k' = k * 2
+        // k' = 2k
+        // U_{k'} = U_k V_k;
+        // V_{k'} = V_k^2 - 2 Q_k
+        // Q^{k'} = (Q^k)^2
 
-        let u_2k = uk * &vk;
-        let v_2k = vk.square() - &qk.double();
-        let q_2k = qk.square();
+        mm.mul_assign(&mut uk, &vk);
 
-        uk = u_2k;
-        vk = v_2k;
-        qk = q_2k;
+        mm.square_assign(&mut vk);
+        vk -= &qk;
+        vk -= &qk;
+
+        mm.square_assign(&mut qk);
 
         if d.bit_vartime(i) {
             // k' = k + 1
+            // U_{k'} = (P U_k + V_k) / 2
+            // V_{k'} = (D U_k + P V_k) / 2
+            // Q^{k'} = Q Q^k
 
-            let (p_uk, p_vk) = if p_is_one {
-                (uk.clone(), vk.clone())
-            } else {
-                (p.clone() * &uk, p.clone() * &vk)
+            temp.copy_montgomery_from(&uk);
+            if !p_is_one {
+                mm.mul_assign(&mut uk, &p);
+            }
+            uk += &vk;
+            uk.div_by_2_assign();
+
+            mm.mul_assign(&mut temp, &d_m);
+            if !p_is_one {
+                mm.mul_assign(&mut vk, &p);
             };
+            vk += &temp;
+            vk.div_by_2_assign();
 
-            let u_k1 = (p_uk + &vk).div_by_2();
-            let v_k1 = (d_m.clone() * &uk + &p_vk).div_by_2();
-            let q_k1 = qk * &q;
-
-            uk = u_k1;
-            vk = v_k1;
-            qk = q_k1;
+            mm.mul_assign(&mut qk, &q);
         }
     }
 
