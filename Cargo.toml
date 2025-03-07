@@ -1,6 +1,6 @@
 [package]
 name = "crypto-primes"
-version = "0.6.1"
+version = "0.6.2"
 edition = "2021"
 license = "Apache-2.0 OR MIT"
 description = "Random prime number generation and primality checking library"
@@ -10,7 +10,7 @@ categories = ["cryptography", "no-std"]
 rust-version = "1.83"
 
 [dependencies]
-crypto-bigint = { version = "0.6", default-features = false, features = ["rand_core"] }
+crypto-bigint = { version = "0.6.1", default-features = false, features = ["rand_core"] }
 rand_core = { version = "0.6.4", default-features = false }
 
 # Optional dependencies used in tests and benchmarks
