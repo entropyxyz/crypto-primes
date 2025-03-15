@@ -22,13 +22,13 @@ pub trait SieveFactory {
 }
 
 /// Provides a generic way to access methods for random prime number generation
-/// and primality checking, wrapping the standalone functions ([`is_prime_with_rng`] etc).
+/// and primality checking, wrapping the standalone functions ([`is_prime`] etc).
 pub trait RandomPrimeWithRng {
     /// Returns a random prime of size `bit_length` using the provided RNG.
     ///
     /// Panics if `bit_length` is less than 2, or greater than the bit size of the target `Uint`.
     ///
-    /// See [`is_prime_with_rng`] for details about the performed checks.
+    /// See [`is_prime`] for details about the performed checks.
     fn generate_prime_with_rng<R: CryptoRng + ?Sized>(rng: &mut R, bit_length: u32) -> Self;
 
     /// Returns a random safe prime (that is, such that `(n - 1) / 2` is also prime)
@@ -36,17 +36,17 @@ pub trait RandomPrimeWithRng {
     ///
     /// Panics if `bit_length` is less than 3, or greater than the bit size of the target `Uint`.
     ///
-    /// See [`is_prime_with_rng`] for details about the performed checks.
+    /// See [`is_prime`] for details about the performed checks.
     fn generate_safe_prime_with_rng<R: CryptoRng + ?Sized>(rng: &mut R, bit_length: u32) -> Self;
 
     /// Probabilistically checks if the given number is prime using the provided RNG.
     ///
-    /// See [`is_prime_with_rng`] for details about the performed checks.
+    /// See [`is_prime`] for details about the performed checks.
     fn is_prime_with_rng<R: CryptoRng + ?Sized>(&self, rng: &mut R) -> bool;
 
     /// Probabilistically checks if the given number is a safe prime using the provided RNG.
     ///
-    /// See [`is_prime_with_rng`] for details about the performed checks.
+    /// See [`is_prime`] for details about the performed checks.
     fn is_safe_prime_with_rng<R: CryptoRng + ?Sized>(&self, rng: &mut R) -> bool;
 }
 

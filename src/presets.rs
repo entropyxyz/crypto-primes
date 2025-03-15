@@ -16,7 +16,7 @@ use crate::generic::par_sieve_and_find;
 
 /// Returns a random prime of size `bit_length` using [`OsRng`] as the RNG.
 ///
-/// See [`is_prime_with_rng`] for details about the performed checks.
+/// See [`is_prime`] for details about the performed checks.
 #[cfg(feature = "default-rng")]
 pub fn generate_prime<T: Integer + RandomBits + RandomMod>(bit_length: u32) -> T {
     generate_prime_with_rng(&mut OsRng.unwrap_err(), bit_length)
@@ -24,7 +24,7 @@ pub fn generate_prime<T: Integer + RandomBits + RandomMod>(bit_length: u32) -> T
 
 /// Returns a random prime of size `bit_length` using [`OsRng`] as the RNG.
 ///
-/// See [`is_prime_with_rng`] for details about the performed checks.
+/// See [`is_prime`] for details about the performed checks.
 ///
 /// Uses `threadcount` cores to parallelize the prime search.
 ///
@@ -39,7 +39,7 @@ pub fn par_generate_prime<T: Integer + RandomBits + RandomMod>(bit_length: u32, 
 /// Returns a random safe prime (that is, such that `(n - 1) / 2` is also prime) of size
 /// `bit_length` using [`OsRng`] as the RNG.
 ///
-/// See [`is_prime_with_rng`] for details about the performed checks.
+/// See [`is_prime`] for details about the performed checks.
 #[cfg(feature = "default-rng")]
 pub fn generate_safe_prime<T: Integer + RandomBits + RandomMod>(bit_length: u32) -> T {
     generate_safe_prime_with_rng(&mut OsRng.unwrap_err(), bit_length)
@@ -48,7 +48,7 @@ pub fn generate_safe_prime<T: Integer + RandomBits + RandomMod>(bit_length: u32)
 /// Returns a random safe prime (that is, such that `(n - 1) / 2` is also prime) of size
 /// `bit_length` using [`OsRng`] as the RNG.
 ///
-/// See [`is_prime_with_rng`] for details about the performed checks.
+/// See [`is_prime`] for details about the performed checks.
 ///
 /// Uses `threadcount` cores to parallelize the prime search.
 ///
@@ -64,7 +64,7 @@ pub fn par_generate_safe_prime<T: Integer + RandomBits + RandomMod>(bit_length: 
 ///
 /// Panics if `bit_length` is less than 2, or greater than the bit size of the target `Uint`.
 ///
-/// See [`is_prime_with_rng`] for details about the performed checks.
+/// See [`is_prime`] for details about the performed checks.
 pub fn generate_prime_with_rng<T: Integer + RandomBits + RandomMod, R: CryptoRng + ?Sized>(
     rng: &mut R,
     bit_length: u32,
@@ -82,7 +82,7 @@ pub fn generate_prime_with_rng<T: Integer + RandomBits + RandomMod, R: CryptoRng
 ///
 /// Panics if `bit_length` is less than 3, or greater than the bit size of the target `Uint`.
 ///
-/// See [`is_prime_with_rng`] for details about the performed checks.
+/// See [`is_prime`] for details about the performed checks.
 pub fn generate_safe_prime_with_rng<T: Integer + RandomBits + RandomMod, R: CryptoRng + ?Sized>(
     rng: &mut R,
     bit_length: u32,
@@ -125,7 +125,7 @@ where
 /// Panics if `bit_length` is less than 3, or greater than the bit size of the target `Uint`.
 /// Panics if the platform is unable to spawn threads.
 ///
-/// See [`is_prime_with_rng`] for details about the performed checks.
+/// See [`is_prime`] for details about the performed checks.
 #[cfg(feature = "multicore")]
 pub fn par_generate_safe_prime_with_rng<T, R>(rng: &mut R, bit_length: u32, threadcount: usize) -> T
 where
