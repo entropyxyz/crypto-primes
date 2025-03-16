@@ -12,12 +12,12 @@ rust-version = "1.83"
 [dependencies]
 crypto-bigint = { version = "0.7.0-pre.0", default-features = false, features = ["rand_core"] }
 rand_core = { version = "0.9.2", default-features = false }
+rayon = { version = "1", optional = true, default-features = false }
 
 # Optional dependencies used in tests and benchmarks
 openssl = { version = "0.10.39", optional = true, features = ["vendored"] }
-rug = { version = "1.26", default-features = false, features = ["integer"], optional = true }
+rug = { version = "1.26", optional = true, default-features = false, features = ["integer"] }
 glass_pumpkin = { version = "1", optional = true }
-rayon = { version = "1", optional = true }
 
 [dev-dependencies]
 rand_core = { version = "0.9.2", default-features = false, features = ["os_rng"] }
