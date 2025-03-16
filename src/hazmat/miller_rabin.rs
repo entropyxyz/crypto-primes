@@ -254,10 +254,10 @@ mod tests {
     #[test]
     fn random_base_corner_cases() {
         let mr = MillerRabin::new(Odd::new(U64::from(1u32)).unwrap());
-        assert!(mr.test_random_base(&mut OsRng.unwrap_err()) == Primality::Composite);
+        assert!(mr.test_random_base(&mut OsRng.unwrap_mut()) == Primality::Composite);
 
         let mr = MillerRabin::new(Odd::new(U64::from(3u32)).unwrap());
-        assert!(mr.test_random_base(&mut OsRng.unwrap_err()) == Primality::Prime);
+        assert!(mr.test_random_base(&mut OsRng.unwrap_mut()) == Primality::Prime);
     }
 
     fn is_spsp(num: u32) -> bool {

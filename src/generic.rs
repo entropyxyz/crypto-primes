@@ -65,11 +65,11 @@ mod tests {
         }
 
         let factory = TestSieveFactory { count: 0 };
-        let result = sieve_and_find(&mut OsRng.unwrap_err(), factory, |_rng, num| *num == 11);
+        let result = sieve_and_find(&mut OsRng.unwrap_mut(), factory, |_rng, num| *num == 11);
         assert!(result.is_some());
 
         let factory = TestSieveFactory { count: 0 };
-        let result = sieve_and_find(&mut OsRng.unwrap_err(), factory, |_rng, num| *num == 20);
+        let result = sieve_and_find(&mut OsRng.unwrap_mut(), factory, |_rng, num| *num == 20);
         assert!(result.is_none());
     }
 }

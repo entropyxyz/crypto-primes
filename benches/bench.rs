@@ -50,12 +50,12 @@ fn bench_sieve(c: &mut Criterion) {
     let mut group = c.benchmark_group("Sieve");
 
     group.bench_function("(U128) random start", |b| {
-        b.iter(|| random_odd_uint::<U128, _>(&mut OsRng.unwrap_err(), 128))
+        b.iter(|| random_odd_uint::<U128, _>(&mut OsRng.unwrap_mut(), 128))
     });
 
     group.bench_function("(U128) creation", |b| {
         b.iter_batched(
-            || random_odd_uint::<U128, _>(&mut OsRng.unwrap_err(), 128),
+            || random_odd_uint::<U128, _>(&mut OsRng.unwrap_mut(), 128),
             |start| SmallPrimesSieve::new(start.get(), NonZero::new(128).unwrap(), false),
             BatchSize::SmallInput,
         )
@@ -64,19 +64,19 @@ fn bench_sieve(c: &mut Criterion) {
     // 5 is the average number of pre-sieved samples we need to take before we encounter a prime
     group.bench_function("(U128) average sieve samples for a prime (5)", |b| {
         b.iter_batched(
-            || make_sieve::<{ nlimbs!(128) }, _>(&mut OsRng.unwrap_err()),
+            || make_sieve::<{ nlimbs!(128) }, _>(&mut OsRng.unwrap_mut()),
             |sieve| sieve.take(5).for_each(drop),
             BatchSize::SmallInput,
         )
     });
 
     group.bench_function("(U1024) random start", |b| {
-        b.iter(|| random_odd_uint::<U1024, _>(&mut OsRng.unwrap_err(), 1024))
+        b.iter(|| random_odd_uint::<U1024, _>(&mut OsRng.unwrap_mut(), 1024))
     });
 
     group.bench_function("(U1024) creation", |b| {
         b.iter_batched(
-            || random_odd_uint::<U1024, _>(&mut OsRng.unwrap_err(), 1024),
+            || random_odd_uint::<U1024, _>(&mut OsRng.unwrap_mut(), 1024),
             |start| SmallPrimesSieve::new(start.get(), NonZero::new(1024).unwrap(), false),
             BatchSize::SmallInput,
         )
@@ -85,7 +85,7 @@ fn bench_sieve(c: &mut Criterion) {
     // 42 is the average number of pre-sieved samples we need to take before we encounter a prime
     group.bench_function("(U1024) average sieve samples for a prime (42)", |b| {
         b.iter_batched(
-            || make_sieve::<{ nlimbs!(1024) }, _>(&mut OsRng.unwrap_err()),
+            || make_sieve::<{ nlimbs!(1024) }, _>(&mut OsRng.unwrap_mut()),
             |sieve| sieve.take(42).for_each(drop),
             BatchSize::SmallInput,
         )
@@ -95,7 +95,7 @@ fn bench_sieve(c: &mut Criterion) {
     // before we encounter a safe prime
     group.bench_function("(U1024) average sieve samples for a safe prime (42^2)", |b| {
         b.iter_batched(
-            || make_sieve::<{ nlimbs!(1024) }, _>(&mut OsRng.unwrap_err()),
+            || make_sieve::<{ nlimbs!(1024) }, _>(&mut OsRng.unwrap_mut()),
             |sieve| sieve.take(42 * 42).for_each(drop),
             BatchSize::SmallInput,
         )
@@ -109,7 +109,7 @@ fn bench_miller_rabin(c: &mut Criterion) {
 
     group.bench_function("(U128) creation", |b| {
         b.iter_batched(
-            || random_odd_uint::<U128, _>(&mut OsRng.unwrap_err(), 128),
+            || random_odd_uint::<U128, _>(&mut OsRng.unwrap_mut(), 128),
             MillerRabin::<U128>::new,
             BatchSize::SmallInput,
         )
@@ -117,15 +117,15 @@ fn bench_miller_rabin(c: &mut Criterion) {
 
     group.bench_function("(U128) random base test (pre-sieved)", |b| {
         b.iter_batched(
-            || MillerRabin::new(make_presieved_num::<{ nlimbs!(128) }, _>(&mut OsRng.unwrap_err())),
-            |mr| mr.test_random_base(&mut OsRng.unwrap_err()),
+            || MillerRabin::new(make_presieved_num::<{ nlimbs!(128) }, _>(&mut OsRng.unwrap_mut())),
+            |mr| mr.test_random_base(&mut OsRng.unwrap_mut()),
             BatchSize::SmallInput,
         )
     });
 
     group.bench_function("(U1024) creation", |b| {
         b.iter_batched(
-            || random_odd_uint::<U1024, _>(&mut OsRng.unwrap_err(), 1024),
+            || random_odd_uint::<U1024, _>(&mut OsRng.unwrap_mut(), 1024),
             MillerRabin::<U1024>::new,
             BatchSize::SmallInput,
         )
@@ -133,8 +133,8 @@ fn bench_miller_rabin(c: &mut Criterion) {
 
     group.bench_function("(U1024) random base test (pre-sieved)", |b| {
         b.iter_batched(
-            || MillerRabin::new(make_presieved_num::<{ nlimbs!(1024) }, _>(&mut OsRng.unwrap_err())),
-            |mr| mr.test_random_base(&mut OsRng.unwrap_err()),
+            || MillerRabin::new(make_presieved_num::<{ nlimbs!(1024) }, _>(&mut OsRng.unwrap_mut())),
+            |mr| mr.test_random_base(&mut OsRng.unwrap_mut()),
             BatchSize::SmallInput,
         )
     });
@@ -215,7 +215,7 @@ fn bench_presets(c: &mut Criterion) {
 
     group.bench_function("(U128) Prime test", |b| {
         b.iter_batched(
-            || random_odd_uint::<U128, _>(&mut OsRng.unwrap_err(), 128),
+            || random_odd_uint::<U128, _>(&mut OsRng.unwrap_mut(), 128),
             |num| is_prime(Flavor::Any, num.as_ref()),
             BatchSize::SmallInput,
         )
@@ -223,7 +223,7 @@ fn bench_presets(c: &mut Criterion) {
 
     group.bench_function("(U1024) Prime test", |b| {
         b.iter_batched(
-            || random_odd_uint::<U1024, _>(&mut OsRng.unwrap_err(), 1024),
+            || random_odd_uint::<U1024, _>(&mut OsRng.unwrap_mut(), 1024),
             |num| is_prime(Flavor::Any, num.as_ref()),
             BatchSize::SmallInput,
         )
@@ -233,15 +233,15 @@ fn bench_presets(c: &mut Criterion) {
 
     group.bench_function("(U1024) Prime test (FIPS, 1/2^128 failure bound)", |b| {
         b.iter_batched(
-            || random_odd_uint::<U1024, _>(&mut OsRng.unwrap_err(), 1024),
-            |num| fips_is_prime(&mut OsRng.unwrap_err(), Flavor::Any, num.as_ref(), iters, false),
+            || random_odd_uint::<U1024, _>(&mut OsRng.unwrap_mut(), 1024),
+            |num| fips_is_prime(&mut OsRng.unwrap_mut(), Flavor::Any, num.as_ref(), iters, false),
             BatchSize::SmallInput,
         )
     });
 
     group.bench_function("(U128) Safe prime test", |b| {
         b.iter_batched(
-            || random_odd_uint::<U128, _>(&mut OsRng.unwrap_err(), 128),
+            || random_odd_uint::<U128, _>(&mut OsRng.unwrap_mut(), 128),
             |num| is_prime(Flavor::Safe, num.as_ref()),
             BatchSize::SmallInput,
         )
@@ -373,7 +373,7 @@ fn bench_gmp(c: &mut Criterion) {
 
     group.bench_function("(U128) Random prime", |b| {
         b.iter_batched(
-            || random::<{ nlimbs!(128) }, _>(&mut OsRng.unwrap_err()),
+            || random::<{ nlimbs!(128) }, _>(&mut OsRng.unwrap_mut()),
             |n| n.next_prime(),
             BatchSize::SmallInput,
         )
@@ -381,7 +381,7 @@ fn bench_gmp(c: &mut Criterion) {
 
     group.bench_function("(U1024) Random prime", |b| {
         b.iter_batched(
-            || random::<{ nlimbs!(1024) }, _>(&mut OsRng.unwrap_err()),
+            || random::<{ nlimbs!(1024) }, _>(&mut OsRng.unwrap_mut()),
             |n| n.next_prime(),
             BatchSize::SmallInput,
         )

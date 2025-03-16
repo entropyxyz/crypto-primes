@@ -27,7 +27,7 @@ Find a 196 bit prime returned in a 256-bit long `crypto_bigint::U256`:
 use crypto_bigint::U256;
 use rand_core::{OsRng, TryRngCore};
 use crypto_primes::{Flavor, is_prime, random_prime};
-let prime = random_prime::<U256, _>(&mut OsRng.unwrap_err(), Flavor::Any, 196);
+let prime = random_prime::<U256, _>(&mut OsRng.unwrap_mut(), Flavor::Any, 196);
 assert!(is_prime(Flavor::Any, &prime));
 ```
 
@@ -37,7 +37,7 @@ Find a 64 bit safe prime returned in a `crypto_bigint::U1024`:
 use crypto_bigint::U1024;
 use rand_core::{OsRng, TryRngCore};
 use crypto_primes::{Flavor, is_prime, random_prime};
-let prime = random_prime::<U1024, _>(&mut OsRng.unwrap_err(), Flavor::Safe, 64);
+let prime = random_prime::<U1024, _>(&mut OsRng.unwrap_mut(), Flavor::Safe, 64);
 assert!(is_prime(Flavor::Safe, &prime));
 ```
 

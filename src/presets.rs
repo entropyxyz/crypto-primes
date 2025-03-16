@@ -230,7 +230,7 @@ mod tests {
 
     fn fips_is_prime<T: Integer + RandomMod>(flavor: Flavor, num: &T) -> bool {
         let mr_iterations = minimum_mr_iterations(128, 100).unwrap();
-        super::fips_is_prime(&mut OsRng.unwrap_err(), flavor, num, mr_iterations, false)
+        super::fips_is_prime(&mut OsRng.unwrap_mut(), flavor, num, mr_iterations, false)
     }
 
     fn test_large_primes<const L: usize>(nums: &[Uint<L>]) {
@@ -394,13 +394,13 @@ mod tests {
     #[test]
     #[should_panic(expected = "random_odd_integer() failed: BitLengthTooLarge { bit_length: 65, bits_precision: 64 }")]
     fn generate_prime_too_many_bits() {
-        let _p: U64 = random_prime(&mut OsRng.unwrap_err(), Flavor::Any, 65);
+        let _p: U64 = random_prime(&mut OsRng.unwrap_mut(), Flavor::Any, 65);
     }
 
     #[test]
     #[should_panic(expected = "random_odd_integer() failed: BitLengthTooLarge { bit_length: 65, bits_precision: 64 }")]
     fn generate_safe_prime_too_many_bits() {
-        let _p: U64 = random_prime(&mut OsRng.unwrap_err(), Flavor::Safe, 65);
+        let _p: U64 = random_prime(&mut OsRng.unwrap_mut(), Flavor::Safe, 65);
     }
 
     fn is_prime_ref(num: Word) -> bool {
@@ -475,7 +475,7 @@ mod tests_openssl {
             let p = from_openssl(&p_bn);
             assert!(is_prime(Flavor::Any, &p), "we report {p} as composite");
             assert!(
-                fips_is_prime(&mut OsRng.unwrap_err(), Flavor::Any, &p, mr_iterations, false),
+                fips_is_prime(&mut OsRng.unwrap_mut(), Flavor::Any, &p, mr_iterations, false),
                 "we report {p} as composite"
             );
         }
@@ -492,7 +492,7 @@ mod tests_openssl {
                 "difference between OpenSSL and us: OpenSSL reports {expected}, we report {actual}",
             );
 
-            let actual = fips_is_prime(&mut OsRng.unwrap_err(), Flavor::Any, p.as_ref(), mr_iterations, false);
+            let actual = fips_is_prime(&mut OsRng.unwrap_mut(), Flavor::Any, p.as_ref(), mr_iterations, false);
             assert_eq!(
                 actual, expected,
                 "difference between OpenSSL and us: OpenSSL reports {expected}, we report {actual}",
@@ -542,21 +542,21 @@ mod tests_gmp {
         // Generate primes with GMP, check them
         for _ in 0..100 {
             let start =
-                random_odd_integer::<U128, _>(&mut OsRng.unwrap_err(), NonZero::new(128).unwrap(), SetBits::Msb)
+                random_odd_integer::<U128, _>(&mut OsRng.unwrap_mut(), NonZero::new(128).unwrap(), SetBits::Msb)
                     .unwrap();
             let start_bn = to_gmp(&start);
             let p_bn = start_bn.next_prime();
             let p = from_gmp(&p_bn);
             assert!(is_prime(Flavor::Any, &p), "we report {p} as composite");
             assert!(
-                fips_is_prime(&mut OsRng.unwrap_err(), Flavor::Any, &p, mr_iterations, false),
+                fips_is_prime(&mut OsRng.unwrap_mut(), Flavor::Any, &p, mr_iterations, false),
                 "we report {p} as composite"
             );
         }
 
         // Generate random numbers, check if our test agrees with GMP
         for _ in 0..100 {
-            let p = random_odd_integer::<U128, _>(&mut OsRng.unwrap_err(), NonZero::new(128).unwrap(), SetBits::Msb)
+            let p = random_odd_integer::<U128, _>(&mut OsRng.unwrap_mut(), NonZero::new(128).unwrap(), SetBits::Msb)
                 .unwrap();
             let p_bn = to_gmp(&p);
             let expected = gmp_is_prime(&p_bn);
@@ -567,7 +567,7 @@ mod tests_gmp {
                 "difference between GMP and us: GMP reports {expected}, we report {actual}",
             );
 
-            let actual = fips_is_prime(&mut OsRng.unwrap_err(), Flavor::Any, p.as_ref(), mr_iterations, false);
+            let actual = fips_is_prime(&mut OsRng.unwrap_mut(), Flavor::Any, p.as_ref(), mr_iterations, false);
             assert_eq!(
                 actual, expected,
                 "difference between GMP and us: GMP reports {expected}, we report {actual}",
