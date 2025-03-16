@@ -14,7 +14,7 @@ use crate::{
 /// and returns the first item for which `predicate` is `true`.
 ///
 /// If `sieve_factory` signals that no more results can be created, returns `None`.
-pub fn par_sieve_and_find<R, S, F>(rng: &mut R, sieve_factory: S, predicate: F, threadcount: usize) -> Option<S::Item>
+pub fn sieve_and_find<R, S, F>(rng: &mut R, sieve_factory: S, predicate: F, threadcount: usize) -> Option<S::Item>
 where
     R: CryptoRng + Clone + Send + Sync,
     S: Send + Sync + SieveFactory,
@@ -89,12 +89,12 @@ where
 /// Panics if `bit_length` is less than 2, or greater than the bit size of the target `Uint`.
 ///
 /// Panics if the platform is unable to spawn threads.
-pub fn par_random_prime<T, R>(rng: &mut R, bit_length: u32, threadcount: usize) -> T
+pub fn random_prime<T, R>(rng: &mut R, bit_length: u32, threadcount: usize) -> T
 where
     T: Integer + RandomBits + RandomMod,
     R: CryptoRng + Send + Sync + Clone,
 {
-    par_sieve_and_find(
+    sieve_and_find(
         rng,
         SmallPrimesSieveFactory::new(bit_length, SetBits::Msb),
         |_rng, candidate| is_prime(candidate),
@@ -112,12 +112,12 @@ where
 /// Panics if the platform is unable to spawn threads.
 ///
 /// See [`is_prime`] for details about the performed checks.
-pub fn par_random_safe_prime<T, R>(rng: &mut R, bit_length: u32, threadcount: usize) -> T
+pub fn random_safe_prime<T, R>(rng: &mut R, bit_length: u32, threadcount: usize) -> T
 where
     T: Integer + RandomBits + RandomMod,
     R: CryptoRng + Send + Sync + Clone,
 {
-    par_sieve_and_find(
+    sieve_and_find(
         rng,
         SmallPrimesSieveFactory::new_safe_primes(bit_length, SetBits::Msb),
         |_rng, candidate| is_safe_prime(candidate),
@@ -131,12 +131,12 @@ mod tests {
     use crypto_bigint::{nlimbs, BoxedUint, U128};
     use rand_core::{OsRng, TryRngCore};
 
-    use super::{is_prime, par_random_prime, par_random_safe_prime};
+    use super::{is_prime, random_prime, random_safe_prime};
 
     #[test]
     fn parallel_prime_generation() {
         for bit_length in (28..=128).step_by(10) {
-            let p: U128 = par_random_prime(&mut OsRng.unwrap_err(), bit_length, 4);
+            let p: U128 = random_prime(&mut OsRng.unwrap_err(), bit_length, 4);
             assert!(p.bits_vartime() == bit_length);
             assert!(is_prime(&p));
         }
@@ -145,7 +145,7 @@ mod tests {
     #[test]
     fn parallel_prime_generation_boxed() {
         for bit_length in (28..=128).step_by(10) {
-            let p: BoxedUint = par_random_prime(&mut OsRng.unwrap_err(), bit_length, 2);
+            let p: BoxedUint = random_prime(&mut OsRng.unwrap_err(), bit_length, 2);
             assert!(p.bits_vartime() == bit_length);
             assert!(p.to_words().len() == nlimbs!(bit_length));
             assert!(is_prime(&p));
@@ -155,7 +155,7 @@ mod tests {
     #[test]
     fn parallel_safe_prime_generation() {
         for bit_length in (28..=128).step_by(10) {
-            let p: U128 = par_random_safe_prime(&mut OsRng.unwrap_err(), bit_length, 8);
+            let p: U128 = random_safe_prime(&mut OsRng.unwrap_err(), bit_length, 8);
             assert!(p.bits_vartime() == bit_length);
             assert!(is_prime(&p));
         }
@@ -164,7 +164,7 @@ mod tests {
     #[test]
     fn parallel_safe_prime_generation_boxed() {
         for bit_length in (28..=128).step_by(10) {
-            let p: BoxedUint = par_random_safe_prime(&mut OsRng.unwrap_err(), bit_length, 4);
+            let p: BoxedUint = random_safe_prime(&mut OsRng.unwrap_err(), bit_length, 4);
             assert!(p.bits_vartime() == bit_length);
             assert!(p.to_words().len() == nlimbs!(bit_length));
             assert!(is_prime(&p));
