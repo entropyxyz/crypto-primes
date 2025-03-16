@@ -45,7 +45,6 @@ Advanced users can use the [`hazmat`][hazmat-lnk] module in the library to build
 
 The following features are available:
 
-- `default-rng`: Use the OS default CSPRNG, `OsRng`. Enabled by default.
 - `multicore`: Enables additional parallel prime finding functions. Disabled by default.
 
 

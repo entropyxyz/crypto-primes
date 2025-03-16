@@ -28,10 +28,6 @@ pub use presets::{
 };
 pub use traits::SieveFactory;
 
-#[cfg(feature = "default-rng")]
-pub use presets::{generate_prime, generate_safe_prime};
-#[cfg(all(feature = "default-rng", feature = "multicore"))]
-pub use presets::{par_generate_prime, par_generate_safe_prime};
 #[cfg(feature = "multicore")]
 pub use presets::{par_generate_prime_with_rng, par_generate_safe_prime_with_rng};
 

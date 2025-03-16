@@ -1,9 +1,6 @@
 use crypto_bigint::{Integer, Odd, RandomBits, RandomMod, Word};
 use rand_core::CryptoRng;
 
-#[cfg(feature = "default-rng")]
-use rand_core::{OsRng, TryRngCore};
-
 use crate::{
     generic::sieve_and_find,
     hazmat::{
@@ -13,52 +10,6 @@ use crate::{
 
 #[cfg(feature = "multicore")]
 use crate::generic::par_sieve_and_find;
-
-/// Returns a random prime of size `bit_length` using [`OsRng`] as the RNG.
-///
-/// See [`is_prime`] for details about the performed checks.
-#[cfg(feature = "default-rng")]
-pub fn generate_prime<T: Integer + RandomBits + RandomMod>(bit_length: u32) -> T {
-    generate_prime_with_rng(&mut OsRng.unwrap_err(), bit_length)
-}
-
-/// Returns a random prime of size `bit_length` using [`OsRng`] as the RNG.
-///
-/// See [`is_prime`] for details about the performed checks.
-///
-/// Uses `threadcount` cores to parallelize the prime search.
-///
-/// Panics if `bit_length` is less than 2, or greater than the bit size of the target `Uint`.
-///
-/// Panics if the platform is unable to spawn threads.
-#[cfg(all(feature = "default-rng", feature = "multicore"))]
-pub fn par_generate_prime<T: Integer + RandomBits + RandomMod>(bit_length: u32, threadcount: usize) -> T {
-    par_generate_prime_with_rng(&mut OsRng.unwrap_err(), bit_length, threadcount)
-}
-
-/// Returns a random safe prime (that is, such that `(n - 1) / 2` is also prime) of size
-/// `bit_length` using [`OsRng`] as the RNG.
-///
-/// See [`is_prime`] for details about the performed checks.
-#[cfg(feature = "default-rng")]
-pub fn generate_safe_prime<T: Integer + RandomBits + RandomMod>(bit_length: u32) -> T {
-    generate_safe_prime_with_rng(&mut OsRng.unwrap_err(), bit_length)
-}
-
-/// Returns a random safe prime (that is, such that `(n - 1) / 2` is also prime) of size
-/// `bit_length` using [`OsRng`] as the RNG.
-///
-/// See [`is_prime`] for details about the performed checks.
-///
-/// Uses `threadcount` cores to parallelize the prime search.
-///
-/// Panics if `bit_length` is less than 3, or greater than the bit size of the target `Uint`.
-///
-/// Panics if the platform is unable to spawn threads.
-#[cfg(all(feature = "default-rng", feature = "multicore"))]
-pub fn par_generate_safe_prime<T: Integer + RandomBits + RandomMod>(bit_length: u32, threadcount: usize) -> T {
-    par_generate_safe_prime_with_rng(&mut OsRng.unwrap_err(), bit_length, threadcount)
-}
 
 /// Returns a random prime of size `bit_length` using the provided RNG.
 ///
@@ -306,8 +257,8 @@ mod tests {
     use rand_core::{OsRng, TryRngCore};
 
     use super::{
-        fips_is_prime_with_rng, fips_is_safe_prime_with_rng, generate_prime, generate_prime_with_rng,
-        generate_safe_prime, generate_safe_prime_with_rng, is_prime, is_safe_prime,
+        fips_is_prime_with_rng, fips_is_safe_prime_with_rng, generate_prime_with_rng, generate_safe_prime_with_rng,
+        is_prime, is_safe_prime,
     };
     use crate::hazmat::{minimum_mr_iterations, primes, pseudoprimes};
 
@@ -396,7 +347,7 @@ mod tests {
     #[test]
     fn prime_generation() {
         for bit_length in (28..=128).step_by(10) {
-            let p: U128 = generate_prime(bit_length);
+            let p: U128 = generate_prime_with_rng(&mut OsRng.unwrap_mut(), bit_length);
             assert!(p.bits_vartime() == bit_length);
             assert!(is_prime(&p));
             assert!(fips_is_prime(&p));
@@ -406,7 +357,7 @@ mod tests {
     #[test]
     fn prime_generation_boxed() {
         for bit_length in (28..=128).step_by(10) {
-            let p: BoxedUint = generate_prime(bit_length);
+            let p: BoxedUint = generate_prime_with_rng(&mut OsRng.unwrap_mut(), bit_length);
             assert!(p.bits_vartime() == bit_length);
             assert!(p.to_words().len() == nlimbs!(bit_length));
             assert!(is_prime(&p));
@@ -417,7 +368,7 @@ mod tests {
     #[test]
     fn safe_prime_generation() {
         for bit_length in (28..=128).step_by(10) {
-            let p: U128 = generate_safe_prime(bit_length);
+            let p: U128 = generate_safe_prime_with_rng(&mut OsRng.unwrap_mut(), bit_length);
             assert!(p.bits_vartime() == bit_length);
             assert!(is_safe_prime(&p));
             assert!(fips_is_safe_prime(&p));
@@ -427,7 +378,7 @@ mod tests {
     #[test]
     fn safe_prime_generation_boxed() {
         for bit_length in (28..=189).step_by(10) {
-            let p: BoxedUint = generate_safe_prime(bit_length);
+            let p: BoxedUint = generate_safe_prime_with_rng(&mut OsRng.unwrap_mut(), bit_length);
             assert!(p.bits_vartime() == bit_length);
             assert!(p.to_words().len() == nlimbs!(bit_length));
             assert!(is_safe_prime(&p));
@@ -499,7 +450,7 @@ mod tests {
     fn corner_cases_generate_prime() {
         for bits in 2..5 {
             for _ in 0..100 {
-                let p: U64 = generate_prime(bits);
+                let p: U64 = generate_prime_with_rng(&mut OsRng.unwrap_mut(), bits);
                 let p_word = p.as_words()[0];
                 assert!(is_prime_ref(p_word));
             }
@@ -510,7 +461,7 @@ mod tests {
     fn corner_cases_generate_safe_prime() {
         for bits in 3..5 {
             for _ in 0..100 {
-                let p: U64 = generate_safe_prime(bits);
+                let p: U64 = generate_safe_prime_with_rng(&mut OsRng.unwrap_mut(), bits);
                 let p_word = p.as_words()[0];
                 assert!(is_prime_ref(p_word) && is_prime_ref(p_word / 2));
             }
@@ -520,13 +471,15 @@ mod tests {
 
 #[cfg(all(test, feature = "multicore"))]
 mod multicore_tests {
-    use super::{is_prime, par_generate_prime, par_generate_safe_prime};
+    use rand_core::{OsRng, TryRngCore};
+
+    use super::{is_prime, par_generate_prime_with_rng, par_generate_safe_prime_with_rng};
     use crypto_bigint::{nlimbs, BoxedUint, U128};
 
     #[test]
     fn parallel_prime_generation() {
         for bit_length in (28..=128).step_by(10) {
-            let p: U128 = par_generate_prime(bit_length, 4);
+            let p: U128 = par_generate_prime_with_rng(&mut OsRng.unwrap_err(), bit_length, 4);
             assert!(p.bits_vartime() == bit_length);
             assert!(is_prime(&p));
         }
@@ -535,7 +488,7 @@ mod multicore_tests {
     #[test]
     fn parallel_prime_generation_boxed() {
         for bit_length in (28..=128).step_by(10) {
-            let p: BoxedUint = par_generate_prime(bit_length, 2);
+            let p: BoxedUint = par_generate_prime_with_rng(&mut OsRng.unwrap_err(), bit_length, 2);
             assert!(p.bits_vartime() == bit_length);
             assert!(p.to_words().len() == nlimbs!(bit_length));
             assert!(is_prime(&p));
@@ -545,7 +498,7 @@ mod multicore_tests {
     #[test]
     fn parallel_safe_prime_generation() {
         for bit_length in (28..=128).step_by(10) {
-            let p: U128 = par_generate_safe_prime(bit_length, 8);
+            let p: U128 = par_generate_safe_prime_with_rng(&mut OsRng.unwrap_err(), bit_length, 8);
             assert!(p.bits_vartime() == bit_length);
             assert!(is_prime(&p));
         }
@@ -554,7 +507,7 @@ mod multicore_tests {
     #[test]
     fn parallel_safe_prime_generation_boxed() {
         for bit_length in (28..=128).step_by(10) {
-            let p: BoxedUint = par_generate_safe_prime(bit_length, 4);
+            let p: BoxedUint = par_generate_safe_prime_with_rng(&mut OsRng.unwrap_err(), bit_length, 4);
             assert!(p.bits_vartime() == bit_length);
             assert!(p.to_words().len() == nlimbs!(bit_length));
             assert!(is_prime(&p));
@@ -572,7 +525,7 @@ mod tests_openssl {
     use openssl::bn::{BigNum, BigNumContext};
     use rand_core::{OsRng, TryRngCore};
 
-    use super::{fips_is_prime_with_rng, generate_prime, is_prime};
+    use super::{fips_is_prime_with_rng, generate_prime_with_rng, is_prime};
     use crate::hazmat::{minimum_mr_iterations, random_odd_integer, SetBits};
 
     fn openssl_is_prime(num: &BigNum, ctx: &mut BigNumContext) -> bool {
@@ -593,7 +546,7 @@ mod tests_openssl {
 
         // Generate primes, let OpenSSL check them
         for _ in 0..100 {
-            let p: U128 = generate_prime(128);
+            let p: U128 = generate_prime_with_rng(&mut OsRng.unwrap_mut(), 128);
             let p_bn = to_openssl(&p);
             assert!(openssl_is_prime(&p_bn, &mut ctx), "OpenSSL reports {p} as composite",);
         }
@@ -645,7 +598,7 @@ mod tests_gmp {
         Integer,
     };
 
-    use super::{fips_is_prime_with_rng, generate_prime, is_prime};
+    use super::{fips_is_prime_with_rng, generate_prime_with_rng, is_prime};
     use crate::hazmat::{minimum_mr_iterations, random_odd_integer, SetBits};
 
     fn gmp_is_prime(num: &Integer) -> bool {
@@ -664,7 +617,7 @@ mod tests_gmp {
     fn gmp_cross_check() {
         // Generate primes, let GMP check them
         for _ in 0..100 {
-            let p: U128 = generate_prime(128);
+            let p: U128 = generate_prime_with_rng(&mut OsRng.unwrap_mut(), 128);
             let p_bn = to_gmp(&p);
             assert!(gmp_is_prime(&p_bn), "GMP reports {p} as composite");
         }

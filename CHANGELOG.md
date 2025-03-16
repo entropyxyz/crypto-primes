@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Removed `is_prime_with_rng()` and `is_safe_prime_with_rng()` since the primality check is now deterministic. ([#70])
 - `SieveIterator` removed from the public API. ([#79])
 - Removed `RandomPrimeWithRng` trait. ([#79])
+- Removed `default-rng` features and corresponding API items. ([#79])
 
 
 ### Added

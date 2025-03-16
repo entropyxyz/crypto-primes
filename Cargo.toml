@@ -20,6 +20,7 @@ glass_pumpkin = { version = "1", optional = true }
 rayon = { version = "1", optional = true }
 
 [dev-dependencies]
+rand_core = { version = "0.9.2", default-features = false, features = ["os_rng"] }
 # need `crypto-bigint` with `alloc` to test `BoxedUint`
 crypto-bigint = { version = "0.7.0-pre.0", default-features = false, features = ["alloc"] }
 rand_chacha = "0.9"
@@ -37,8 +38,6 @@ rand_core_06 = { package = "rand_core", version = "0.6.4", default-features = fa
 rand_chacha_03 = { package = "rand_chacha", version = "0.3", default-features = false }
 
 [features]
-default = ["default-rng"]
-default-rng = ["rand_core/os_rng"]
 tests-openssl = ["openssl"]
 tests-gmp = ["rug/std"]
 tests-glass-pumpkin = ["glass_pumpkin"]
