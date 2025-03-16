@@ -26,7 +26,7 @@ pub use presets::{
     fips_is_prime_with_rng, fips_is_safe_prime_with_rng, generate_prime_with_rng, generate_safe_prime_with_rng,
     is_prime, is_safe_prime,
 };
-pub use traits::{RandomPrimeWithRng, SieveFactory};
+pub use traits::SieveFactory;
 
 #[cfg(feature = "default-rng")]
 pub use presets::{generate_prime, generate_safe_prime};

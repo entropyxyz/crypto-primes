@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Replaced the default GMP-style primality check with the BPSW'21 check. ([#70])
 - Removed `is_prime_with_rng()` and `is_safe_prime_with_rng()` since the primality check is now deterministic. ([#70])
 - `SieveIterator` removed from the public API. ([#79])
+- Removed `RandomPrimeWithRng` trait. ([#79])
 
 
 ### Added
