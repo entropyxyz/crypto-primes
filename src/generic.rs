@@ -66,14 +66,20 @@ where
 
 /// A structure that chains the creation of sieves, returning the results from one until it is exhausted,
 /// and then creating a new one.
+#[cfg(feature = "multicore")]
 #[derive(Debug)]
-pub struct SieveIterator<'a, R: CryptoRng + ?Sized, S: SieveFactory> {
+pub(crate) struct SieveIterator<'a, R: ?Sized, S: SieveFactory> {
     sieve_factory: S,
     sieve: S::Sieve,
     rng: &'a mut R,
 }
 
-impl<'a, R: CryptoRng + ?Sized, S: SieveFactory> SieveIterator<'a, R, S> {
+#[cfg(feature = "multicore")]
+impl<'a, R, S> SieveIterator<'a, R, S>
+where
+    R: CryptoRng + ?Sized,
+    S: SieveFactory,
+{
     /// Creates a new chained iterator producing results from sieves returned from `sieve_factory`.
     pub fn new(rng: &'a mut R, sieve_factory: S) -> Option<Self> {
         let mut sieve_factory = sieve_factory;
@@ -86,7 +92,12 @@ impl<'a, R: CryptoRng + ?Sized, S: SieveFactory> SieveIterator<'a, R, S> {
     }
 }
 
-impl<R: CryptoRng, S: SieveFactory> Iterator for SieveIterator<'_, R, S> {
+#[cfg(feature = "multicore")]
+impl<R, S> Iterator for SieveIterator<'_, R, S>
+where
+    R: CryptoRng + ?Sized,
+    S: SieveFactory,
+{
     type Item = S::Item;
 
     fn next(&mut self) -> Option<Self::Item> {

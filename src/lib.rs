@@ -21,7 +21,7 @@ pub mod hazmat;
 mod presets;
 mod traits;
 
-pub use generic::{sieve_and_find, SieveIterator};
+pub use generic::sieve_and_find;
 pub use presets::{
     fips_is_prime_with_rng, fips_is_safe_prime_with_rng, generate_prime_with_rng, generate_safe_prime_with_rng,
     is_prime, is_safe_prime,
