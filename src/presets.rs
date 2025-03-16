@@ -22,11 +22,11 @@ pub enum Flavor {
 /// Panics if `bit_length` is less than the bit length of the smallest possible prime with the requested `flavor`.
 ///
 /// See [`is_prime`] for details about the performed checks.
-pub fn random_prime<T: Integer + RandomBits + RandomMod, R: CryptoRng + ?Sized>(
-    rng: &mut R,
-    flavor: Flavor,
-    bit_length: u32,
-) -> T {
+pub fn random_prime<T, R>(rng: &mut R, flavor: Flavor, bit_length: u32) -> T
+where
+    T: Integer + RandomBits + RandomMod,
+    R: CryptoRng + ?Sized,
+{
     sieve_and_find(
         rng,
         SmallPrimesSieveFactory::new(flavor, bit_length, SetBits::Msb),
@@ -35,7 +35,10 @@ pub fn random_prime<T: Integer + RandomBits + RandomMod, R: CryptoRng + ?Sized>(
     .expect("will produce a result eventually")
 }
 
-fn equals_primitive<T: Integer>(num: &T, primitive: Word) -> bool {
+fn equals_primitive<T>(num: &T, primitive: Word) -> bool
+where
+    T: Integer,
+{
     num.bits_vartime() <= u16::BITS && num.as_ref()[0].0 == primitive
 }
 
@@ -63,7 +66,10 @@ fn equals_primitive<T: Integer>(num: &T, primitive: Word) -> bool {
 ///       "Strengthening the Baillie-PSW primality test",
 ///       Math. Comp. 90 1931-1955 (2021),
 ///       DOI: [10.1090/mcom/3616](https://doi.org/10.1090/mcom/3616)
-pub fn is_prime<T: Integer + RandomMod>(flavor: Flavor, candidate: &T) -> bool {
+pub fn is_prime<T>(flavor: Flavor, candidate: &T) -> bool
+where
+    T: Integer + RandomMod,
+{
     match flavor {
         Flavor::Any => {}
         Flavor::Safe => return is_safe_prime(candidate),
@@ -98,7 +104,10 @@ pub fn is_prime<T: Integer + RandomMod>(flavor: Flavor, candidate: &T) -> bool {
 /// Checks if the given number is a safe prime.
 ///
 /// See [`is_prime`] for details about the performed checks.
-fn is_safe_prime<T: Integer + RandomMod>(candidate: &T) -> bool {
+fn is_safe_prime<T>(candidate: &T) -> bool
+where
+    T: Integer + RandomMod,
+{
     // Since, by the definition of safe prime, `(candidate - 1) / 2` must also be prime,
     // and therefore odd, `candidate` has to be equal to 3 modulo 4.
     // 5 is the only exception, so we check for it.
@@ -128,13 +137,16 @@ fn is_safe_prime<T: Integer + RandomMod>(candidate: &T) -> bool {
 /// to calculate the number of required iterations.
 ///
 /// [^FIPS]: FIPS-186.5 standard, <https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.186-5.pdf>
-pub fn fips_is_prime<T: Integer + RandomMod>(
+pub fn fips_is_prime<T>(
     rng: &mut (impl CryptoRng + ?Sized),
     flavor: Flavor,
     candidate: &T,
     mr_iterations: usize,
     add_lucas_test: bool,
-) -> bool {
+) -> bool
+where
+    T: Integer + RandomMod,
+{
     match flavor {
         Flavor::Any => {}
         Flavor::Safe => return fips_is_safe_prime(rng, candidate, mr_iterations, add_lucas_test),
@@ -180,12 +192,15 @@ pub fn fips_is_prime<T: Integer + RandomMod>(
 /// See [`fips_is_prime`] for details about the performed checks.
 ///
 /// [^FIPS]: FIPS-186.5 standard, <https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.186-5.pdf>
-fn fips_is_safe_prime<T: Integer + RandomMod>(
+fn fips_is_safe_prime<T>(
     rng: &mut (impl CryptoRng + ?Sized),
     candidate: &T,
     mr_iterations: usize,
     add_lucas_test: bool,
-) -> bool {
+) -> bool
+where
+    T: Integer + RandomMod,
+{
     // Since, by the definition of safe prime, `(candidate - 1) / 2` must also be prime,
     // and therefore odd, `candidate` has to be equal to 3 modulo 4.
     // 5 is the only exception, so we check for it.

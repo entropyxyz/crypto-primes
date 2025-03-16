@@ -34,11 +34,15 @@ pub enum SetBits {
 ///
 /// Returns an error variant if `bit_length` is greater than the maximum allowed for `T`
 /// (applies to fixed-length types).
-pub fn random_odd_integer<T: Integer + RandomBits, R: TryCryptoRng + ?Sized>(
+pub fn random_odd_integer<T, R>(
     rng: &mut R,
     bit_length: NonZeroU32,
     set_bits: SetBits,
-) -> Result<Odd<T>, RandomBitsError<R::Error>> {
+) -> Result<Odd<T>, RandomBitsError<R::Error>>
+where
+    T: Integer + RandomBits,
+    R: TryCryptoRng + ?Sized,
+{
     let bit_length = bit_length.get();
 
     let mut random = T::try_random_bits(rng, bit_length)?;
@@ -92,7 +96,10 @@ pub struct SmallPrimesSieve<T: Integer> {
     last_round: bool,
 }
 
-impl<T: Integer> SmallPrimesSieve<T> {
+impl<T> SmallPrimesSieve<T>
+where
+    T: Integer,
+{
     /// Creates a new sieve, iterating from `start` and until the last number with `max_bit_length`
     /// bits, producing numbers that are not non-trivial multiples of a list of small primes in the
     /// range `[2, start)` (`safe_primes = false`) or `[2, start/2)` (`safe_primes = true`).
@@ -274,7 +281,10 @@ impl<T: Integer> SmallPrimesSieve<T> {
     }
 }
 
-impl<T: Integer> Iterator for SmallPrimesSieve<T> {
+impl<T> Iterator for SmallPrimesSieve<T>
+where
+    T: Integer,
+{
     type Item = T;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -291,7 +301,10 @@ pub struct SmallPrimesSieveFactory<T> {
     phantom: PhantomData<T>,
 }
 
-impl<T: Integer + RandomBits> SmallPrimesSieveFactory<T> {
+impl<T> SmallPrimesSieveFactory<T>
+where
+    T: Integer + RandomBits,
+{
     /// Creates a factory that produces sieves returning numbers of at most `max_bit_length` bits
     /// that are not divisible by a number of small factors.
     ///
@@ -330,7 +343,10 @@ impl<T: Integer + RandomBits> SmallPrimesSieveFactory<T> {
     }
 }
 
-impl<T: Integer + RandomBits> SieveFactory for SmallPrimesSieveFactory<T> {
+impl<T> SieveFactory for SmallPrimesSieveFactory<T>
+where
+    T: Integer + RandomBits,
+{
     type Item = T;
     type Sieve = SmallPrimesSieve<T>;
     fn make_sieve<R: CryptoRng + ?Sized>(
