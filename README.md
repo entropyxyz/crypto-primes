@@ -25,16 +25,20 @@ Find a 196 bit prime returned in a 256-bit long `crypto_bigint::U256`:
 
 ```rust
 use crypto_bigint::U256;
-let prime = crypto_primes::generate_prime::<U256>(196);
-assert!(crypto_primes::is_prime(&prime));
+use rand_core::{OsRng, TryRngCore};
+use crypto_primes::{Flavor, is_prime, random_prime};
+let prime = random_prime::<U256, _>(&mut OsRng.unwrap_mut(), Flavor::Any, 196);
+assert!(is_prime(Flavor::Any, &prime));
 ```
 
 Find a 64 bit safe prime returned in a `crypto_bigint::U1024`:
 
 ```rust
 use crypto_bigint::U1024;
-let prime = crypto_primes::generate_safe_prime::<U1024>(64);
-assert!(crypto_primes::is_safe_prime(&prime));
+use rand_core::{OsRng, TryRngCore};
+use crypto_primes::{Flavor, is_prime, random_prime};
+let prime = random_prime::<U1024, _>(&mut OsRng.unwrap_mut(), Flavor::Safe, 64);
+assert!(is_prime(Flavor::Safe, &prime));
 ```
 
 ## Advanced
@@ -45,7 +49,6 @@ Advanced users can use the [`hazmat`][hazmat-lnk] module in the library to build
 
 The following features are available:
 
-- `default-rng`: Use the OS default CSPRNG, `OsRng`. Enabled by default.
 - `multicore`: Enables additional parallel prime finding functions. Disabled by default.
 
 

@@ -36,7 +36,10 @@ fn apply_reduce_numerator(j: JacobiSymbol, a: Word, p: Word) -> (JacobiSymbol, W
     (j, a >> s)
 }
 
-fn reduce_numerator_long<T: Integer>(j: JacobiSymbol, a: Word, p: &T) -> (JacobiSymbol, Word) {
+fn reduce_numerator_long<T>(j: JacobiSymbol, a: Word, p: &T) -> (JacobiSymbol, Word)
+where
+    T: Integer,
+{
     apply_reduce_numerator(j, a, p.as_ref()[0].0)
 }
 
@@ -66,7 +69,10 @@ fn swap_short(j: JacobiSymbol, a: Word, p: Word) -> (JacobiSymbol, Word, Word) {
 }
 
 /// Returns the Jacobi symbol `(a/p)` given an odd `p`.
-pub(crate) fn jacobi_symbol_vartime<T: Integer>(abs_a: Word, a_is_negative: bool, p_long: &Odd<T>) -> JacobiSymbol {
+pub(crate) fn jacobi_symbol_vartime<T>(abs_a: Word, a_is_negative: bool, p_long: &Odd<T>) -> JacobiSymbol
+where
+    T: Integer,
+{
     let result = JacobiSymbol::One; // Keep track of all the sign flips here.
 
     // Deal with a negative `a` first:
