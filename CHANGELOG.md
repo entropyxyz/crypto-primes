@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Renamed `generate_(safe_)prime_with_rng()` to `random_(safe_)prime()`, `fips_is_(safe_)prime_with_rng()` to `fips_is_(safe_)prime()`. ([#79])
 - Moved multicore functions to `multicore` module and removed `par_` prefixes. ([#79])
 - Introduced `Flavor` enum and removed `_safe` suffixes from functions. ([#79])
+- `SieveFactory` trait moved to `hazmat` module. ([#79])
 
 
 ### Added

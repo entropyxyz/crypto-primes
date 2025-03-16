@@ -10,7 +10,6 @@ use rand_core::{CryptoRng, TryCryptoRng};
 
 use crate::hazmat::precomputed::{SmallPrime, LAST_SMALL_PRIME, RECIPROCALS, SMALL_PRIMES};
 use crate::presets::Flavor;
-use crate::traits::SieveFactory;
 
 /// Decide how prime candidates are manipulated by setting certain bits before primality testing,
 /// influencing the range of the prime.
@@ -290,6 +289,24 @@ where
     fn next(&mut self) -> Option<Self::Item> {
         Self::next(self)
     }
+}
+
+/// A type producing sieves for random prime generation.
+pub trait SieveFactory {
+    /// The type of items returning by the sieves.
+    type Item;
+
+    /// The resulting sieve.
+    type Sieve: Iterator<Item = Self::Item>;
+
+    /// Makes a sieve given an RNG and the previous exhausted sieve (if any).
+    ///
+    /// Returning `None` signals that the prime generation should stop.
+    fn make_sieve<R: CryptoRng + ?Sized>(
+        &mut self,
+        rng: &mut R,
+        previous_sieve: Option<&Self::Sieve>,
+    ) -> Option<Self::Sieve>;
 }
 
 /// A sieve returning numbers that are not multiples of a set of small factors.

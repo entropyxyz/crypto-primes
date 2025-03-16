@@ -19,11 +19,9 @@ extern crate alloc;
 mod generic;
 pub mod hazmat;
 mod presets;
-mod traits;
 
 #[cfg(feature = "multicore")]
 pub mod multicore;
 
 pub use generic::sieve_and_find;
 pub use presets::{fips_is_prime, is_prime, random_prime, Flavor};
-pub use traits::SieveFactory;

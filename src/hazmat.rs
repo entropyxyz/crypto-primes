@@ -15,7 +15,7 @@ mod sieve;
 
 pub use lucas::{lucas_test, AStarBase, BruteForceBase, LucasBase, LucasCheck, SelfridgeBase};
 pub use miller_rabin::{minimum_mr_iterations, MillerRabin};
-pub use sieve::{random_odd_integer, SetBits, SmallPrimesSieve, SmallPrimesSieveFactory};
+pub use sieve::{random_odd_integer, SetBits, SieveFactory, SmallPrimesSieve, SmallPrimesSieveFactory};
 
 /// Possible results of various primality tests.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]

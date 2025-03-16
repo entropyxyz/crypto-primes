@@ -5,9 +5,8 @@ use rand_core::CryptoRng;
 use rayon::iter::{ParallelBridge, ParallelIterator};
 
 use crate::{
-    hazmat::{SetBits, SmallPrimesSieveFactory},
+    hazmat::{SetBits, SieveFactory, SmallPrimesSieveFactory},
     presets::{is_prime, Flavor},
-    traits::SieveFactory,
 };
 
 /// Sieves through the results of `sieve_factory` using a thread pool with `threadcount` threads,
