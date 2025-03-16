@@ -21,12 +21,9 @@ pub mod hazmat;
 mod presets;
 mod traits;
 
+#[cfg(feature = "multicore")]
+pub mod multicore;
+
 pub use generic::sieve_and_find;
 pub use presets::{fips_is_prime, fips_is_safe_prime, is_prime, is_safe_prime, random_prime, random_safe_prime};
 pub use traits::SieveFactory;
-
-#[cfg(feature = "multicore")]
-pub use presets::{par_random_prime, par_random_safe_prime};
-
-#[cfg(feature = "multicore")]
-pub use generic::par_sieve_and_find;

@@ -21,7 +21,7 @@ use crypto_primes::{
 };
 
 #[cfg(feature = "multicore")]
-use crypto_primes::{par_random_prime, par_random_safe_prime};
+use crypto_primes::multicore::{par_random_prime, par_random_safe_prime};
 
 fn make_rng() -> ChaCha8Rng {
     ChaCha8Rng::from_seed(*b"01234567890123456789012345678901")

@@ -8,9 +8,6 @@ use crate::{
     },
 };
 
-#[cfg(feature = "multicore")]
-use crate::generic::par_sieve_and_find;
-
 /// Returns a random prime of size `bit_length` using the provided RNG.
 ///
 /// Panics if `bit_length` is less than 2, or greater than the bit size of the target `Uint`.
@@ -39,52 +36,6 @@ pub fn random_safe_prime<T: Integer + RandomBits + RandomMod, R: CryptoRng + ?Si
         rng,
         SmallPrimesSieveFactory::new_safe_primes(bit_length, SetBits::Msb),
         |_rng, candidate| is_safe_prime(candidate),
-    )
-    .expect("will produce a result eventually")
-}
-
-/// Returns a random prime of size `bit_length` using the provided RNG.
-///
-/// Uses `threadcount` cores to parallelize the prime search.
-///
-/// Panics if `bit_length` is less than 2, or greater than the bit size of the target `Uint`.
-///
-/// Panics if the platform is unable to spawn threads.
-#[cfg(feature = "multicore")]
-pub fn par_random_prime<T, R>(rng: &mut R, bit_length: u32, threadcount: usize) -> T
-where
-    T: Integer + RandomBits + RandomMod,
-    R: CryptoRng + Send + Sync + Clone,
-{
-    par_sieve_and_find(
-        rng,
-        SmallPrimesSieveFactory::new(bit_length, SetBits::Msb),
-        |_rng, candidate| is_prime(candidate),
-        threadcount,
-    )
-    .expect("will produce a result eventually")
-}
-
-/// Returns a random safe prime (that is, such that `(n - 1) / 2` is also prime)
-/// of size `bit_length` using the provided RNG.
-///
-/// Uses `threadcount` cores to parallelize the prime search.
-///
-/// Panics if `bit_length` is less than 3, or greater than the bit size of the target `Uint`.
-/// Panics if the platform is unable to spawn threads.
-///
-/// See [`is_prime`] for details about the performed checks.
-#[cfg(feature = "multicore")]
-pub fn par_random_safe_prime<T, R>(rng: &mut R, bit_length: u32, threadcount: usize) -> T
-where
-    T: Integer + RandomBits + RandomMod,
-    R: CryptoRng + Send + Sync + Clone,
-{
-    par_sieve_and_find(
-        rng,
-        SmallPrimesSieveFactory::new_safe_primes(bit_length, SetBits::Msb),
-        |_rng, candidate| is_safe_prime(candidate),
-        threadcount,
     )
     .expect("will produce a result eventually")
 }
@@ -459,52 +410,6 @@ mod tests {
                 let p_word = p.as_words()[0];
                 assert!(is_prime_ref(p_word) && is_prime_ref(p_word / 2));
             }
-        }
-    }
-}
-
-#[cfg(all(test, feature = "multicore"))]
-mod multicore_tests {
-    use rand_core::{OsRng, TryRngCore};
-
-    use super::{is_prime, par_random_prime, par_random_safe_prime};
-    use crypto_bigint::{nlimbs, BoxedUint, U128};
-
-    #[test]
-    fn parallel_prime_generation() {
-        for bit_length in (28..=128).step_by(10) {
-            let p: U128 = par_random_prime(&mut OsRng.unwrap_err(), bit_length, 4);
-            assert!(p.bits_vartime() == bit_length);
-            assert!(is_prime(&p));
-        }
-    }
-
-    #[test]
-    fn parallel_prime_generation_boxed() {
-        for bit_length in (28..=128).step_by(10) {
-            let p: BoxedUint = par_random_prime(&mut OsRng.unwrap_err(), bit_length, 2);
-            assert!(p.bits_vartime() == bit_length);
-            assert!(p.to_words().len() == nlimbs!(bit_length));
-            assert!(is_prime(&p));
-        }
-    }
-
-    #[test]
-    fn parallel_safe_prime_generation() {
-        for bit_length in (28..=128).step_by(10) {
-            let p: U128 = par_random_safe_prime(&mut OsRng.unwrap_err(), bit_length, 8);
-            assert!(p.bits_vartime() == bit_length);
-            assert!(is_prime(&p));
-        }
-    }
-
-    #[test]
-    fn parallel_safe_prime_generation_boxed() {
-        for bit_length in (28..=128).step_by(10) {
-            let p: BoxedUint = par_random_safe_prime(&mut OsRng.unwrap_err(), bit_length, 4);
-            assert!(p.bits_vartime() == bit_length);
-            assert!(p.to_words().len() == nlimbs!(bit_length));
-            assert!(is_prime(&p));
         }
     }
 }
