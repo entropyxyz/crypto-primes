@@ -25,7 +25,8 @@ Find a 196 bit prime returned in a 256-bit long `crypto_bigint::U256`:
 
 ```rust
 use crypto_bigint::U256;
-let prime = crypto_primes::generate_prime::<U256>(196);
+use rand_core::{OsRng, TryRngCore};
+let prime = crypto_primes::random_prime::<U256, _>(&mut OsRng.unwrap_err(), 196);
 assert!(crypto_primes::is_prime(&prime));
 ```
 
@@ -33,7 +34,8 @@ Find a 64 bit safe prime returned in a `crypto_bigint::U1024`:
 
 ```rust
 use crypto_bigint::U1024;
-let prime = crypto_primes::generate_safe_prime::<U1024>(64);
+use rand_core::{OsRng, TryRngCore};
+let prime = crypto_primes::random_safe_prime::<U1024, _>(&mut OsRng.unwrap_err(), 64);
 assert!(crypto_primes::is_safe_prime(&prime));
 ```
 

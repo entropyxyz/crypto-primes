@@ -22,14 +22,11 @@ mod presets;
 mod traits;
 
 pub use generic::sieve_and_find;
-pub use presets::{
-    fips_is_prime_with_rng, fips_is_safe_prime_with_rng, generate_prime_with_rng, generate_safe_prime_with_rng,
-    is_prime, is_safe_prime,
-};
+pub use presets::{fips_is_prime, fips_is_safe_prime, is_prime, is_safe_prime, random_prime, random_safe_prime};
 pub use traits::SieveFactory;
 
 #[cfg(feature = "multicore")]
-pub use presets::{par_generate_prime_with_rng, par_generate_safe_prime_with_rng};
+pub use presets::{par_random_prime, par_random_safe_prime};
 
 #[cfg(feature = "multicore")]
 pub use generic::par_sieve_and_find;

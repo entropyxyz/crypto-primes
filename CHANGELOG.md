@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `SieveIterator` removed from the public API. ([#79])
 - Removed `RandomPrimeWithRng` trait. ([#79])
 - Removed `default-rng` features and corresponding API items. ([#79])
+- Renamed `generate_(safe_)prime_with_rng()` to `random_(safe_)prime()`, `fips_is_(safe_)prime_with_rng()` to `fips_is_(safe_)prime()`. ([#79])
 
 
 ### Added
