@@ -38,7 +38,7 @@ fn random_odd_uint<T: RandomBits + Integer, R: CryptoRng + ?Sized>(rng: &mut R, 
 
 fn make_sieve<const L: usize, R: CryptoRng + ?Sized>(rng: &mut R) -> SmallPrimesSieve<Uint<L>> {
     let start = random_odd_uint::<Uint<L>, R>(rng, Uint::<L>::BITS);
-    SmallPrimesSieve::new(start.get(), NonZero::new(Uint::<L>::BITS).unwrap(), false)
+    SmallPrimesSieve::new(start.get(), NonZero::new(Uint::<L>::BITS).unwrap(), false).unwrap()
 }
 
 fn make_presieved_num<const L: usize, R: CryptoRng + ?Sized>(rng: &mut R) -> Odd<Uint<L>> {
@@ -470,7 +470,7 @@ fn bench_glass_pumpkin(c: &mut Criterion) {
             let start = random_odd_integer::<BoxedUint, _>(rng, NonZero::new(bit_length).unwrap(), SetBits::Msb)
                 .unwrap()
                 .get();
-            let sieve = SmallPrimesSieve::new(start, NonZero::new(bit_length).unwrap(), false);
+            let sieve = SmallPrimesSieve::new(start, NonZero::new(bit_length).unwrap(), false).unwrap();
             for num in sieve {
                 let odd_num = Odd::new(num.clone()).unwrap();
 
@@ -496,7 +496,7 @@ fn bench_glass_pumpkin(c: &mut Criterion) {
             let start = random_odd_integer::<BoxedUint, _>(rng, NonZero::new(bit_length).unwrap(), SetBits::Msb)
                 .unwrap()
                 .get();
-            let sieve = SmallPrimesSieve::new(start, NonZero::new(bit_length).unwrap(), true);
+            let sieve = SmallPrimesSieve::new(start, NonZero::new(bit_length).unwrap(), true).unwrap();
             for num in sieve {
                 let odd_num = Odd::new(num.clone()).unwrap();
 

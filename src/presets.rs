@@ -28,12 +28,11 @@ where
     T: Integer + RandomBits + RandomMod,
     R: CryptoRng + ?Sized,
 {
-    sieve_and_find(
-        rng,
-        SmallPrimesSieveFactory::new(flavor, bit_length, SetBits::Msb),
-        |_rng, candidate| is_prime(flavor, candidate),
-    )
-    .expect("will produce a result eventually")
+    let factory = SmallPrimesSieveFactory::new(flavor, bit_length, SetBits::Msb)
+        .unwrap_or_else(|err| panic!("Error creating the sieve: {err}"));
+    sieve_and_find(rng, factory, |_rng, candidate| is_prime(flavor, candidate))
+        .unwrap_or_else(|err| panic!("Error generating random candidates: {err}"))
+        .expect("will produce a result eventually")
 }
 
 /// Checks if the given number is prime.
@@ -392,13 +391,17 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "random_odd_integer() failed: BitLengthTooLarge { bit_length: 65, bits_precision: 64 }")]
+    #[should_panic(
+        expected = "Error generating random candidates: The requested bit length of the candidate (65) is larger than the maximum size of the target integer type (64)."
+    )]
     fn generate_prime_too_many_bits() {
         let _p: U64 = random_prime(&mut OsRng.unwrap_mut(), Flavor::Any, 65);
     }
 
     #[test]
-    #[should_panic(expected = "random_odd_integer() failed: BitLengthTooLarge { bit_length: 65, bits_precision: 64 }")]
+    #[should_panic(
+        expected = "Error generating random candidates: The requested bit length of the candidate (65) is larger than the maximum size of the target integer type (64)."
+    )]
     fn generate_safe_prime_too_many_bits() {
         let _p: U64 = random_prime(&mut OsRng.unwrap_mut(), Flavor::Safe, 65);
     }
@@ -482,7 +485,8 @@ mod tests_openssl {
 
         // Generate random numbers, check if our test agrees with OpenSSL
         for _ in 0..100 {
-            let p = random_odd_integer::<U128, _>(&mut OsRng, NonZero::new(128).unwrap(), SetBits::Msb).unwrap();
+            let p = random_odd_integer::<U128, _>(&mut OsRng.unwrap_mut(), NonZero::new(128).unwrap(), SetBits::Msb)
+                .unwrap();
             let p_bn = to_openssl(&p);
             let expected = openssl_is_prime(&p_bn, &mut ctx);
 

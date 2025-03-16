@@ -5,6 +5,7 @@ use rand_core::CryptoRng;
 use rayon::iter::{ParallelBridge, ParallelIterator};
 
 use crate::{
+    error::Error,
     hazmat::{SetBits, SieveFactory, SmallPrimesSieveFactory},
     presets::{is_prime, Flavor},
 };
@@ -13,7 +14,12 @@ use crate::{
 /// and returns the first item for which `predicate` is `true`.
 ///
 /// If `sieve_factory` signals that no more results can be created, returns `None`.
-pub fn sieve_and_find<R, S, F>(rng: &mut R, sieve_factory: S, predicate: F, threadcount: usize) -> Option<S::Item>
+pub fn sieve_and_find<R, S, F>(
+    rng: &mut R,
+    sieve_factory: S,
+    predicate: F,
+    threadcount: usize,
+) -> Result<Option<S::Item>, Error>
 where
     R: CryptoRng + Clone + Send + Sync,
     S: Send + Sync + SieveFactory,
@@ -27,13 +33,16 @@ where
         .expect("If the platform can spawn threads, then this call will work.");
 
     let mut iter_rng = rng.clone();
-    let iter = SieveIterator::new(&mut iter_rng, sieve_factory)?;
+    let iter = match SieveIterator::new(&mut iter_rng, sieve_factory)? {
+        Some(iter) => iter,
+        None => return Ok(None),
+    };
 
     threadpool.install(|| {
-        iter.par_bridge().find_any(|c| {
+        Ok(iter.par_bridge().find_any(|c| {
             let mut rng = rng.clone();
             predicate(&mut rng, c)
-        })
+        }))
     })
 }
 
@@ -52,14 +61,17 @@ where
     S: SieveFactory,
 {
     /// Creates a new chained iterator producing results from sieves returned from `sieve_factory`.
-    pub fn new(rng: &'a mut R, sieve_factory: S) -> Option<Self> {
+    pub fn new(rng: &'a mut R, sieve_factory: S) -> Result<Option<Self>, Error> {
         let mut sieve_factory = sieve_factory;
-        let sieve = sieve_factory.make_sieve(rng, None)?;
-        Some(Self {
+        let sieve = match sieve_factory.make_sieve(rng, None)? {
+            Some(sieve) => sieve,
+            None => return Ok(None),
+        };
+        Ok(Some(Self {
             sieve_factory,
             rng,
             sieve,
-        })
+        }))
     }
 }
 
@@ -76,7 +88,10 @@ where
                 return Some(result);
             }
 
-            self.sieve = self.sieve_factory.make_sieve(self.rng, Some(&self.sieve))?;
+            self.sieve = self
+                .sieve_factory
+                .make_sieve(self.rng, Some(&self.sieve))
+                .expect("the first attempt to make a sieve succeeded, so the next ones should too")?;
         }
     }
 }
@@ -93,13 +108,11 @@ where
     T: Integer + RandomBits + RandomMod,
     R: CryptoRng + Send + Sync + Clone,
 {
-    sieve_and_find(
-        rng,
-        SmallPrimesSieveFactory::new(flavor, bit_length, SetBits::Msb),
-        |_rng, candidate| is_prime(flavor, candidate),
-        threadcount,
-    )
-    .expect("will produce a result eventually")
+    let factory = SmallPrimesSieveFactory::new(flavor, bit_length, SetBits::Msb)
+        .unwrap_or_else(|err| panic!("Error creating the sieve: {err}"));
+    sieve_and_find(rng, factory, |_rng, candidate| is_prime(flavor, candidate), threadcount)
+        .unwrap_or_else(|err| panic!("Error generating random candidates: {}", err))
+        .expect("will produce a result eventually")
 }
 
 #[cfg(test)]
