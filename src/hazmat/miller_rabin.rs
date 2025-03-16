@@ -4,6 +4,7 @@ use crypto_bigint::{Integer, Limb, Monty, NonZero as CTNonZero, Odd, PowBoundedE
 use rand_core::CryptoRng;
 
 use super::{
+    equals_primitive,
     float::{floor_sqrt, two_powf_upper_bound, two_powi},
     Primality,
 };
@@ -107,25 +108,30 @@ impl<T: Integer + RandomMod> MillerRabin<T> {
         self.test(&T::from_limb_like(Limb::from(2u32), &self.candidate))
     }
 
-    /// Perform a Miller-Rabin check with a random base (in the range `[3, candidate-2]`)
-    /// drawn using the provided RNG.
+    /// Perform a Miller-Rabin check with a random base (in the range `[2, candidate-2]`,
+    /// because the test holds trivially for bases 1 or `candidate-1`) drawn using the provided RNG.
     ///
-    /// Note: panics if `candidate == 3` (so the range above is empty).
+    /// *Note:* if `candidate == 1` or `candidate == 3` (which would make the above range contain no numbers)
+    /// no check is actually performed, since we already know the result
+    /// ([`Primality::Composite`] for 1, [`Primality::Prime`] for 3).
     pub fn test_random_base<R: CryptoRng + ?Sized>(&self, rng: &mut R) -> Primality {
-        // We sample a random base from the range `[3, candidate-2]`:
-        // - we have a separate method for base 2;
-        // - the test holds trivially for bases 1 or `candidate-1`.
-        if self.candidate.bits() < 3 {
-            panic!("No suitable random base possible when `candidate == 3`; use the base 2 test.")
+        if equals_primitive(&self.candidate, 1) {
+            // As per standard convention
+            return Primality::Composite;
         }
 
-        let range = self.candidate.wrapping_sub(&T::from(4u32));
-        // Can unwrap here since `candidate` is odd, and `candidate >= 4` (as checked above)
+        if equals_primitive(&self.candidate, 3) {
+            // As per standard convention
+            return Primality::Prime;
+        }
+
+        // The candidate is odd, so by now it is guaranteed to be >= 5.
+        let range = self.candidate.wrapping_sub(&T::from(3u32));
         let range_nonzero = CTNonZero::new(range).expect("the range should be non-zero by construction");
         // This should not overflow as long as `random_mod()` behaves according to the contract
         // (that is, returns a number within the given range).
         let random = T::random_mod(rng, &range_nonzero)
-            .checked_add(&T::from(3u32))
+            .checked_add(&T::from(2u32))
             .expect("addition should not overflow by construction");
         self.test(&random)
     }
@@ -236,7 +242,7 @@ mod tests {
     use num_prime::nt_funcs::is_prime64;
 
     use super::{minimum_mr_iterations, MillerRabin};
-    use crate::hazmat::{primes, pseudoprimes, random_odd_integer, SetBits, SmallPrimesSieve};
+    use crate::hazmat::{primes, pseudoprimes, random_odd_integer, Primality, SetBits, SmallPrimesSieve};
 
     #[test]
     fn miller_rabin_derived_traits() {
@@ -246,10 +252,12 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "No suitable random base possible when `candidate == 3`; use the base 2 test.")]
-    fn random_base_range_check() {
+    fn random_base_corner_cases() {
+        let mr = MillerRabin::new(Odd::new(U64::from(1u32)).unwrap());
+        assert!(mr.test_random_base(&mut OsRng.unwrap_err()) == Primality::Composite);
+
         let mr = MillerRabin::new(Odd::new(U64::from(3u32)).unwrap());
-        mr.test_random_base(&mut OsRng.unwrap_err());
+        assert!(mr.test_random_base(&mut OsRng.unwrap_err()) == Primality::Prime);
     }
 
     fn is_spsp(num: u32) -> bool {

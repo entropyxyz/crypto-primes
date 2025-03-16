@@ -1,10 +1,11 @@
-use crypto_bigint::{Integer, Odd, RandomBits, RandomMod, Word};
+use crypto_bigint::{Integer, Odd, RandomBits, RandomMod};
 use rand_core::CryptoRng;
 
 use crate::{
     generic::sieve_and_find,
     hazmat::{
-        lucas_test, AStarBase, LucasCheck, MillerRabin, Primality, SelfridgeBase, SetBits, SmallPrimesSieveFactory,
+        equals_primitive, lucas_test, AStarBase, LucasCheck, MillerRabin, Primality, SelfridgeBase, SetBits,
+        SmallPrimesSieveFactory,
     },
 };
 
@@ -33,13 +34,6 @@ where
         |_rng, candidate| is_prime(flavor, candidate),
     )
     .expect("will produce a result eventually")
-}
-
-fn equals_primitive<T>(num: &T, primitive: Word) -> bool
-where
-    T: Integer,
-{
-    num.bits_vartime() <= u16::BITS && num.as_ref()[0].0 == primitive
 }
 
 /// Checks if the given number is prime.

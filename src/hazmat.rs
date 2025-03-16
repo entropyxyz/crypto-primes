@@ -17,6 +17,8 @@ pub use lucas::{lucas_test, AStarBase, BruteForceBase, LucasBase, LucasCheck, Se
 pub use miller_rabin::{minimum_mr_iterations, MillerRabin};
 pub use sieve::{random_odd_integer, SetBits, SieveFactory, SmallPrimesSieve, SmallPrimesSieveFactory};
 
+use crypto_bigint::{Integer, Word};
+
 /// Possible results of various primality tests.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Primality {
@@ -38,6 +40,13 @@ impl Primality {
             Self::Composite => false,
         }
     }
+}
+
+pub(crate) fn equals_primitive<T>(num: &T, primitive: Word) -> bool
+where
+    T: Integer,
+{
+    num.bits_vartime() <= Word::BITS && num.as_ref()[0].0 == primitive
 }
 
 #[cfg(test)]

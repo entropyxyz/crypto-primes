@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Moved multicore functions to `multicore` module and removed `par_` prefixes. ([#79])
 - Introduced `Flavor` enum and removed `_safe` suffixes from functions. ([#79])
 - `SieveFactory` trait moved to `hazmat` module. ([#79])
+- The base chosen by `MillerRabin::test_random_base()` can now be equal to 2. ([#79])
 
 
 ### Added
