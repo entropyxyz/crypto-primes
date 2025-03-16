@@ -6,7 +6,7 @@ use rayon::iter::{ParallelBridge, ParallelIterator};
 
 use crate::{
     hazmat::{SetBits, SmallPrimesSieveFactory},
-    presets::{is_prime, is_safe_prime},
+    presets::{is_prime, Flavor},
     traits::SieveFactory,
 };
 
@@ -86,41 +86,18 @@ where
 ///
 /// Uses `threadcount` cores to parallelize the prime search.
 ///
-/// Panics if `bit_length` is less than 2, or greater than the bit size of the target `Uint`.
+/// Panics if `bit_length` is less than the bit length of the smallest possible prime with the requested `flavor`.
 ///
 /// Panics if the platform is unable to spawn threads.
-pub fn random_prime<T, R>(rng: &mut R, bit_length: u32, threadcount: usize) -> T
+pub fn random_prime<T, R>(rng: &mut R, flavor: Flavor, bit_length: u32, threadcount: usize) -> T
 where
     T: Integer + RandomBits + RandomMod,
     R: CryptoRng + Send + Sync + Clone,
 {
     sieve_and_find(
         rng,
-        SmallPrimesSieveFactory::new(bit_length, SetBits::Msb),
-        |_rng, candidate| is_prime(candidate),
-        threadcount,
-    )
-    .expect("will produce a result eventually")
-}
-
-/// Returns a random safe prime (that is, such that `(n - 1) / 2` is also prime)
-/// of size `bit_length` using the provided RNG.
-///
-/// Uses `threadcount` cores to parallelize the prime search.
-///
-/// Panics if `bit_length` is less than 3, or greater than the bit size of the target `Uint`.
-/// Panics if the platform is unable to spawn threads.
-///
-/// See [`is_prime`] for details about the performed checks.
-pub fn random_safe_prime<T, R>(rng: &mut R, bit_length: u32, threadcount: usize) -> T
-where
-    T: Integer + RandomBits + RandomMod,
-    R: CryptoRng + Send + Sync + Clone,
-{
-    sieve_and_find(
-        rng,
-        SmallPrimesSieveFactory::new_safe_primes(bit_length, SetBits::Msb),
-        |_rng, candidate| is_safe_prime(candidate),
+        SmallPrimesSieveFactory::new(flavor, bit_length, SetBits::Msb),
+        |_rng, candidate| is_prime(flavor, candidate),
         threadcount,
     )
     .expect("will produce a result eventually")
@@ -131,43 +108,44 @@ mod tests {
     use crypto_bigint::{nlimbs, BoxedUint, U128};
     use rand_core::{OsRng, TryRngCore};
 
-    use super::{is_prime, random_prime, random_safe_prime};
+    use super::{is_prime, random_prime};
+    use crate::Flavor;
 
     #[test]
     fn parallel_prime_generation() {
         for bit_length in (28..=128).step_by(10) {
-            let p: U128 = random_prime(&mut OsRng.unwrap_err(), bit_length, 4);
+            let p: U128 = random_prime(&mut OsRng.unwrap_err(), Flavor::Any, bit_length, 4);
             assert!(p.bits_vartime() == bit_length);
-            assert!(is_prime(&p));
+            assert!(is_prime(Flavor::Any, &p));
         }
     }
 
     #[test]
     fn parallel_prime_generation_boxed() {
         for bit_length in (28..=128).step_by(10) {
-            let p: BoxedUint = random_prime(&mut OsRng.unwrap_err(), bit_length, 2);
+            let p: BoxedUint = random_prime(&mut OsRng.unwrap_err(), Flavor::Any, bit_length, 2);
             assert!(p.bits_vartime() == bit_length);
             assert!(p.to_words().len() == nlimbs!(bit_length));
-            assert!(is_prime(&p));
+            assert!(is_prime(Flavor::Any, &p));
         }
     }
 
     #[test]
     fn parallel_safe_prime_generation() {
         for bit_length in (28..=128).step_by(10) {
-            let p: U128 = random_safe_prime(&mut OsRng.unwrap_err(), bit_length, 8);
+            let p: U128 = random_prime(&mut OsRng.unwrap_err(), Flavor::Safe, bit_length, 8);
             assert!(p.bits_vartime() == bit_length);
-            assert!(is_prime(&p));
+            assert!(is_prime(Flavor::Safe, &p));
         }
     }
 
     #[test]
     fn parallel_safe_prime_generation_boxed() {
         for bit_length in (28..=128).step_by(10) {
-            let p: BoxedUint = random_safe_prime(&mut OsRng.unwrap_err(), bit_length, 4);
+            let p: BoxedUint = random_prime(&mut OsRng.unwrap_err(), Flavor::Safe, bit_length, 4);
             assert!(p.bits_vartime() == bit_length);
             assert!(p.to_words().len() == nlimbs!(bit_length));
-            assert!(is_prime(&p));
+            assert!(is_prime(Flavor::Safe, &p));
         }
     }
 }

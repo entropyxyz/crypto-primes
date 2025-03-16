@@ -25,5 +25,5 @@ mod traits;
 pub mod multicore;
 
 pub use generic::sieve_and_find;
-pub use presets::{fips_is_prime, fips_is_safe_prime, is_prime, is_safe_prime, random_prime, random_safe_prime};
+pub use presets::{fips_is_prime, is_prime, random_prime, Flavor};
 pub use traits::SieveFactory;

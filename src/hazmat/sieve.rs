@@ -9,6 +9,7 @@ use crypto_bigint::{Integer, Odd, RandomBits, RandomBitsError};
 use rand_core::{CryptoRng, TryCryptoRng};
 
 use crate::hazmat::precomputed::{SmallPrime, LAST_SMALL_PRIME, RECIPROCALS, SMALL_PRIMES};
+use crate::presets::Flavor;
 use crate::traits::SieveFactory;
 
 /// Decide how prime candidates are manipulated by setting certain bits before primality testing,
@@ -291,32 +292,41 @@ pub struct SmallPrimesSieveFactory<T> {
 }
 
 impl<T: Integer + RandomBits> SmallPrimesSieveFactory<T> {
-    fn new_impl(max_bit_length: u32, set_bits: SetBits, safe_primes: bool) -> Self {
-        if !safe_primes && max_bit_length < 2 {
-            panic!("`bit_length` must be 2 or greater.");
-        }
-        if safe_primes && max_bit_length < 3 {
-            panic!("`bit_length` must be 3 or greater.");
+    /// Creates a factory that produces sieves returning numbers of at most `max_bit_length` bits
+    /// that are not divisible by a number of small factors.
+    ///
+    /// Some bits may be guaranteed to set depending on the requested `set_bits`.
+    ///
+    /// Depending on the requested `flavor`, additional filters may be applied.
+    pub fn new(flavor: Flavor, max_bit_length: u32, set_bits: SetBits) -> Self {
+        match flavor {
+            Flavor::Any => {
+                if max_bit_length < 2 {
+                    panic!(
+                        "There are no primes with bit length {}; `bit_length` must be 2 or greater.",
+                        max_bit_length
+                    );
+                }
+            }
+            Flavor::Safe => {
+                if max_bit_length < 3 {
+                    panic!(
+                        "There are no safe primes with bit length {}; `bit_length` must be 3 or greater.",
+                        max_bit_length
+                    );
+                }
+            }
         }
         let max_bit_length = NonZero::new(max_bit_length).expect("`bit_length` should be non-zero");
         Self {
             max_bit_length,
-            safe_primes,
+            safe_primes: match flavor {
+                Flavor::Any => false,
+                Flavor::Safe => true,
+            },
             set_bits,
             phantom: PhantomData,
         }
-    }
-
-    /// Creates a factory that produces sieves returning numbers of `max_bit_length` bits (with the top bit set)
-    /// that are not divisible by a number of small factors.
-    pub fn new(max_bit_length: u32, set_bits: SetBits) -> Self {
-        Self::new_impl(max_bit_length, set_bits, false)
-    }
-
-    /// Creates a factory that produces sieves returning numbers `n` of `max_bit_length` bits (with the top bit set)
-    /// such that neither `n` nor `(n - 1) / 2` are divisible by a number of small factors.
-    pub fn new_safe_primes(max_bit_length: u32, set_bits: SetBits) -> Self {
-        Self::new_impl(max_bit_length, set_bits, true)
     }
 }
 
@@ -351,7 +361,7 @@ mod tests {
     use rand_core::{OsRng, SeedableRng};
 
     use super::{random_odd_integer, SetBits, SmallPrimesSieve, SmallPrimesSieveFactory};
-    use crate::hazmat::precomputed::SMALL_PRIMES;
+    use crate::{hazmat::precomputed::SMALL_PRIMES, Flavor};
 
     #[test]
     fn random() {
@@ -492,15 +502,15 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "`bit_length` must be 2 or greater")]
+    #[should_panic(expected = "There are no primes with bit length 1; `bit_length` must be 2 or greater")]
     fn too_few_bits_regular_primes() {
-        let _fac = SmallPrimesSieveFactory::<U64>::new(1, SetBits::Msb);
+        let _fac = SmallPrimesSieveFactory::<U64>::new(Flavor::Any, 1, SetBits::Msb);
     }
 
     #[test]
-    #[should_panic(expected = "`bit_length` must be 3 or greater")]
+    #[should_panic(expected = "There are no safe primes with bit length 2; `bit_length` must be 3 or greater")]
     fn too_few_bits_safe_primes() {
-        let _fac = SmallPrimesSieveFactory::<U64>::new_safe_primes(2, SetBits::Msb);
+        let _fac = SmallPrimesSieveFactory::<U64>::new(Flavor::Safe, 2, SetBits::Msb);
     }
 
     #[test]
