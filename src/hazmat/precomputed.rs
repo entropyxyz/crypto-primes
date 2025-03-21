@@ -155,7 +155,7 @@ mod tests {
 
         for (reciprocal, prime) in reciprocals.iter().zip(SMALL_PRIMES.iter()) {
             for _ in 0..10 {
-                let x = U256::random(&mut OsRng.unwrap_err());
+                let x = U256::random(&mut OsRng.unwrap_mut());
                 let r_ref = (x % NonZero::new(U256::from(*prime)).unwrap()).as_limbs()[0];
                 let r_test = x.rem_limb_with_reciprocal(reciprocal);
                 assert_eq!(r_ref, r_test);
