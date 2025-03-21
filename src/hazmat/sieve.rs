@@ -400,7 +400,7 @@ mod tests {
     use alloc::vec::Vec;
     use core::num::NonZero;
 
-    use crypto_bigint::U64;
+    use crypto_bigint::{U256, U64};
     use num_prime::nt_funcs::factorize64;
     use rand_chacha::ChaCha8Rng;
     use rand_core::{OsRng, SeedableRng, TryRngCore};
@@ -613,5 +613,26 @@ mod tests {
             .unwrap()
             .get();
         assert_eq!(x, U64::ONE);
+    }
+
+    #[test]
+    fn platform_independence() {
+        let mut rng = ChaCha8Rng::from_seed([7u8; 32]);
+
+        let x = random_odd_integer::<U256, _>(&mut rng, NonZero::new(200).unwrap(), SetBits::TwoMsb)
+            .unwrap()
+            .get();
+        assert_eq!(
+            x,
+            U256::from_be_hex("00000000000000E94A74F9D90C0982D7D4F5378BDA8143E6391EBC3F59CBD0E5")
+        );
+
+        let x = random_odd_integer::<U256, _>(&mut rng, NonZero::new(220).unwrap(), SetBits::TwoMsb)
+            .unwrap()
+            .get();
+        assert_eq!(
+            x,
+            U256::from_be_hex("000000000E28CE6059E357411C67F6539AEF56F2B4653F0583D6A2195A9897BB")
+        );
     }
 }

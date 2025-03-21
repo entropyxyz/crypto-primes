@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Introudced `Error` enum; `hazmat` functions and method now return it instead of panicking. ([#79])
 - Renamed `SmallPrimesSieveFactory` to `SmallFactorsSieveFactory`. ([#79])
 - Moved `fips_is_prime()` to its own `fips` submodule and renamed to `is_prime`. ([#79])
+- Bumped `crypto-bigint` to 0.7.0-pre.1 and MSRV to 1.85. ([#80])
 
 
 ### Added
@@ -33,6 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [#70]: https://github.com/entropyxyz/crypto-primes/pull/72
 [#72]: https://github.com/entropyxyz/crypto-primes/pull/72
 [#79]: https://github.com/entropyxyz/crypto-primes/pull/79
+[#80]: https://github.com/entropyxyz/crypto-primes/pull/80
 
 
 ## [0.7.0-pre.0] - 2025-02-22
