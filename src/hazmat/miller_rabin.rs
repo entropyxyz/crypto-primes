@@ -242,7 +242,7 @@ mod tests {
     use num_prime::nt_funcs::is_prime64;
 
     use super::{minimum_mr_iterations, MillerRabin};
-    use crate::hazmat::{primes, pseudoprimes, random_odd_integer, Primality, SetBits, SmallPrimesSieve};
+    use crate::hazmat::{primes, pseudoprimes, random_odd_integer, Primality, SetBits, SmallFactorsSieve};
 
     #[test]
     fn miller_rabin_derived_traits() {
@@ -298,7 +298,7 @@ mod tests {
     fn trivial() {
         let mut rng = ChaCha8Rng::from_seed(*b"01234567890123456789012345678901");
         let start = random_odd_integer::<U1024, _>(&mut rng, NonZero::new(1024).unwrap(), SetBits::Msb).unwrap();
-        for num in SmallPrimesSieve::new(start.get(), NonZero::new(1024).unwrap(), false)
+        for num in SmallFactorsSieve::new(start.get(), NonZero::new(1024).unwrap(), false)
             .unwrap()
             .take(10)
         {

@@ -88,7 +88,7 @@ const INCR_LIMIT: Residue = Residue::MAX - LAST_SMALL_PRIME as Residue + 1;
 /// An iterator returning numbers with up to and including given bit length,
 /// starting from a given number, that are not multiples of the first 2048 small primes.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct SmallPrimesSieve<T: Integer> {
+pub struct SmallFactorsSieve<T: Integer> {
     // Instead of dividing a big integer by small primes every time (which is slow),
     // we keep a "base" and a small increment separately,
     // so that we can only calculate the residues of the increment.
@@ -103,7 +103,7 @@ pub struct SmallPrimesSieve<T: Integer> {
     last_round: bool,
 }
 
-impl<T> SmallPrimesSieve<T>
+impl<T> SmallFactorsSieve<T>
 where
     T: Integer,
 {
@@ -288,7 +288,7 @@ where
     }
 }
 
-impl<T> Iterator for SmallPrimesSieve<T>
+impl<T> Iterator for SmallFactorsSieve<T>
 where
     T: Integer,
 {
@@ -321,14 +321,14 @@ pub trait SieveFactory {
 
 /// A sieve returning numbers that are not multiples of a set of small factors.
 #[derive(Debug, Clone, Copy)]
-pub struct SmallPrimesSieveFactory<T> {
+pub struct SmallFactorsSieveFactory<T> {
     max_bit_length: NonZeroU32,
     safe_primes: bool,
     set_bits: SetBits,
     phantom: PhantomData<T>,
 }
 
-impl<T> SmallPrimesSieveFactory<T>
+impl<T> SmallFactorsSieveFactory<T>
 where
     T: Integer + RandomBits,
 {
@@ -370,12 +370,12 @@ where
     }
 }
 
-impl<T> SieveFactory for SmallPrimesSieveFactory<T>
+impl<T> SieveFactory for SmallFactorsSieveFactory<T>
 where
     T: Integer + RandomBits,
 {
     type Item = T;
-    type Sieve = SmallPrimesSieve<T>;
+    type Sieve = SmallFactorsSieve<T>;
     fn make_sieve<R>(
         &mut self,
         rng: &mut R,
@@ -385,7 +385,7 @@ where
         R: CryptoRng + ?Sized,
     {
         let start = random_odd_integer::<T, _>(rng, self.max_bit_length, self.set_bits)?;
-        Ok(Some(SmallPrimesSieve::new(
+        Ok(Some(SmallFactorsSieve::new(
             start.get(),
             self.max_bit_length,
             self.safe_primes,
@@ -405,7 +405,7 @@ mod tests {
     use rand_chacha::ChaCha8Rng;
     use rand_core::{OsRng, SeedableRng, TryRngCore};
 
-    use super::{random_odd_integer, SetBits, SmallPrimesSieve, SmallPrimesSieveFactory};
+    use super::{random_odd_integer, SetBits, SmallFactorsSieve, SmallFactorsSieveFactory};
     use crate::{hazmat::precomputed::SMALL_PRIMES, Error, Flavor};
 
     #[test]
@@ -416,7 +416,7 @@ mod tests {
         let start = random_odd_integer::<U64, _>(&mut rng, NonZero::new(32).unwrap(), SetBits::Msb)
             .unwrap()
             .get();
-        for num in SmallPrimesSieve::new(start, NonZero::new(32).unwrap(), false)
+        for num in SmallFactorsSieve::new(start, NonZero::new(32).unwrap(), false)
             .unwrap()
             .take(100)
         {
@@ -439,7 +439,7 @@ mod tests {
                 .unwrap()
                 .get();
 
-        for num in SmallPrimesSieve::new(start, NonZero::new(32).unwrap(), false)
+        for num in SmallFactorsSieve::new(start, NonZero::new(32).unwrap(), false)
             .unwrap()
             .take(100)
         {
@@ -456,7 +456,7 @@ mod tests {
     }
 
     fn check_sieve(start: u32, bit_length: u32, safe_prime: bool, reference: &[u32]) {
-        let test = SmallPrimesSieve::new(U64::from(start), NonZero::new(bit_length).unwrap(), safe_prime)
+        let test = SmallFactorsSieve::new(U64::from(start), NonZero::new(bit_length).unwrap(), safe_prime)
             .unwrap()
             .collect::<Vec<_>>();
         assert_eq!(test.len(), reference.len());
@@ -513,7 +513,7 @@ mod tests {
     #[test]
     fn sieve_too_many_bits() {
         assert_eq!(
-            SmallPrimesSieve::new(U64::ONE, NonZero::new(65).unwrap(), false).unwrap_err(),
+            SmallFactorsSieve::new(U64::ONE, NonZero::new(65).unwrap(), false).unwrap_err(),
             Error::BitLengthTooLarge {
                 bit_length: 65,
                 bits_precision: 64
@@ -540,30 +540,30 @@ mod tests {
 
     #[test]
     fn sieve_derived_traits() {
-        let s = SmallPrimesSieve::new(U64::ONE, NonZero::new(10).unwrap(), false).unwrap();
+        let s = SmallFactorsSieve::new(U64::ONE, NonZero::new(10).unwrap(), false).unwrap();
         // Debug
-        assert!(format!("{s:?}").starts_with("SmallPrimesSieve"));
+        assert!(format!("{s:?}").starts_with("SmallFactorsSieve"));
         // Clone
         assert_eq!(s.clone(), s);
 
         // PartialEq
-        let s2 = SmallPrimesSieve::new(U64::ONE, NonZero::new(10).unwrap(), false).unwrap();
+        let s2 = SmallFactorsSieve::new(U64::ONE, NonZero::new(10).unwrap(), false).unwrap();
         assert_eq!(s, s2);
-        let s3 = SmallPrimesSieve::new(U64::ONE, NonZero::new(12).unwrap(), false).unwrap();
+        let s3 = SmallFactorsSieve::new(U64::ONE, NonZero::new(12).unwrap(), false).unwrap();
         assert_ne!(s, s3);
     }
 
     #[test]
     fn sieve_with_max_start() {
         let start = U64::MAX;
-        let mut sieve = SmallPrimesSieve::new(start, NonZero::new(U64::BITS).unwrap(), false).unwrap();
+        let mut sieve = SmallFactorsSieve::new(start, NonZero::new(U64::BITS).unwrap(), false).unwrap();
         assert!(sieve.next().is_none());
     }
 
     #[test]
     fn too_few_bits_regular_primes() {
         assert_eq!(
-            SmallPrimesSieveFactory::<U64>::new(Flavor::Any, 1, SetBits::Msb).unwrap_err(),
+            SmallFactorsSieveFactory::<U64>::new(Flavor::Any, 1, SetBits::Msb).unwrap_err(),
             Error::BitLengthTooSmall {
                 bit_length: 1,
                 flavor: Flavor::Any
@@ -574,7 +574,7 @@ mod tests {
     #[test]
     fn too_few_bits_safe_primes() {
         assert_eq!(
-            SmallPrimesSieveFactory::<U64>::new(Flavor::Safe, 2, SetBits::Msb).unwrap_err(),
+            SmallFactorsSieveFactory::<U64>::new(Flavor::Safe, 2, SetBits::Msb).unwrap_err(),
             Error::BitLengthTooSmall {
                 bit_length: 2,
                 flavor: Flavor::Safe

@@ -6,7 +6,7 @@ use rayon::iter::{ParallelBridge, ParallelIterator};
 
 use crate::{
     error::Error,
-    hazmat::{SetBits, SieveFactory, SmallPrimesSieveFactory},
+    hazmat::{SetBits, SieveFactory, SmallFactorsSieveFactory},
     presets::{is_prime, Flavor},
 };
 
@@ -108,7 +108,7 @@ where
     T: Integer + RandomBits + RandomMod,
     R: CryptoRng + Send + Sync + Clone,
 {
-    let factory = SmallPrimesSieveFactory::new(flavor, bit_length, SetBits::Msb)
+    let factory = SmallFactorsSieveFactory::new(flavor, bit_length, SetBits::Msb)
         .unwrap_or_else(|err| panic!("Error creating the sieve: {err}"));
     sieve_and_find(rng, factory, |_rng, candidate| is_prime(flavor, candidate), threadcount)
         .unwrap_or_else(|err| panic!("Error generating random candidates: {}", err))

@@ -5,7 +5,7 @@ use crate::{
     generic::sieve_and_find,
     hazmat::{
         equals_primitive, lucas_test, AStarBase, LucasCheck, MillerRabin, Primality, SelfridgeBase, SetBits,
-        SmallPrimesSieveFactory,
+        SmallFactorsSieveFactory,
     },
 };
 
@@ -28,7 +28,7 @@ where
     T: Integer + RandomBits + RandomMod,
     R: CryptoRng + ?Sized,
 {
-    let factory = SmallPrimesSieveFactory::new(flavor, bit_length, SetBits::Msb)
+    let factory = SmallFactorsSieveFactory::new(flavor, bit_length, SetBits::Msb)
         .unwrap_or_else(|err| panic!("Error creating the sieve: {err}"));
     sieve_and_find(rng, factory, |_rng, candidate| is_prime(flavor, candidate))
         .unwrap_or_else(|err| panic!("Error generating random candidates: {err}"))
