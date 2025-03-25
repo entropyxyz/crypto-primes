@@ -51,6 +51,8 @@ mod tests {
         }
     }
 
+    // TODO(dp): Need a variant for 32 bit, or at least a helper function to extract u64 from limbs.
+    #[cfg(target_pointer_width = "64")]
     #[test]
     fn pi_estimates() {
         let pi_xs: Vec<(u128, u32)> = vec![
