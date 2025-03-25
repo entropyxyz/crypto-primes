@@ -10,8 +10,7 @@ pub fn estimate_pi_x<const LIMBS: usize>(x: &Uint<LIMBS>) -> Uint<LIMBS> {
     let ln_x = ln_x as f64;
     let ln_x_sq = ln_x * ln_x;
     let term2 = (1.0 + 1.0 / ln_x + 2.0 / (ln_x_sq) + 6.0 / (ln_x_sq * ln_x)) as u64;
-    let pi_x = term1 * Uint::<LIMBS>::from_u64(term2);
-    pi_x
+    term1 * Uint::<LIMBS>::from_u64(term2)
 }
 
 // Calculate the natural logarithm of a big integer using the relation ln(x) = log₂(x) / log₂(e).
@@ -40,7 +39,7 @@ mod tests {
         for exponent in 1..=35 {
             let x = U256::from_u128(10u128.pow(exponent));
             let ln_x = ln(&x);
-            let expected_ln_x = (exponent as f64 * 2.302585092994046) as u64; // ln(10^exponent) = exponent * ln(10)
+            let expected_ln_x = (exponent as f64 * core::f64::consts::LN_10) as u64; // ln(10^exponent) = exponent * ln(10)
             let delta = ln_x.abs_diff(expected_ln_x);
             assert!(
                 delta < 2,
