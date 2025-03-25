@@ -23,6 +23,9 @@ fn ln<const LIMBS: usize>(x: &Uint<LIMBS>) -> u64 {
     let log2_x = U256::from(x.bits_vartime().saturating_sub(1));
     // The error in this approximation is "lower 128 bits of the product"/2^128, which is on the order of 10^-40.
     let ln_x: U256 = (log2_x * SCALED_LN2) >> 128;
+    #[cfg(target_pointer_width = "32")]
+    let ln_x = (ln_x.as_limbs()[1].0 as u64) << 32 | ln_x.as_limbs()[0].0 as u64;
+    #[cfg(target_pointer_width = "64")]
     let ln_x = ln_x.as_limbs()[0].0;
     ln_x & !((ln_x == 0) as u64) // Ensure we return 0 for ln(1)
 }
