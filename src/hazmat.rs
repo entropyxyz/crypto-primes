@@ -7,6 +7,7 @@ mod jacobi;
 mod lucas;
 mod miller_rabin;
 mod precomputed;
+mod primecount;
 #[cfg(test)]
 pub(crate) mod primes;
 #[cfg(test)]
@@ -15,6 +16,7 @@ mod sieve;
 
 pub use lucas::{lucas_test, AStarBase, BruteForceBase, LucasBase, LucasCheck, SelfridgeBase};
 pub use miller_rabin::{minimum_mr_iterations, MillerRabin};
+pub use primecount::estimate_pi_x;
 pub use sieve::{random_odd_integer, SetBits, SmallPrimesSieve, SmallPrimesSieveFactory};
 
 /// Possible results of various primality tests.
