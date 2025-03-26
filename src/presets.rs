@@ -4,8 +4,7 @@ use rand_core::CryptoRng;
 use crate::{
     generic::sieve_and_find,
     hazmat::{
-        equals_primitive, lucas_test, AStarBase, LucasCheck, MillerRabin, Primality, SelfridgeBase, SetBits,
-        SmallFactorsSieveFactory,
+        equals_primitive, lucas_test, AStarBase, LucasCheck, MillerRabin, Primality, SetBits, SmallFactorsSieveFactory,
     },
 };
 
@@ -118,106 +117,6 @@ where
     is_prime(Flavor::Any, candidate) && is_prime(Flavor::Any, &candidate.wrapping_shr_vartime(1))
 }
 
-/// Probabilistically checks if the given number is prime using the provided RNG
-/// according to FIPS-186.5[^FIPS] standard.
-///
-/// Performed checks:
-/// - `mr_iterations` of Miller-Rabin check with random bases;
-/// - Regular Lucas check with Selfridge base (see [`SelfridgeBase`] for details), if `add_lucas_test` is `true`.
-///
-/// See [`MillerRabin`] and [`lucas_test`] for more details about the checks;
-/// use [`minimum_mr_iterations`](`crate::hazmat::minimum_mr_iterations`)
-/// to calculate the number of required iterations.
-///
-/// [^FIPS]: FIPS-186.5 standard, <https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.186-5.pdf>
-pub fn fips_is_prime<T>(
-    rng: &mut (impl CryptoRng + ?Sized),
-    flavor: Flavor,
-    candidate: &T,
-    mr_iterations: usize,
-    add_lucas_test: bool,
-) -> bool
-where
-    T: Integer + RandomMod,
-{
-    match flavor {
-        Flavor::Any => {}
-        Flavor::Safe => return fips_is_safe_prime(rng, candidate, mr_iterations, add_lucas_test),
-    }
-
-    if equals_primitive(candidate, 1) {
-        return false;
-    }
-
-    if equals_primitive(candidate, 2) {
-        return true;
-    }
-
-    let odd_candidate: Odd<T> = match Odd::new(candidate.clone()).into() {
-        Some(x) => x,
-        None => return false,
-    };
-
-    // The random base test only makes sense when `candidate > 3`.
-    if !equals_primitive(candidate, 3) {
-        let mr = MillerRabin::new(odd_candidate.clone());
-        for _ in 0..mr_iterations {
-            if !mr.test_random_base(rng).is_probably_prime() {
-                return false;
-            }
-        }
-    }
-
-    if add_lucas_test {
-        match lucas_test(odd_candidate, SelfridgeBase, LucasCheck::Strong) {
-            Primality::Composite => return false,
-            Primality::Prime => return true,
-            _ => {}
-        }
-    }
-
-    true
-}
-
-/// Probabilistically checks if the given number is a safe prime using the provided RNG
-/// according to FIPS-186.5[^FIPS] standard.
-///
-/// See [`fips_is_prime`] for details about the performed checks.
-///
-/// [^FIPS]: FIPS-186.5 standard, <https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.186-5.pdf>
-fn fips_is_safe_prime<T>(
-    rng: &mut (impl CryptoRng + ?Sized),
-    candidate: &T,
-    mr_iterations: usize,
-    add_lucas_test: bool,
-) -> bool
-where
-    T: Integer + RandomMod,
-{
-    // Since, by the definition of safe prime, `(candidate - 1) / 2` must also be prime,
-    // and therefore odd, `candidate` has to be equal to 3 modulo 4.
-    // 5 is the only exception, so we check for it.
-    if equals_primitive(candidate, 5) {
-        return true;
-    }
-
-    // Safe primes are always of the form 4k + 3 (i.e. n ≡ 3 mod 4)
-    // The last two digits of a binary number give you its value modulo 4.
-    // Primes p=4n+3 will always end in 11 in binary because p ≡ 3 mod 4.
-    if candidate.as_ref()[0].0 & 3 != 3 {
-        return false;
-    }
-
-    fips_is_prime(rng, Flavor::Any, candidate, mr_iterations, add_lucas_test)
-        && fips_is_prime(
-            rng,
-            Flavor::Any,
-            &candidate.wrapping_shr_vartime(1),
-            mr_iterations,
-            add_lucas_test,
-        )
-}
-
 #[cfg(test)]
 mod tests {
     use crypto_bigint::{nlimbs, BoxedUint, CheckedAdd, Integer, RandomMod, Uint, Word, U128, U64};
@@ -225,11 +124,14 @@ mod tests {
     use rand_core::{OsRng, TryRngCore};
 
     use super::{is_prime, random_prime, Flavor};
-    use crate::hazmat::{minimum_mr_iterations, primes, pseudoprimes};
+    use crate::{
+        fips,
+        hazmat::{minimum_mr_iterations, primes, pseudoprimes},
+    };
 
     fn fips_is_prime<T: Integer + RandomMod>(flavor: Flavor, num: &T) -> bool {
         let mr_iterations = minimum_mr_iterations(128, 100).unwrap();
-        super::fips_is_prime(&mut OsRng.unwrap_mut(), flavor, num, mr_iterations, false)
+        fips::is_prime(&mut OsRng.unwrap_mut(), flavor, num, mr_iterations, false)
     }
 
     fn test_large_primes<const L: usize>(nums: &[Uint<L>]) {
@@ -443,8 +345,11 @@ mod tests_openssl {
     use openssl::bn::{BigNum, BigNumContext};
     use rand_core::{OsRng, TryRngCore};
 
-    use super::{fips_is_prime, is_prime, random_prime, Flavor};
-    use crate::hazmat::{minimum_mr_iterations, random_odd_integer, SetBits};
+    use super::{is_prime, random_prime, Flavor};
+    use crate::{
+        fips,
+        hazmat::{minimum_mr_iterations, random_odd_integer, SetBits},
+    };
 
     fn openssl_is_prime(num: &BigNum, ctx: &mut BigNumContext) -> bool {
         num.is_prime(64, ctx).unwrap()
@@ -478,7 +383,7 @@ mod tests_openssl {
             let p = from_openssl(&p_bn);
             assert!(is_prime(Flavor::Any, &p), "we report {p} as composite");
             assert!(
-                fips_is_prime(&mut OsRng.unwrap_mut(), Flavor::Any, &p, mr_iterations, false),
+                fips::is_prime(&mut OsRng.unwrap_mut(), Flavor::Any, &p, mr_iterations, false),
                 "we report {p} as composite"
             );
         }
@@ -496,7 +401,7 @@ mod tests_openssl {
                 "difference between OpenSSL and us: OpenSSL reports {expected}, we report {actual}",
             );
 
-            let actual = fips_is_prime(&mut OsRng.unwrap_mut(), Flavor::Any, p.as_ref(), mr_iterations, false);
+            let actual = fips::is_prime(&mut OsRng.unwrap_mut(), Flavor::Any, p.as_ref(), mr_iterations, false);
             assert_eq!(
                 actual, expected,
                 "difference between OpenSSL and us: OpenSSL reports {expected}, we report {actual}",
@@ -517,8 +422,11 @@ mod tests_gmp {
         Integer,
     };
 
-    use super::{fips_is_prime, is_prime, random_prime, Flavor};
-    use crate::hazmat::{minimum_mr_iterations, random_odd_integer, SetBits};
+    use super::{is_prime, random_prime, Flavor};
+    use crate::{
+        fips,
+        hazmat::{minimum_mr_iterations, random_odd_integer, SetBits},
+    };
 
     fn gmp_is_prime(num: &Integer) -> bool {
         matches!(num.is_probably_prime(25), IsPrime::Yes | IsPrime::Probably)
@@ -553,7 +461,7 @@ mod tests_gmp {
             let p = from_gmp(&p_bn);
             assert!(is_prime(Flavor::Any, &p), "we report {p} as composite");
             assert!(
-                fips_is_prime(&mut OsRng.unwrap_mut(), Flavor::Any, &p, mr_iterations, false),
+                fips::is_prime(&mut OsRng.unwrap_mut(), Flavor::Any, &p, mr_iterations, false),
                 "we report {p} as composite"
             );
         }
@@ -571,7 +479,7 @@ mod tests_gmp {
                 "difference between GMP and us: GMP reports {expected}, we report {actual}",
             );
 
-            let actual = fips_is_prime(&mut OsRng.unwrap_mut(), Flavor::Any, p.as_ref(), mr_iterations, false);
+            let actual = fips::is_prime(&mut OsRng.unwrap_mut(), Flavor::Any, p.as_ref(), mr_iterations, false);
             assert_eq!(
                 actual, expected,
                 "difference between GMP and us: GMP reports {expected}, we report {actual}",

@@ -17,6 +17,7 @@
 extern crate alloc;
 
 mod error;
+pub mod fips;
 mod generic;
 pub mod hazmat;
 mod presets;
@@ -26,4 +27,4 @@ pub mod multicore;
 
 pub use error::Error;
 pub use generic::sieve_and_find;
-pub use presets::{fips_is_prime, is_prime, random_prime, Flavor};
+pub use presets::{is_prime, random_prime, Flavor};

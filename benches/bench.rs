@@ -12,7 +12,7 @@ use rug::{integer::Order, Integer as GmpInteger};
 use openssl::bn::BigNum;
 
 use crypto_primes::{
-    fips_is_prime,
+    fips,
     hazmat::{
         lucas_test, minimum_mr_iterations, random_odd_integer, AStarBase, BruteForceBase, LucasCheck, MillerRabin,
         SelfridgeBase, SetBits, SmallFactorsSieve,
@@ -234,7 +234,7 @@ fn bench_presets(c: &mut Criterion) {
     group.bench_function("(U1024) Prime test (FIPS, 1/2^128 failure bound)", |b| {
         b.iter_batched(
             || random_odd_uint::<U1024, _>(&mut OsRng.unwrap_mut(), 1024),
-            |num| fips_is_prime(&mut OsRng.unwrap_mut(), Flavor::Any, num.as_ref(), iters, false),
+            |num| fips::is_prime(&mut OsRng.unwrap_mut(), Flavor::Any, num.as_ref(), iters, false),
             BatchSize::SmallInput,
         )
     });

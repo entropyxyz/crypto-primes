@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The base chosen by `MillerRabin::test_random_base()` can now be equal to 2. ([#79])
 - Introudced `Error` enum; `hazmat` functions and method now return it instead of panicking. ([#79])
 - Renamed `SmallPrimesSieveFactory` to `SmallFactorsSieveFactory`. ([#79])
+- Moved `fips_is_prime()` to its own `fips` submodule and renamed to `is_prime`. ([#79])
 
 
 ### Added
