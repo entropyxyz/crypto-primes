@@ -3,7 +3,7 @@ use std::io::BufRead;
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use crypto_bigint::U1024;
 
-use crypto_primes::is_prime;
+use crypto_primes::{is_prime, Flavor};
 
 /// CCTV stands for Community Cryptography Test Vectors[1]. This benchmark uses the
 /// "rsa.bench.2048.txt" test vector, which is a file of 708 1024-bit long candidates for prime
@@ -22,13 +22,19 @@ fn bench_cctv(c: &mut Criterion) {
         .map(|candidate_hex| U1024::from_be_hex(&candidate_hex.unwrap()))
         .collect();
 
-    assert!(is_prime(&candidates[353]), "Line 354 is a prime. This is a bug.");
-    assert!(is_prime(&candidates[707]), "Line 708 is a prime. This is a bug.");
+    assert!(
+        is_prime(Flavor::Any, &candidates[353]),
+        "Line 354 is a prime. This is a bug."
+    );
+    assert!(
+        is_prime(Flavor::Any, &candidates[707]),
+        "Line 708 is a prime. This is a bug."
+    );
 
     group.bench_function("all", |b| {
         b.iter(|| {
             for candidate in &candidates {
-                black_box(is_prime(candidate));
+                black_box(is_prime(Flavor::Any, candidate));
             }
         });
     });

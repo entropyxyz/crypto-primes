@@ -4,7 +4,10 @@ use crypto_bigint::{Integer, Limb, NonZero as CTNonZero, Word};
 /// Calculates the greatest common divisor of `n` and `m`.
 /// By definition, `gcd(0, m) == m`.
 /// `n` must be non-zero.
-pub(crate) fn gcd_vartime<T: Integer>(n: &T, m: NonZero<Word>) -> Word {
+pub(crate) fn gcd_vartime<T>(n: &T, m: NonZero<Word>) -> Word
+where
+    T: Integer,
+{
     let m = m.get();
     // This we can check since it doesn't affect the return type,
     // even though `n` will not be 0 either in the application.

@@ -179,7 +179,10 @@ impl LucasBase for BruteForceBase {
 }
 
 /// For the given odd `n`, finds `s` and odd `d` such that `n + 1 == 2^s * d`.
-fn decompose<T: Integer>(n: &Odd<T>) -> (u32, Odd<T>) {
+fn decompose<T>(n: &Odd<T>) -> (u32, Odd<T>)
+where
+    T: Integer,
+{
     // Need to be careful here since `n + 1` can overflow.
     // Instead of adding 1 and counting trailing 0s, we count trailing ones on the original `n`.
 
@@ -323,7 +326,10 @@ pub enum LucasCheck {
 /// prescribed by the FIPS.186-5 standard[^FIPS].
 ///
 /// [^FIPS]: FIPS-186.5 standard, <https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.186-5.pdf>
-pub fn lucas_test<T: Integer>(candidate: Odd<T>, base: impl LucasBase, check: LucasCheck) -> Primality {
+pub fn lucas_test<T>(candidate: Odd<T>, base: impl LucasBase, check: LucasCheck) -> Primality
+where
+    T: Integer,
+{
     // The comments in this function use references in `LucasCheck`, plus this one:
     //
     // [^Crandall2005]:
