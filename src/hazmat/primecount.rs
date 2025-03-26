@@ -51,8 +51,6 @@ mod tests {
         }
     }
 
-    // TODO(dp): Need a variant for 32 bit, or at least a helper function to extract u64 from limbs.
-    #[cfg(target_pointer_width = "64")]
     #[test]
     fn pi_estimates() {
         let pi_xs: Vec<(u128, u32)> = vec![
@@ -96,13 +94,24 @@ mod tests {
             } else {
                 approx_pi_x - pi_x_wide
             };
-            let delta = (delta.as_limbs()[1].0 as u128) << 64 | delta.as_limbs()[0].0 as u128;
-            let approx_pi_x_128 = (approx_pi_x.as_limbs()[1].0 as u128) << 64 | approx_pi_x.as_limbs()[0].0 as u128;
+            let delta = uint_to_u128(&delta);
+            let approx_pi_x_128 = uint_to_u128(&approx_pi_x);
             let error = (delta as f64 / *pi_x as f64) * 100.0;
             assert!(
                 error < 5.0, // For large x, this error is much better, well below 1.
                 "10^{exponent}:\t{pi_x} - {approx_pi_x_128} = {delta}, err: {error:.2}"
             );
         }
+    }
+
+    fn uint_to_u128<const LIMBS: usize>(x: &Uint<LIMBS>) -> u128 {
+        let limbs = x.as_limbs();
+        #[cfg(target_pointer_width = "32")]
+        return (limbs[3].0 as u128) << 96
+            | (limbs[2].0 as u128) << 64
+            | (limbs[1].0 as u128) << 32
+            | limbs[0].0 as u128;
+        #[cfg(target_pointer_width = "64")]
+        return (limbs[1].0 as u128) << 64 | limbs[0].0 as u128;
     }
 }
