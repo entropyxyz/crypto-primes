@@ -2,8 +2,9 @@ use crypto_bigint::Uint;
 
 /// Estimate the number of primes smaller than x using the asymptotic expansion of Li(x) with three terms.
 /// 𝜋(𝑥)/Li(x) converges to 1 from below, which means that the estimation of number of primes for the ranges relevant
-/// here is a slight overestimate; the numerical approximations involved – in particular log₂ x ~ floor(log₂ x) –
-/// means that the approximation for ln x is an underestimate, which means the approximated Li(x) is >= actual Li(x).
+/// here is a slight overestimate.
+/// The numerical approximations involved – in particular log₂ x ~ floor(log₂ x) – means that the approximation for ln x
+/// is an underestimate, which means the approximated Li(x) is >= actual Li(x).
 /// Uses the formula 𝜋(𝑥) ~ x/ln x * (1 + 1!/ln x + 2!/ln^2 x + 3!/ln^3 x).
 pub fn estimate_pi_x<const LIMBS: usize>(x: &Uint<LIMBS>) -> Uint<LIMBS> {
     let ln_x = ln(x);
@@ -33,7 +34,7 @@ mod tests {
     #[test]
     fn pi_estimates() {
         let pi_xs: Vec<(u128, u32)> = vec![
-            // The error is very large for small x, so we skip them.
+            // The error is large for small x, so we skip them.
             // (4, 1),
             // (25, 2),
             // (168, 3),
