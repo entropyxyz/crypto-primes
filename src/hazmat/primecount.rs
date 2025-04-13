@@ -53,7 +53,6 @@ use num_traits::float::FloatCore as _;
 /// `π(x) - Li(x)` changes infinitely often. It has been proven that there must be a crossing below ~10^316 (~2^1051),
 /// which is well within the ranges used in this library. Thus, users should be aware that the estimate provided here
 /// can be both greater than and smaller than the actual value of π(x).
-///
 pub fn estimate_pi_x<const LIMBS: usize>(x: &Uint<LIMBS>) -> Uint<LIMBS> {
     let ln_x = ln(x);
     let term1 = x / Uint::from_u64(ln_x.round() as u64);
