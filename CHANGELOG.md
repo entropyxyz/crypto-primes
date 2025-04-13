@@ -10,6 +10,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Replaced the default GMP-style primality check with the BPSW'21 check. ([#70])
 - Removed `is_prime_with_rng()` and `is_safe_prime_with_rng()` since the primality check is now deterministic. ([#70])
+- `SieveIterator` removed from the public API. ([#79])
+- Removed `RandomPrimeWithRng` trait. ([#79])
+- Removed `default-rng` features and corresponding API items. ([#79])
+- Renamed `generate_(safe_)prime_with_rng()` to `random_(safe_)prime()`, `fips_is_(safe_)prime_with_rng()` to `fips_is_(safe_)prime()`. ([#79])
+- Moved multicore functions to `multicore` module and removed `par_` prefixes. ([#79])
+- Introduced `Flavor` enum and removed `_safe` suffixes from functions. ([#79])
+- `SieveFactory` trait moved to `hazmat` module. ([#79])
+- The base chosen by `MillerRabin::test_random_base()` can now be equal to 2. ([#79])
+- Introudced `Error` enum; `hazmat` functions and method now return it instead of panicking. ([#79])
+- Renamed `SmallPrimesSieveFactory` to `SmallFactorsSieveFactory`. ([#79])
+- Moved `fips_is_prime()` to its own `fips` submodule and renamed to `is_prime`. ([#79])
 
 
 ### Added
@@ -21,6 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 [#70]: https://github.com/entropyxyz/crypto-primes/pull/72
 [#72]: https://github.com/entropyxyz/crypto-primes/pull/72
+[#79]: https://github.com/entropyxyz/crypto-primes/pull/79
 
 
 ## [0.7.0-pre.0] - 2025-02-22

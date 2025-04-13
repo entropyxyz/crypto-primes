@@ -16,24 +16,15 @@
 
 extern crate alloc;
 
+mod error;
+pub mod fips;
 mod generic;
 pub mod hazmat;
 mod presets;
-mod traits;
-
-pub use generic::{sieve_and_find, SieveIterator};
-pub use presets::{
-    fips_is_prime_with_rng, fips_is_safe_prime_with_rng, generate_prime_with_rng, generate_safe_prime_with_rng,
-    is_prime, is_safe_prime,
-};
-pub use traits::{RandomPrimeWithRng, SieveFactory};
-
-#[cfg(feature = "default-rng")]
-pub use presets::{generate_prime, generate_safe_prime};
-#[cfg(all(feature = "default-rng", feature = "multicore"))]
-pub use presets::{par_generate_prime, par_generate_safe_prime};
-#[cfg(feature = "multicore")]
-pub use presets::{par_generate_prime_with_rng, par_generate_safe_prime_with_rng};
 
 #[cfg(feature = "multicore")]
-pub use generic::par_sieve_and_find;
+pub mod multicore;
+
+pub use error::Error;
+pub use generic::sieve_and_find;
+pub use presets::{is_prime, random_prime, Flavor};
