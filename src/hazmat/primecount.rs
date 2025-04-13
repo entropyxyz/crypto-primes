@@ -32,11 +32,11 @@ use num_traits::float::FloatCore as _;
 /// Assuming RH, we can use Schoenfeld’s bound `|π(x) - Li(x)| < (1 / 8π) * √x * ln x`. This gives a very small
 /// theoretical error bound compared to the best known unconditional bounds (by Trudgian).
 ///
-/// | Bits | Error Bound (abs) | Error Bound (rel) 		|
-/// | :--- | :---------------- | :--------------------- |
-/// | 1024 | < 2^517           | < 2^-497               |
-/// | 2048 | < 2^1030          | < 2^-1007              |
-/// | 4096 | < 2^2055          | < 2^-2029              |
+/// | Bits | Error Bound (abs) | Error Bound (rel) |
+/// | :--- | :---------------- | :-----------------|
+/// | 1024 | < 2^517           | < 2^-497          |
+/// | 2048 | < 2^1030          | < 2^-1007         |
+/// | 4096 | < 2^2055          | < 2^-2029         |
 ///
 /// *(Relative error bound is calculated as `Schoenfeld’s Bound (abs) / Li_approx(x)`)*
 ///
@@ -49,10 +49,11 @@ use num_traits::float::FloatCore as _;
 /// approximately ~2^-33 (for 1024 bits) down to ~2^-41 (for 4096 bits). This corresponds to an extremely small
 /// percentage error (significantly less than 10^-8 %).
 ///
-/// It should be noted that while Li(x) is generally smaller than π(x) for 'small' x, it is known that the sign of `π(x)
-/// - Li(x)` changes infinitely often. It has been proven that there must be a crossing below ~10^316 (~2^1051), which
-/// is well within the ranges used in this library. Thus, users should be aware that the estimate provided here can be
-/// both greater than and smaller than the actual value of π(x).
+/// It should be noted that while Li(x) is generally smaller than π(x) for 'small' x, it is known that the sign of
+/// `π(x) - Li(x)` changes infinitely often. It has been proven that there must be a crossing below ~10^316 (~2^1051),
+/// which is well within the ranges used in this library. Thus, users should be aware that the estimate provided here
+/// can be both greater than and smaller than the actual value of π(x).
+///
 pub fn estimate_pi_x<const LIMBS: usize>(x: &Uint<LIMBS>) -> Uint<LIMBS> {
     let ln_x = ln(x);
     let term1 = x / Uint::from_u64(ln_x.round() as u64);
