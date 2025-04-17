@@ -114,7 +114,6 @@ where
 // Calculate the natural logarithm of a big integer using the relation ln(x) = log₂(x) / log₂(e).
 // Uses fixed-point arithmetic for large values of x (> 2^53).
 #[inline]
-
 fn ln<const LIMBS: usize>(x: &Uint<LIMBS>) -> f64 {
     if x <= &Uint::ONE {
         return 0.0;
