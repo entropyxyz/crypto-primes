@@ -1,8 +1,9 @@
 use core::f64;
-
 use crypto_bigint::{Concat, NonZero, Split, Uint};
 #[allow(unused_imports)]
 use num_traits::float::FloatCore as _;
+
+use super::log2::log2;
 
 /// Estimate the number of primes smaller than x using the asymptotic expansion of Li(x) with 4 terms, i.e.:
 ///
@@ -120,14 +121,14 @@ fn ln<const LIMBS: usize>(x: &Uint<LIMBS>) -> f64 {
     let ilog2_x = x.bits_vartime().saturating_sub(1);
     // if x is small enough to be cast losslessly to an f64 we just use the normal log2().
     if ilog2_x < f64::MANTISSA_DIGITS {
-        return (x.as_limbs()[0].0 as f64).log2() * f64::consts::LN_2;
+        return log2(x.as_limbs()[0].0 as f64) * f64::consts::LN_2;
     }
     // x can be expressed as m + 2^k, so log(x) = log(m) + k
     // Extract top 53 bits and cast to an f64.
     let shift = ilog2_x.saturating_sub(f64::MANTISSA_DIGITS - 1);
     let fraction = x.wrapping_shr_vartime(shift).as_limbs()[0].0 as f64;
     // Fraction is now m * 2^52, where m is the top 53 bits of x. Take log2(m) and subtract 52 to scale the result back to the expected range.
-    let fraction = fraction.log2() - (f64::MANTISSA_DIGITS - 1) as f64;
+    let fraction = log2(fraction) - (f64::MANTISSA_DIGITS - 1) as f64;
     let log2_x = ilog2_x as f64 + fraction;
     log2_x * f64::consts::LN_2
 }

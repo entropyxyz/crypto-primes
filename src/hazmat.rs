@@ -4,6 +4,7 @@
 mod float;
 mod gcd;
 mod jacobi;
+mod log2;
 mod lucas;
 mod miller_rabin;
 mod precomputed;
