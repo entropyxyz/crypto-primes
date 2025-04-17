@@ -359,7 +359,7 @@ mod tests {
             // TODO: for some reason the error is much worse for 32-bit, more than 10%
             #[cfg(target_pointer_width = "32")]
             assert!(
-                error 12.0,
+                error < 12.0,
                 "10^{exponent}:\t{pi_x} - {estimate_128} = {delta}, err: {error:.2}"
             );
         }
