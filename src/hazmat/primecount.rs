@@ -114,6 +114,7 @@ where
 // Calculate the natural logarithm of a big integer using the relation ln(x) = log₂(x) / log₂(e).
 // Uses fixed-point arithmetic for large values of x (> 2^53).
 #[inline]
+
 fn ln<const LIMBS: usize>(x: &Uint<LIMBS>) -> f64 {
     if x <= &Uint::ONE {
         return 0.0;
@@ -126,7 +127,17 @@ fn ln<const LIMBS: usize>(x: &Uint<LIMBS>) -> f64 {
     // x can be expressed as m + 2^k, so log(x) = log(m) + k
     // Extract top 53 bits and cast to an f64.
     let shift = ilog2_x.saturating_sub(f64::MANTISSA_DIGITS - 1);
-    let fraction = x.wrapping_shr_vartime(shift).as_limbs()[0].0 as f64;
+    let shifted_x = x.wrapping_shr_vartime(shift);
+    #[cfg(target_pointer_width = "64")]
+    let fraction = shifted_x.as_limbs()[0].0 as f64;
+    #[cfg(target_pointer_width = "32")]
+    let fraction = {
+        let lo = shifted_x.as_limbs()[0].0;
+        let hi = shifted_x.as_limbs()[1].0;
+        let fraction = (hi as u64) << 32 | lo as u64;
+        fraction as f64
+    };
+
     // Fraction is now m * 2^52, where m is the top 53 bits of x. Take log2(m) and subtract 52 to scale the result back to the expected range.
     let fraction = log2(fraction) - (f64::MANTISSA_DIGITS - 1) as f64;
     let log2_x = ilog2_x as f64 + fraction;
