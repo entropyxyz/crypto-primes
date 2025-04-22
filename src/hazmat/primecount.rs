@@ -130,7 +130,7 @@ fn ln<const LIMBS: usize>(x: &Uint<LIMBS>) -> f64 {
             {
                 // Small enough to fit in 32 bits
                 if ilog2_x < 32 {
-                    x.as_limbs()[0].0
+                    x.as_limbs()[0].0 as u64
                 } else {
                     let lo = x.as_limbs()[0].0;
                     let hi = x.as_limbs()[1].0;
