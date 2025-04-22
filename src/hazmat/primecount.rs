@@ -378,6 +378,6 @@ mod tests {
             | (limbs[1].0 as u128) << 32
             | limbs[0].0 as u128;
         #[cfg(target_pointer_width = "64")]
-        return (limbs[1].0 as u128) << 64 | limbs[0].0 as u128;
+        return ((limbs[1].0 as u128) << 64) | limbs[0].0 as u128;
     }
 }
