@@ -140,7 +140,8 @@ fn ln<const LIMBS: usize>(x: &Uint<LIMBS>) -> f64 {
         };
         return log2(x as f64) * f64::consts::LN_2;
     }
-    // x can be approximated by M*2^shift, where shift is `ilog2(x) - 52` and M is the integer value represented by the top 53 bits of x.
+    // x can be approximated by M*2^shift, where shift is `ilog2(x) - 52` and M is the integer value represented by the
+    // top 53 bits of x.
     // log2(x) ~ log2(M*2^shift) ~ log2(M) + shift ~ log2(M) + ilog2(x) - 52
     let shift = ilog2_x.saturating_sub(f64::MANTISSA_DIGITS - 1);
     let shifted_x = x.wrapping_shr_vartime(shift);
@@ -154,7 +155,8 @@ fn ln<const LIMBS: usize>(x: &Uint<LIMBS>) -> f64 {
         fraction as f64
     };
 
-    // Fraction is now m * 2^52, where m is the top 53 bits of x. Take log2(m) and subtract 52 to scale the result back to the expected range.
+    // Fraction is now m * 2^52, where m is the top 53 bits of x. Take log2(m) and subtract 52 to scale the result back
+    // to the expected range.
     let fraction = log2(fraction) - (f64::MANTISSA_DIGITS - 1) as f64;
     let log2_x = ilog2_x as f64 + fraction;
     log2_x * f64::consts::LN_2
