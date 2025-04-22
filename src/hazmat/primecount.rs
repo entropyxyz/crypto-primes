@@ -361,7 +361,6 @@ mod tests {
             let delta = uint_to_u128(&delta);
             let estimate_128 = uint_to_u128(&estimate);
             let error = (delta as f64 / *pi_x as f64) * 100.0;
-            #[cfg(target_pointer_width = "64")]
             assert!(
                 error < 2.2,
                 "10^{exponent}:\t{pi_x} - {estimate_128} = {delta}, err: {error:.2}"
