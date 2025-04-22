@@ -119,9 +119,26 @@ fn ln<const LIMBS: usize>(x: &Uint<LIMBS>) -> f64 {
         return 0.0;
     }
     let ilog2_x = x.bits_vartime().saturating_sub(1);
-    // if x is small enough to be cast losslessly to an f64 we just use the normal log2().
+    // if x is small enough to be cast losslessly to an f64 we use the normal 64-bit log2() from `libm`.
     if ilog2_x < f64::MANTISSA_DIGITS {
-        return log2(x.as_limbs()[0].0 as f64) * f64::consts::LN_2;
+        let x = {
+            #[cfg(target_pointer_width = "64")]
+            {
+                x.as_limbs()[0].0
+            }
+            #[cfg(target_pointer_width = "32")]
+            {
+                // Small enough to fit in 32 bits
+                if ilog2_x < 32 {
+                    x.as_limbs()[0].0
+                } else {
+                    let lo = x.as_limbs()[0].0;
+                    let hi = x.as_limbs()[1].0;
+                    (hi as u64) << 32 | lo as u64
+                }
+            }
+        };
+        return log2(x as f64) * f64::consts::LN_2;
     }
     // x can be expressed as m + 2^k, so log(x) = log(m) + k
     // Extract top 53 bits and cast to an f64.
@@ -199,15 +216,8 @@ mod tests {
         for (x, expected) in test_cases.iter() {
             let x_big = U128::from_u128(*x);
             let result = ln(&x_big);
-            #[cfg(target_pointer_width = "64")]
             assert!(
                 (result - *expected).abs() < f64::EPSILON * 100.0,
-                "x: {x}, mine: {result}, expected: {expected}"
-            );
-            // TODO: for some reason the error is much worse for 32-bit targets
-            #[cfg(target_pointer_width = "32")]
-            assert!(
-                (result - *expected).abs() < f64::EPSILON * 1000.0,
                 "x: {x}, mine: {result}, expected: {expected}"
             );
         }
@@ -354,12 +364,6 @@ mod tests {
             #[cfg(target_pointer_width = "64")]
             assert!(
                 error < 2.2,
-                "10^{exponent}:\t{pi_x} - {estimate_128} = {delta}, err: {error:.2}"
-            );
-            // TODO: for some reason the error is much worse for 32-bit, more than 10%
-            #[cfg(target_pointer_width = "32")]
-            assert!(
-                error < 12.0,
                 "10^{exponent}:\t{pi_x} - {estimate_128} = {delta}, err: {error:.2}"
             );
         }
