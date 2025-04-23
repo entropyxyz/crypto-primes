@@ -1,8 +1,8 @@
-use super::log2::log2;
+use crate::hazmat::float::ln;
 use core::f64;
 use crypto_bigint::{Concat, NonZero, Split, Uint};
 #[allow(unused_imports)]
-use num_traits::float::FloatCore as _;
+use num_traits::float::FloatCore;
 
 /// Estimate the number of primes smaller than x using the asymptotic expansion of Li(x) with 4 terms, i.e.:
 ///
@@ -145,150 +145,12 @@ where
     lo
 }
 
-// Calculate the natural logarithm of a big integer using the relation ln(x) = log₂(x) / log₂(e).
-// Uses fixed-point arithmetic for large values of x (> 2^53).
-#[inline]
-fn ln<const LIMBS: usize>(x: &Uint<LIMBS>) -> f64 {
-    if x <= &Uint::ONE {
-        return 0.0;
-    }
-    let ilog2_x = x.bits_vartime().saturating_sub(1);
-    // if x is small enough to be cast losslessly to an f64 we use the normal 64-bit log2() from `libm`.
-    if ilog2_x < f64::MANTISSA_DIGITS {
-        let x = {
-            #[cfg(target_pointer_width = "64")]
-            {
-                x.as_limbs()[0].0
-            }
-            #[cfg(target_pointer_width = "32")]
-            {
-                // Small enough to fit in 32 bits
-                if ilog2_x < 32 {
-                    x.as_limbs()[0].0 as u64
-                } else {
-                    let lo = x.as_limbs()[0].0;
-                    let hi = x.as_limbs()[1].0;
-                    (hi as u64) << 32 | lo as u64
-                }
-            }
-        };
-        return log2(x as f64) * f64::consts::LN_2;
-    }
-    // x can be approximated by M*2^shift, where shift is `ilog2(x) - 52` and M is the integer value represented by the
-    // top 53 bits of x.
-    // log2(x) ~ log2(M*2^shift) ~ log2(M) + shift ~ log2(M) + ilog2(x) - 52
-    let shift = ilog2_x.saturating_sub(f64::MANTISSA_DIGITS - 1);
-    let shifted_x = x.wrapping_shr_vartime(shift);
-    #[cfg(target_pointer_width = "64")]
-    let fraction = shifted_x.as_limbs()[0].0 as f64;
-    #[cfg(target_pointer_width = "32")]
-    let fraction = {
-        let lo = shifted_x.as_limbs()[0].0;
-        let hi = shifted_x.as_limbs()[1].0;
-        let fraction = (hi as u64) << 32 | lo as u64;
-        fraction as f64
-    };
-
-    // Fraction is now m * 2^52, where m is the top 53 bits of x. Take log2(m) and subtract 52 to scale the result back
-    // to the expected range.
-    let fraction = log2(fraction) - (f64::MANTISSA_DIGITS - 1) as f64;
-    let log2_x = ilog2_x as f64 + fraction;
-    log2_x * f64::consts::LN_2
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use alloc::vec;
     use alloc::vec::Vec;
-    use crypto_bigint::{Random, U1024, U128, U256, U512, U64};
-    use rand_core::SeedableRng;
-
-    #[test]
-    fn test_ln_x_small() {
-        let test_cases: Vec<(u128, f64)> = vec![
-            (1, 0.0),
-            (3, 1.09861228866811),
-            (4, 1.3862943611198906),
-            (5, 1.6094379124341004),
-            (10u128.pow(2), 4.60517018598809),
-            (10u128.pow(3), 6.90775527898214),
-            (10u128.pow(4), 9.21034037197618),
-            (10u128.pow(5), 11.51292546497023),
-            (10u128.pow(6), 13.81551055796427),
-            (10u128.pow(7), 16.11809565095832),
-            (10u128.pow(8), 18.42068074395237),
-            (10u128.pow(9), 20.72326583694641),
-            (10u128.pow(10), 23.02585092994046),
-            (10u128.pow(11), 25.3284360229345),
-            (10u128.pow(12), 27.63102111592855),
-            (10u128.pow(13), 29.93360620892259),
-            (10u128.pow(14), 32.23619130191664),
-            (10u128.pow(15), 34.53877639491069),
-            (10u128.pow(16), 36.84136148790473),
-            (10u128.pow(17), 39.14394658089878),
-            (10u128.pow(18), 41.44653167389282),
-            (10u128.pow(19), 43.74911676688687),
-            (10u128.pow(20), 46.05170185988091),
-            (10u128.pow(21), 48.35428695287496),
-            (10u128.pow(22), 50.65687204586901),
-            (10u128.pow(23), 52.95945713886305),
-            (10u128.pow(24), 55.262042231857096),
-            (10u128.pow(25), 57.56462732485114),
-            (10u128.pow(26), 59.86721241784519),
-            (10u128.pow(27), 62.16979751083923),
-            (10u128.pow(28), 64.47238260383328),
-            (10u128.pow(29), 66.77496769682733),
-            (10u128.pow(30), 69.07755278982137),
-            (10u128.pow(31), 71.38013788281542),
-            (10u128.pow(32), 73.68272297580946),
-            (10u128.pow(33), 75.9853080688035),
-            (10u128.pow(34), 78.28789316179756),
-            (10u128.pow(35), 80.5904782547916),
-            (10u128.pow(36), 82.89306334778564),
-            (10u128.pow(37), 85.19564844077969),
-            (10u128.pow(38), 87.49823353377374),
-        ];
-        for (x, expected) in test_cases.iter() {
-            let x_big = U128::from_u128(*x);
-            let result = ln(&x_big);
-            assert!(
-                (result - *expected).abs() < f64::EPSILON * 100.0,
-                "x: {x}, mine: {result}, expected: {expected}"
-            );
-        }
-    }
-
-    #[test]
-    fn test_ln_x_large() {
-        let mut rng = rand_chacha::ChaCha8Rng::from_seed(*b"01234567890123456789012345678901");
-        let expected_256 = 172.29242258375361;
-
-        let x = U256::random(&mut rng);
-        let ln_x = ln(&x);
-        assert!(
-            (ln_x - expected_256).abs() < f64::EPSILON,
-            "x: {x}, ln x: {ln_x}, expected: {expected_256}"
-        );
-
-        let expected_512 = 354.2665608707877;
-        let mut rng = rand_chacha::ChaCha8Rng::from_seed(*b"01234567890123456789012345678901");
-        let x = U512::random(&mut rng);
-        let ln_x = ln(&x);
-        assert!(
-            (ln_x - expected_512).abs() < f64::EPSILON,
-            "x: {x}, ln x: {ln_x}, expected: {expected_512}"
-        );
-
-        let expected_1024 = 708.828942204781;
-        let mut rng = rand_chacha::ChaCha8Rng::from_seed(*b"01234567890123456789012345678901");
-        let x = U1024::random(&mut rng);
-        let ln_x = ln(&x);
-        assert!(
-            (ln_x - expected_1024).abs() < f64::EPSILON,
-            "x: {x}, ln x: {ln_x}, expected: {expected_1024}"
-        );
-    }
+    use crypto_bigint::{U1024, U256, U64};
 
     #[test]
     fn pi_x_2_500() {
@@ -424,38 +286,5 @@ mod tests {
             | limbs[0].0 as u128;
         #[cfg(target_pointer_width = "64")]
         return ((limbs[1].0 as u128) << 64) | limbs[0].0 as u128;
-    }
-
-    #[test]
-    fn test_log2_special_cases() {
-        // Test lines 56-57: log(±0) = -inf
-        let log_zero = log2(0.0);
-        assert!(log_zero.is_infinite() && log_zero.is_sign_negative(), "log2(0.0) is −∞");
-        let log_neg_zero = log2(-0.0);
-        assert!(
-            log_neg_zero.is_infinite() && log_neg_zero.is_sign_negative(),
-            "log2(-0.0) is −∞"
-        );
-
-        // Test lines 59-60: log(-#) = NaN
-        let log_neg_one = log2(-1.0);
-        assert!(log_neg_one.is_nan(), "log2(-1.0) is NaN");
-        let log_neg_inf = log2(f64::NEG_INFINITY);
-        assert!(log_neg_inf.is_nan(), "log2(-Inf) is NaN");
-
-        // Test lines 67-68: log(Inf) = Inf, log(NaN) = NaN
-        let log_inf = log2(f64::INFINITY);
-        assert!(log_inf.is_infinite() && log_inf.is_sign_positive(), "log2(Inf) is ∞");
-        assert!(log2(f64::NAN).is_nan(), "log2(NaN) is NaN");
-
-        // Test lines 69-70: log(1.0) = 0.0
-        assert_eq!(log2(1.0), 0.0, "log2(1.0) is zero");
-
-        // Test lines 55 & 62-66: Subnormal input
-        let log_subnormal = log2(f64::MIN_POSITIVE); // Smallest positive f64 > 0
-        assert!(log_subnormal.is_finite(), "log2(subnormal) is finite");
-        // log2(MIN_POSITIVE) is log2(2^-1074) = -1074, but the log2 code approximates it as -1022 because floating
-        // point maths is weird.
-        assert!(log_subnormal < -1000.0, "log2(subnormal) is smaller than 1000");
     }
 }
