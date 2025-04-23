@@ -211,7 +211,7 @@ const fn pseudoprime_probability(k: u32, t: u32, cap_m: u32) -> f64 {
 /// [^FIPS]: FIPS-186.5 standard, <https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.186-5.pdf>
 pub const fn minimum_mr_iterations(bit_length: u32, log2_target: u32) -> Option<usize> {
     let mut t = 1;
-    while t <= (log2_target + 1) / 2 {
+    while t <= log2_target.div_ceil(2) {
         let cap_m_limit = floor_sqrt(4 * (bit_length - 1)) - 1;
 
         let mut cap_m = 3;
@@ -261,7 +261,7 @@ mod tests {
     }
 
     fn is_spsp(num: u32) -> bool {
-        pseudoprimes::STRONG_BASE_2.iter().any(|x| *x == num)
+        pseudoprimes::STRONG_BASE_2.contains(&num)
     }
 
     fn random_checks<T: Integer + RandomMod, R: CryptoRng + ?Sized>(

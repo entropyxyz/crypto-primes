@@ -729,7 +729,7 @@ mod tests {
             _ => panic!("We do not have pseudoprimes listed for this combination of base and check"),
         };
 
-        pseudoprimes.iter().any(|x| *x == num)
+        pseudoprimes.contains(&num)
     }
 
     fn test_pseudoprimes<T: HasBaseType>(numbers: &[u32], base: T, check: LucasCheck, expected_result: bool) {
