@@ -4,8 +4,6 @@
 mod float;
 mod gcd;
 mod jacobi;
-#[allow(clippy::all)]
-mod log2;
 mod lucas;
 mod miller_rabin;
 mod precomputed;
