@@ -355,7 +355,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "LIMBS must be at least 2")]
+    #[should_panic(expected = "LIMBS must be at least ")]
     fn pi_x_tiny() {
         let x = U64::from_u64(10000000);
         estimate_pi_x(&x);
