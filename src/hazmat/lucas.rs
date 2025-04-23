@@ -387,8 +387,6 @@ where
     let (s, d) = decompose(&candidate);
 
     // Some constants in Montgomery form
-    // TODO(dp): Cloning `candidate` should not be necessary. It's only needed because the
-    // `to_integer` closure captures it, but all we really need is the `BITS`
     let params = <T as Integer>::Monty::new_params_vartime(candidate.clone());
 
     let zero = <T as Integer>::Monty::zero(params.clone());
