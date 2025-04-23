@@ -80,9 +80,15 @@ where
     Uint<LIMBS>: Concat<Output = Uint<RHS_LIMBS>>,
     Uint<RHS_LIMBS>: Split<Output = Uint<LIMBS>>,
 {
+    #[cfg(target_pointer_width = "64")]
     assert!(
         LIMBS >= 2,
         "LIMBS must be at least 2; for smaller values, use precalculated values for π(x)"
+    );
+    #[cfg(target_pointer_width = "32")]
+    assert!(
+        LIMBS >= 4,
+        "LIMBS must be at least 4; for smaller values, use precalculated values for π(x)"
     );
     // Number of bits to scale by (fractional bits during division)
     const SCALE_BITS: u32 = 64;
