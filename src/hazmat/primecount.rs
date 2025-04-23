@@ -1,13 +1,17 @@
+use super::log2::log2;
 use core::f64;
 use crypto_bigint::{Concat, NonZero, Split, Uint};
 #[allow(unused_imports)]
 use num_traits::float::FloatCore as _;
 
-use super::log2::log2;
-
 /// Estimate the number of primes smaller than x using the asymptotic expansion of Li(x) with 4 terms, i.e.:
 ///
 ///   `𝜋(𝑥) ~ x/ln x * (1 + 1!/ln x + 2!/ln^2 x + 3!/ln^3 x).`
+///
+/// # Panics
+///
+/// The number of limbs must be at least 2. For smaller values, use precalculated values for π(x) from
+/// e.g. https://sweet.ua.pt/tos/primes.html.
 ///
 /// # Error considerations
 ///
@@ -56,13 +60,35 @@ use super::log2::log2;
 /// `π(x) - Li(x)` changes infinitely often. It has been proven that there must be a crossing below ~10^316 (~2^1051),
 /// which is well within the ranges used in this library. Thus, users should be aware that the estimate provided here
 /// can be both greater than and smaller than the actual value of π(x).
+///
+/// # Sources
+///
+/// Wikipedia, [Prime Counting Function][wikipedia-pcf]
+/// Pierre Dusart (2010), [ESTIMATES OF SOME FUNCTIONS OVER PRIMES WITHOUT R.H.][dusart2010].
+/// Pierre Dusart (2018), [Explicit estimates of some functions over primes][dusart2018].
+/// Lowell Schoenfeld (1976), [Sharper Bounds for the Chebyshev Functions θ(x) and ψ(x)](schoenfeld).
+/// Trudgian, T. S. (2014). [Updating the error term in the prime number theorem](trudgian)
+///
+/// [dusart2010]: https://arxiv.org/pdf/1002.0442
+/// [dusart2018]: https://www.researchgate.net/publication/309522478_Explicit_estimates_of_some_functions_over_primes
+/// [wikipedia-pcf]: https://en.wikipedia.org/wiki/Prime-counting_function
+/// [schoenfeld]: https://www.jstor.org/stable/2005976
+/// [trudgian]: https://arxiv.org/abs/1401.2689
+///
 pub fn estimate_pi_x<const LIMBS: usize, const RHS_LIMBS: usize>(x: &Uint<LIMBS>) -> Uint<LIMBS>
 where
     Uint<LIMBS>: Concat<Output = Uint<RHS_LIMBS>>,
     Uint<RHS_LIMBS>: Split<Output = Uint<LIMBS>>,
 {
-    // Number of bits to scale by (effectively fractional bits during division)
+    assert!(
+        LIMBS >= 2,
+        "LIMBS must be at least 2; for smaller values, use precalculated values for π(x)"
+    );
+    // Number of bits to scale by (fractional bits during division)
     const SCALE_BITS: u32 = 64;
+    const TOTAL_SCALE_BITS: u32 = 2 * SCALE_BITS;
+    // Scaling factor for the denominators of the expansion terms, 2^64.
+    const DENOM_SCALE_FACTOR: f64 = (1u128 << SCALE_BITS) as f64;
 
     let ln_x = ln(x);
 
@@ -75,29 +101,31 @@ where
     let ln_x_3 = ln_x_2 * ln_x;
     let ln_x_4 = ln_x_3 * ln_x;
 
-    // Round to nearest u64. Ensure results are non-zero for division.
-    let d1 = ln_x.round().max(1.0) as u64;
-    let d2 = ln_x_2.round().max(1.0) as u64;
-    let d3 = ln_x_3.round().max(1.0) as u64;
-    let d4 = ln_x_4.round().max(1.0) as u64;
+    // Scale up a float by 2^64, round, cast to u128 and then to a wide `Uint`.
+    let f64_to_scaled_uint = |value: f64| -> NonZero<Uint<RHS_LIMBS>> {
+        let scaled = value * DENOM_SCALE_FACTOR;
+        let scaled = (scaled.round()).max(1.0) as u128;
+        let denom = Uint::<RHS_LIMBS>::from_u128(scaled);
+        NonZero::new(denom).expect("max(1.0) ensures value is at least 1")
+    };
 
-    let d1 = NonZero::new(Uint::<RHS_LIMBS>::from(d1)).expect("at least 1 by construction");
-    let d2 = NonZero::new(Uint::<RHS_LIMBS>::from(d2)).expect("at least 1 by construction");
-    let d3 = NonZero::new(Uint::<RHS_LIMBS>::from(d3)).expect("at least 1 by construction");
-    let d4 = NonZero::new(Uint::<RHS_LIMBS>::from(d4)).expect("at least 1 by construction");
+    let d1 = f64_to_scaled_uint(ln_x);
+    let d2 = f64_to_scaled_uint(ln_x_2);
+    let d3 = f64_to_scaled_uint(ln_x_3);
+    let d4 = f64_to_scaled_uint(ln_x_4);
 
     let x_wide: Uint<RHS_LIMBS> = x.concat(&Uint::ZERO);
-    let term1_scaled = (x_wide << SCALE_BITS).wrapping_div(&d1);
-    let term2_scaled = (x_wide << SCALE_BITS).wrapping_div(&d2);
 
-    // Term 3: (2x << SCALE_BITS) / d3  (Factorial 2!)
-    let x_times_2: Uint<RHS_LIMBS> = x_wide << 1;
-    let term3_scaled = (x_times_2 << SCALE_BITS).wrapping_div(&d3);
+    let term1_scaled = (x_wide << TOTAL_SCALE_BITS).wrapping_div(&d1);
+    let term2_scaled = (x_wide << TOTAL_SCALE_BITS).wrapping_div(&d2);
 
-    // Term 4: (6x << SCALE_BITS) / d4  (Factorial 3!)
+    // Term 3: (2x << TOTAL_SCALE_BITS) / d3  (Factorial 2!)
+    let term3_scaled = (x_wide << (TOTAL_SCALE_BITS + 1)).wrapping_div(&d3);
+
+    // Term 4: (6x << TOTAL_SCALE_BITS) / d4  (Factorial 3!)
     let six = Uint::<LIMBS>::from(6u64);
     let x_times_6 = x_wide.saturating_mul(&six);
-    let term4_scaled = (x_times_6 << SCALE_BITS).wrapping_div(&d4);
+    let term4_scaled = (x_times_6 << TOTAL_SCALE_BITS).wrapping_div(&d4);
 
     let sum_scaled = term1_scaled
         .wrapping_add(&term2_scaled)
@@ -167,7 +195,7 @@ mod tests {
     use super::*;
     use alloc::vec;
     use alloc::vec::Vec;
-    use crypto_bigint::{Random, U1024, U128, U256, U512};
+    use crypto_bigint::{Random, U1024, U128, U256, U512, U64};
     use rand_core::SeedableRng;
 
     #[test]
@@ -266,7 +294,8 @@ mod tests {
         } else {
             estimate - sage_est
         };
-        const MIN_BIT_DIFFERENCE: u32 = 10;
+        // Want the delta to be "far away" from Sage's estimate.
+        const MIN_BIT_DIFFERENCE: u32 = 29;
         assert!(
             sage_est.bits_vartime() - delta.bits_vartime() >= MIN_BIT_DIFFERENCE,
             "Estimate not close enough: delta has {} bits, expected {} bits. Difference should be >= {}",
@@ -286,10 +315,12 @@ mod tests {
         } else {
             estimate - sage_est
         };
-        const MIN_BIT_DIFFERENCE: u32 = 12;
+
+        // Want the delta to be "far away" from Sage's estimate.
+        const MIN_BIT_DIFFERENCE: u32 = 33;
         assert!(
             sage_est.bits_vartime() - delta.bits_vartime() >= MIN_BIT_DIFFERENCE,
-            "Estimate not close enough: delta has {} bits, expected {} bits. Difference should be >= {}",
+            "Estimate not close enough: delta has {} bits, expected {} bits. Difference should be >= {}; delta: {delta}, sage_est: {sage_est}, estimate: {estimate}",
             delta.bits_vartime(),
             sage_est.bits_vartime(),
             MIN_BIT_DIFFERENCE
@@ -306,7 +337,8 @@ mod tests {
         } else {
             estimate - sage_est
         };
-        const MIN_BIT_DIFFERENCE: u32 = 12;
+        // Want the delta to be "far away" from Sage's estimate.
+        const MIN_BIT_DIFFERENCE: u32 = 34;
         assert!(
             sage_est.bits_vartime() - delta.bits_vartime() >= MIN_BIT_DIFFERENCE,
             "Estimate not close enough: delta has {} bits, expected {} bits. Difference should be >= {}",
@@ -317,15 +349,22 @@ mod tests {
     }
 
     #[test]
-    fn pi_estimates_for_known_values() {
+    #[should_panic(expected = "LIMBS must be at least 2")]
+    fn pi_x_tiny() {
+        let x = U64::from_u64(10000000);
+        estimate_pi_x(&x);
+    }
+
+    #[test]
+    fn pi_x_estimates_for_known_values() {
         // List of known values for π(x), expressed as a tuple of `(π(x), exponent)`, where the `exponent` is used with base 10.
         let pi_xs: Vec<(u128, u32)> = vec![
             // The error is large for small x, so we skip them.
             // (4, 1),
             // (25, 2),
             // (168, 3),
-            // (1229, 4),
-            // (9592, 5),
+            (1229, 4),
+            (9592, 5),
             (78498, 6),
             (664579, 7),
             (5761455, 8),
@@ -379,5 +418,38 @@ mod tests {
             | limbs[0].0 as u128;
         #[cfg(target_pointer_width = "64")]
         return ((limbs[1].0 as u128) << 64) | limbs[0].0 as u128;
+    }
+
+    #[test]
+    fn test_log2_special_cases() {
+        // Test lines 56-57: log(±0) = -inf
+        let log_zero = log2(0.0);
+        assert!(log_zero.is_infinite() && log_zero.is_sign_negative(), "log2(0.0) is −∞");
+        let log_neg_zero = log2(-0.0);
+        assert!(
+            log_neg_zero.is_infinite() && log_neg_zero.is_sign_negative(),
+            "log2(-0.0) is −∞"
+        );
+
+        // Test lines 59-60: log(-#) = NaN
+        let log_neg_one = log2(-1.0);
+        assert!(log_neg_one.is_nan(), "log2(-1.0) is NaN");
+        let log_neg_inf = log2(f64::NEG_INFINITY);
+        assert!(log_neg_inf.is_nan(), "log2(-Inf) is NaN");
+
+        // Test lines 67-68: log(Inf) = Inf, log(NaN) = NaN
+        let log_inf = log2(f64::INFINITY);
+        assert!(log_inf.is_infinite() && log_inf.is_sign_positive(), "log2(Inf) is ∞");
+        assert!(log2(f64::NAN).is_nan(), "log2(NaN) is NaN");
+
+        // Test lines 69-70: log(1.0) = 0.0
+        assert_eq!(log2(1.0), 0.0, "log2(1.0) is zero");
+
+        // Test lines 55 & 62-66: Subnormal input
+        let log_subnormal = log2(f64::MIN_POSITIVE); // Smallest positive f64 > 0
+        assert!(log_subnormal.is_finite(), "log2(subnormal) is finite");
+        // log2(MIN_POSITIVE) is log2(2^-1074) = -1074, but the log2 code approximates it as -1022 because floating
+        // point maths is weird.
+        assert!(log_subnormal < -1000.0, "log2(subnormal) is smaller than 1000");
     }
 }
