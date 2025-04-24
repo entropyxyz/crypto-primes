@@ -1,8 +1,6 @@
 use crate::hazmat::float::ln;
 use core::f64;
 use crypto_bigint::{Concat, NonZero, Split, Uint};
-#[allow(unused_imports)]
-use num_traits::float::FloatCore;
 
 /// Estimate the number of primes smaller than x using the asymptotic expansion of Li(x) with 4 terms, i.e.:
 ///
@@ -102,7 +100,7 @@ where
         return Uint::ZERO;
     }
 
-    // Calculate f64 denominators L, L^2, L^3, L^4 and round to u64
+    // Calculate f64 denominators L, L^2, L^3, L^4
     let ln_x_2 = ln_x * ln_x;
     let ln_x_3 = ln_x_2 * ln_x;
     let ln_x_4 = ln_x_3 * ln_x;
@@ -110,7 +108,7 @@ where
     // Scale up a float by 2^64, round, cast to u128 and then to a wide `Uint`.
     let f64_to_scaled_uint = |value: f64| -> NonZero<Uint<RHS_LIMBS>> {
         let scaled = value * DENOM_SCALE_FACTOR;
-        let scaled = (scaled.round()).max(1.0) as u128;
+        let scaled = libm::round(scaled).max(1.0) as u128;
         let denom = Uint::<RHS_LIMBS>::from_u128(scaled);
         NonZero::new(denom).expect("max(1.0) ensures value is at least 1")
     };
