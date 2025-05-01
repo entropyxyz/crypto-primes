@@ -73,7 +73,7 @@ use crypto_bigint::{Concat, NonZero, Split, Uint};
 /// [schoenfeld]: https://www.jstor.org/stable/2005976
 /// [trudgian]: https://arxiv.org/abs/1401.2689
 ///
-pub fn estimate_pi_x<const LIMBS: usize, const RHS_LIMBS: usize>(x: &Uint<LIMBS>) -> Uint<LIMBS>
+pub fn estimate_primecount<const LIMBS: usize, const RHS_LIMBS: usize>(x: &Uint<LIMBS>) -> Uint<LIMBS>
 where
     Uint<LIMBS>: Concat<Output = Uint<RHS_LIMBS>>,
     Uint<RHS_LIMBS>: Split<Output = Uint<LIMBS>>,
@@ -154,7 +154,7 @@ mod tests {
     fn pi_x_2_500() {
         let x = Uint::ONE << 500;
         let sage_est = U1024::from_be_hex("0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000bda54dd744907290defac4f74bec507fdafd96e123c49bea56826f73702a469b67453a13a6abc40e81b760a0a5fd95870dbb8bbe99973c246c49561e101");
-        let estimate = estimate_pi_x(&x);
+        let estimate = estimate_primecount(&x);
         let delta = if sage_est > estimate {
             sage_est - estimate
         } else {
@@ -174,7 +174,7 @@ mod tests {
     #[test]
     fn pi_x_max() {
         let x = U1024::MAX;
-        let estimate = estimate_pi_x(&x);
+        let estimate = estimate_primecount(&x);
         let sage_est = Uint::from_be_hex("005c7682fe13533e630c22e716b35439b3dc61f1d4898d78a36dd9c9afc0745a06d3a0deb93b77423f6d11c107283fcfdb8ae17de22b5197972f37cb480a2737fe8d0f15202bb43bc1863b05f6d3849f865b95242eaec9789dcf3b40e92504d98258f80b394ebec1c63d1186f9552689076f709c2fd8497b5f78d82cea2c2137");
         let delta = if sage_est > estimate {
             sage_est - estimate
@@ -197,7 +197,7 @@ mod tests {
         // This is a ChaCha8Rng with seed b"01234567890123456789012345678901"
         let x = Uint::from_be_hex("62A211E0907141403FD3EB60A82EAB701524710BDB024EB68DFF309389258B632EB9975D29F028F5137AC9DE870EB622D2D45A0D3A9C5801E8A3109BED220F82890E108F1778E5523E3E89CCD5DEDB667E6C17E940E9D4C3F58575C86CB76403017AD59D33AC084D2E58D81F8BB87A61B44677037A7DBDE04814256570DCBD7A");
         let sage_est = U1024::from_be_hex("0023ac3184a0c4c8e9025e0ae9b44d7980cee1baacf69032bb898677841fac0e516fa6bc8c1d1d3bb282622aa62c49f2d8e622d2f9aa80af3140c8c2251363017c99621943c90ab55a6dd69a678110233254a1a3c50ceb1cdb516e7220a7514a17b20114c7bef6f316e94cf7c9181187d70e751bda2e18695fa71e8015b8cf1c");
-        let estimate = estimate_pi_x(&x);
+        let estimate = estimate_primecount(&x);
         let delta = if sage_est > estimate {
             sage_est - estimate
         } else {
@@ -218,7 +218,7 @@ mod tests {
     #[should_panic(expected = "LIMBS must be at least ")]
     fn pi_x_tiny() {
         let x = U64::from_u64(10000000);
-        estimate_pi_x(&x);
+        estimate_primecount(&x);
     }
 
     #[test]
@@ -259,7 +259,7 @@ mod tests {
         for (pi_x, exponent) in pi_xs.iter() {
             let pi_x_wide = U256::from_u128(*pi_x);
             let n = U256::from_u128(10u128.pow(*exponent));
-            let estimate = estimate_pi_x(&n);
+            let estimate = estimate_primecount(&n);
             let delta = if pi_x_wide > estimate {
                 pi_x_wide - estimate
             } else {
