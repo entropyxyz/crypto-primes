@@ -42,11 +42,7 @@ const fn floor(x: f64) -> f64 {
     if e < 0x3ff {
         return if (ui >> 63) != 0 { -1. } else { 0. };
     }
-    if y > 0. {
-        x + y - 1.
-    } else {
-        x + y
-    }
+    if y > 0. { x + y - 1. } else { x + y }
 }
 
 /// Calculates a lower bound approximation of `2^exp` where `0 <= exp <= 1`.
@@ -171,7 +167,7 @@ mod tests {
     use alloc::vec;
     use alloc::vec::Vec;
 
-    use crypto_bigint::{U1024, U128, U256, U512};
+    use crypto_bigint::{U128, U256, U512, U1024};
     use float_cmp::assert_approx_eq;
     use proptest::prelude::*;
 

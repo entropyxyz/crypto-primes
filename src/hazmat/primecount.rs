@@ -142,7 +142,7 @@ mod tests {
     use super::*;
     use alloc::vec;
     use alloc::vec::Vec;
-    use crypto_bigint::{U1024, U128, U256, U64};
+    use crypto_bigint::{U64, U128, U256, U1024};
 
     #[test]
     fn pi_x_2_500() {

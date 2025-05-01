@@ -6,7 +6,7 @@ use crypto_bigint::{Integer, Odd, RandomMod};
 use rand_core::CryptoRng;
 
 use crate::{
-    hazmat::{equals_primitive, lucas_test, LucasCheck, MillerRabin, Primality, SelfridgeBase},
+    hazmat::{LucasCheck, MillerRabin, Primality, SelfridgeBase, equals_primitive, lucas_test},
     presets::Flavor,
 };
 

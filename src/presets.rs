@@ -4,7 +4,7 @@ use rand_core::CryptoRng;
 use crate::{
     generic::sieve_and_find,
     hazmat::{
-        equals_primitive, lucas_test, AStarBase, LucasCheck, MillerRabin, Primality, SetBits, SmallFactorsSieveFactory,
+        AStarBase, LucasCheck, MillerRabin, Primality, SetBits, SmallFactorsSieveFactory, equals_primitive, lucas_test,
     },
 };
 
@@ -119,11 +119,11 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crypto_bigint::{nlimbs, BoxedUint, CheckedAdd, Integer, RandomMod, Uint, Word, U128, U64};
+    use crypto_bigint::{BoxedUint, CheckedAdd, Integer, RandomMod, U64, U128, Uint, Word, nlimbs};
     use num_prime::nt_funcs::is_prime64;
     use rand_core::{OsRng, TryRngCore};
 
-    use super::{is_prime, random_prime, Flavor};
+    use super::{Flavor, is_prime, random_prime};
     use crate::{
         fips,
         hazmat::{minimum_mr_iterations, primes, pseudoprimes},
@@ -345,10 +345,10 @@ mod tests_openssl {
     use openssl::bn::{BigNum, BigNumContext};
     use rand_core::{OsRng, TryRngCore};
 
-    use super::{is_prime, random_prime, Flavor};
+    use super::{Flavor, is_prime, random_prime};
     use crate::{
         fips,
-        hazmat::{minimum_mr_iterations, random_odd_integer, SetBits},
+        hazmat::{SetBits, minimum_mr_iterations, random_odd_integer},
     };
 
     fn openssl_is_prime(num: &BigNum, ctx: &mut BigNumContext) -> bool {
@@ -418,14 +418,14 @@ mod tests_gmp {
     use crypto_bigint::U128;
     use rand_core::{OsRng, TryRngCore};
     use rug::{
-        integer::{IsPrime, Order},
         Integer,
+        integer::{IsPrime, Order},
     };
 
-    use super::{is_prime, random_prime, Flavor};
+    use super::{Flavor, is_prime, random_prime};
     use crate::{
         fips,
-        hazmat::{minimum_mr_iterations, random_odd_integer, SetBits},
+        hazmat::{SetBits, minimum_mr_iterations, random_odd_integer},
     };
 
     fn gmp_is_prime(num: &Integer) -> bool {

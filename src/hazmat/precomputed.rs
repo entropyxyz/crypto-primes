@@ -145,7 +145,7 @@ mod tests {
     use crypto_bigint::{NonZero, Random, U256};
     use rand_core::{OsRng, TryRngCore};
 
-    use super::{create_reciprocals, SMALL_PRIMES};
+    use super::{SMALL_PRIMES, create_reciprocals};
 
     #[test]
     fn correctness() {

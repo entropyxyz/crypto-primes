@@ -22,6 +22,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Renamed `SmallPrimesSieveFactory` to `SmallFactorsSieveFactory`. ([#79])
 - Moved `fips_is_prime()` to its own `fips` submodule and renamed to `is_prime`. ([#79])
 - Bumped `crypto-bigint` to 0.7.0-pre.1 and MSRV to 1.85. ([#80])
+- Bumped `crypto-bigint` to 0.7.0-pre.2. ([#84])
+- Bumped Rust edition to 2024. ([#84])
 
 
 ### Added
@@ -37,6 +39,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [#79]: https://github.com/entropyxyz/crypto-primes/pull/79
 [#80]: https://github.com/entropyxyz/crypto-primes/pull/80
 [#81]: https://github.com/entropyxyz/crypto-primes/pull/81
+[#84]: https://github.com/entropyxyz/crypto-primes/pull/84
 
 
 ## [0.7.0-pre.0] - 2025-02-22

@@ -24,11 +24,7 @@ where
         // In this branch `n` is `Word::BITS` bits or shorter,
         // so we can safely take the first limb.
         let n = n.as_ref()[0].0;
-        if n > m {
-            (n, m)
-        } else {
-            (m, n)
-        }
+        if n > m { (n, m) } else { (m, n) }
     };
 
     // Now do standard binary GCD on the two u64s
@@ -79,7 +75,7 @@ fn binary_gcd(mut n: Word, mut m: Word) -> Word {
 #[cfg(test)]
 mod tests {
     use core::num::NonZero;
-    use crypto_bigint::{Word, U128};
+    use crypto_bigint::{U128, Word};
     use num_bigint::BigUint;
     use num_integer::Integer;
     use proptest::prelude::*;

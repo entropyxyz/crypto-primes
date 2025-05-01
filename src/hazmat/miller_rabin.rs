@@ -4,9 +4,8 @@ use crypto_bigint::{Integer, Limb, Monty, NonZero as CTNonZero, Odd, PowBoundedE
 use rand_core::CryptoRng;
 
 use super::{
-    equals_primitive,
+    Primality, equals_primitive,
     float::{floor_sqrt, two_powf_upper_bound, two_powi},
-    Primality,
 };
 
 /// Precomputed data used to perform Miller-Rabin primality test[^Pomerance1980].
@@ -234,15 +233,15 @@ mod tests {
     use alloc::format;
     use core::num::NonZero;
 
-    use crypto_bigint::{Integer, Odd, RandomMod, Uint, U1024, U128, U1536, U64};
+    use crypto_bigint::{Integer, Odd, RandomMod, U64, U128, U1024, U1536, Uint};
     use rand_chacha::ChaCha8Rng;
     use rand_core::{CryptoRng, OsRng, SeedableRng, TryRngCore};
 
     #[cfg(feature = "tests-exhaustive")]
     use num_prime::nt_funcs::is_prime64;
 
-    use super::{minimum_mr_iterations, MillerRabin};
-    use crate::hazmat::{primes, pseudoprimes, random_odd_integer, Primality, SetBits, SmallFactorsSieve};
+    use super::{MillerRabin, minimum_mr_iterations};
+    use crate::hazmat::{Primality, SetBits, SmallFactorsSieve, primes, pseudoprimes, random_odd_integer};
 
     #[test]
     fn miller_rabin_derived_traits() {

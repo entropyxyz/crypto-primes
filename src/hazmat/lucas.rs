@@ -3,9 +3,9 @@ use core::num::NonZero;
 use crypto_bigint::{Integer, Limb, Monty, MontyMultiplier, Odd, Square, Word};
 
 use super::{
-    gcd::gcd_vartime,
-    jacobi::{jacobi_symbol_vartime, JacobiSymbol},
     Primality,
+    gcd::gcd_vartime,
+    jacobi::{JacobiSymbol, jacobi_symbol_vartime},
 };
 
 /// The maximum number of attempts to find `D` such that `(D/n) == -1`.
@@ -351,11 +351,7 @@ where
     } else {
         let t1 = p * p;
         let t2 = 4 * abs_q;
-        if t2 > t1 {
-            (t2 - t1, true)
-        } else {
-            (t1 - t2, false)
-        }
+        if t2 > t1 { (t2 - t1, true) } else { (t1 - t2, false) }
     };
 
     // If either is true, it allows us to optimize certain parts of the calculations.
@@ -400,11 +396,7 @@ where
         one.clone()
     } else {
         let abs_q = <T as Integer>::Monty::new(to_integer(abs_q), params.clone());
-        if q_is_negative {
-            -abs_q
-        } else {
-            abs_q
-        }
+        if q_is_negative { -abs_q } else { abs_q }
     };
 
     // Convert P to Montgomery form
@@ -622,13 +614,13 @@ mod tests {
 
     use alloc::format;
 
-    use crypto_bigint::{Integer, Odd, Uint, Word, U128, U64};
+    use crypto_bigint::{Integer, Odd, U64, U128, Uint, Word};
 
     #[cfg(feature = "tests-exhaustive")]
     use num_prime::nt_funcs::is_prime64;
 
-    use super::{decompose, lucas_test, AStarBase, BruteForceBase, LucasBase, LucasCheck, SelfridgeBase};
-    use crate::hazmat::{primes, pseudoprimes, Primality};
+    use super::{AStarBase, BruteForceBase, LucasBase, LucasCheck, SelfridgeBase, decompose, lucas_test};
+    use crate::hazmat::{Primality, primes, pseudoprimes};
 
     #[test]
     fn bases_derived_traits() {

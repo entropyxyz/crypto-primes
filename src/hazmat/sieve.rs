@@ -8,7 +8,7 @@ use core::num::{NonZero, NonZeroU32};
 use crypto_bigint::{Integer, Odd, RandomBits, RandomBitsError};
 use rand_core::CryptoRng;
 
-use super::precomputed::{SmallPrime, LAST_SMALL_PRIME, RECIPROCALS, SMALL_PRIMES};
+use super::precomputed::{LAST_SMALL_PRIME, RECIPROCALS, SMALL_PRIMES, SmallPrime};
 use crate::{error::Error, presets::Flavor};
 
 /// Decide how prime candidates are manipulated by setting certain bits before primality testing,
@@ -400,13 +400,13 @@ mod tests {
     use alloc::vec::Vec;
     use core::num::NonZero;
 
-    use crypto_bigint::{U256, U64};
+    use crypto_bigint::{U64, U256};
     use num_prime::nt_funcs::factorize64;
     use rand_chacha::ChaCha8Rng;
     use rand_core::{OsRng, SeedableRng, TryRngCore};
 
-    use super::{random_odd_integer, SetBits, SmallFactorsSieve, SmallFactorsSieveFactory};
-    use crate::{hazmat::precomputed::SMALL_PRIMES, Error, Flavor};
+    use super::{SetBits, SmallFactorsSieve, SmallFactorsSieveFactory, random_odd_integer};
+    use crate::{Error, Flavor, hazmat::precomputed::SMALL_PRIMES};
 
     #[test]
     fn random() {
@@ -598,11 +598,14 @@ mod tests {
         }
 
         // 1 in 2^30 chance of spurious failure... good enough?
-        assert!((0..30)
-            .map(|_| {
-                random_odd_integer::<U64, _>(&mut OsRng.unwrap_mut(), NonZero::new(64).unwrap(), SetBits::None).unwrap()
-            })
-            .any(|x| !bool::from(x.bit(63))));
+        assert!(
+            (0..30)
+                .map(|_| {
+                    random_odd_integer::<U64, _>(&mut OsRng.unwrap_mut(), NonZero::new(64).unwrap(), SetBits::None)
+                        .unwrap()
+                })
+                .any(|x| !bool::from(x.bit(63)))
+        );
     }
 
     #[test]
