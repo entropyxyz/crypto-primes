@@ -51,11 +51,7 @@ fn reduce_numerator_short(j: JacobiSymbol, a: Word, p: Word) -> (JacobiSymbol, W
 /// Takes a Jacobi symbol value, and returns the swapped pair and the new Jacobi symbol,
 /// negated if the transformation changes parity.
 fn apply_swap(j: JacobiSymbol, a: Word, p: Word) -> JacobiSymbol {
-    if a & 3 == 1 || p & 3 == 1 {
-        j
-    } else {
-        -j
-    }
+    if a & 3 == 1 || p & 3 == 1 { j } else { -j }
 }
 
 fn swap_long<T: Integer>(j: JacobiSymbol, a: Word, p: &Odd<T>) -> (JacobiSymbol, &Odd<T>, Word) {
@@ -143,12 +139,12 @@ mod tests {
 
     use alloc::format;
 
-    use crypto_bigint::{Odd, Word, U128};
+    use crypto_bigint::{Odd, U128, Word};
     use num_bigint::{BigInt, Sign};
     use num_modular::ModularSymbols;
     use proptest::prelude::*;
 
-    use super::{jacobi_symbol_vartime, JacobiSymbol};
+    use super::{JacobiSymbol, jacobi_symbol_vartime};
 
     #[test]
     fn jacobi_symbol_derived_traits() {

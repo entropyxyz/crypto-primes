@@ -1,6 +1,6 @@
 //! Some known primes for testing, taken from <https://primes.utm.edu/lists>
 
-use crypto_bigint::{U1024, U128, U256, U384, U512};
+use crypto_bigint::{U128, U256, U384, U512, U1024};
 
 pub(crate) const PRIMES_128: &[U128] = &[
     U128::from_be_hex("000000087b57be17f0ecdbf18a227bd9"),

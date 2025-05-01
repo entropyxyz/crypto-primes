@@ -1,9 +1,9 @@
 use std::io::BufRead;
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use criterion::{Criterion, black_box, criterion_group, criterion_main};
 use crypto_bigint::U1024;
 
-use crypto_primes::{is_prime, Flavor};
+use crypto_primes::{Flavor, is_prime};
 
 /// CCTV stands for Community Cryptography Test Vectors[1]. This benchmark uses the
 /// "rsa.bench.2048.txt" test vector, which is a file of 708 1024-bit long candidates for prime

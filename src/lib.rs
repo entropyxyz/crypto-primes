@@ -27,4 +27,4 @@ pub mod multicore;
 
 pub use error::Error;
 pub use generic::sieve_and_find;
-pub use presets::{is_prime, random_prime, Flavor};
+pub use presets::{Flavor, is_prime, random_prime};

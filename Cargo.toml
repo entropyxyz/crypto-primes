@@ -1,7 +1,7 @@
 [package]
 name = "crypto-primes"
 version = "0.7.0-dev"
-edition = "2021"
+edition = "2024"
 license = "Apache-2.0 OR MIT"
 description = "Random prime number generation and primality checking library"
 repository = "https://github.com/entropyxyz/crypto-primes"

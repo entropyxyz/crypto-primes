@@ -1,6 +1,6 @@
 use rand_core::CryptoRng;
 
-use crate::{hazmat::SieveFactory, Error};
+use crate::{Error, hazmat::SieveFactory};
 
 /// Sieves through the results of `sieve_factory` and returns the first item for which `predicate` is `true`.
 ///
@@ -40,7 +40,7 @@ mod tests {
     use rand_core::{CryptoRng, OsRng, TryRngCore};
 
     use super::sieve_and_find;
-    use crate::{hazmat::SieveFactory, Error};
+    use crate::{Error, hazmat::SieveFactory};
 
     #[test]
     fn test_exhaustable_sieve_factory() {

@@ -1,23 +1,23 @@
 use core::num::NonZero;
 
-use criterion::{criterion_group, criterion_main, BatchSize, Criterion};
-use crypto_bigint::{nlimbs, BoxedUint, Integer, Odd, RandomBits, Uint, U1024, U128, U256};
+use criterion::{BatchSize, Criterion, criterion_group, criterion_main};
+use crypto_bigint::{BoxedUint, Integer, Odd, RandomBits, U128, U256, U1024, Uint, nlimbs};
 use rand_chacha::ChaCha8Rng;
 use rand_core::{CryptoRng, OsRng, SeedableRng, TryRngCore};
 
 #[cfg(feature = "tests-gmp")]
-use rug::{integer::Order, Integer as GmpInteger};
+use rug::{Integer as GmpInteger, integer::Order};
 
 #[cfg(feature = "tests-openssl")]
 use openssl::bn::BigNum;
 
 use crypto_primes::{
-    fips,
+    Flavor, fips,
     hazmat::{
-        lucas_test, minimum_mr_iterations, random_odd_integer, AStarBase, BruteForceBase, LucasCheck, MillerRabin,
-        SelfridgeBase, SetBits, SmallFactorsSieve,
+        AStarBase, BruteForceBase, LucasCheck, MillerRabin, SelfridgeBase, SetBits, SmallFactorsSieve, lucas_test,
+        minimum_mr_iterations, random_odd_integer,
     },
-    is_prime, random_prime, Flavor,
+    is_prime, random_prime,
 };
 
 #[cfg(feature = "multicore")]
@@ -451,7 +451,7 @@ fn bench_openssl(_c: &mut Criterion) {}
 #[cfg(feature = "tests-glass-pumpkin")]
 fn bench_glass_pumpkin(c: &mut Criterion) {
     use crypto_bigint::Limb;
-    use crypto_primes::hazmat::{lucas_test, AStarBase, LucasCheck, MillerRabin, Primality};
+    use crypto_primes::hazmat::{AStarBase, LucasCheck, MillerRabin, Primality, lucas_test};
 
     fn make_rng_gp() -> rand_chacha_03::ChaCha8Rng {
         <rand_chacha_03::ChaCha8Rng as rand_core_06::SeedableRng>::from_seed(*b"01234567890123456789012345678901")

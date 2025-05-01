@@ -14,10 +14,10 @@ pub(crate) mod primes;
 pub(crate) mod pseudoprimes;
 mod sieve;
 
-pub use lucas::{lucas_test, AStarBase, BruteForceBase, LucasBase, LucasCheck, SelfridgeBase};
-pub use miller_rabin::{minimum_mr_iterations, MillerRabin};
+pub use lucas::{AStarBase, BruteForceBase, LucasBase, LucasCheck, SelfridgeBase, lucas_test};
+pub use miller_rabin::{MillerRabin, minimum_mr_iterations};
 pub use primecount::estimate_primecount;
-pub use sieve::{random_odd_integer, SetBits, SieveFactory, SmallFactorsSieve, SmallFactorsSieveFactory};
+pub use sieve::{SetBits, SieveFactory, SmallFactorsSieve, SmallFactorsSieveFactory, random_odd_integer};
 
 use crypto_bigint::{Integer, Word};
 

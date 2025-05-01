@@ -1,6 +1,6 @@
 //! This module contains various types pseudoprimes
 //! (composites that are classified as primes by various tests) for testing purposes.
-use crypto_bigint::{U1536, U64};
+use crypto_bigint::{U64, U1536};
 
 /// The limit up to which we have exceptions to implemented tests listed (see below),
 /// so we can run an exhaustive test on every number knowing when it is expected to fail.
