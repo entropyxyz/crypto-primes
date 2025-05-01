@@ -77,6 +77,9 @@ where
     Uint<RHS_LIMBS>: Split<Output = Uint<LIMBS>>,
 {
     // Number of bits to scale by (fractional bits during division)
+    #[cfg(target_pointer_width = "32")]
+    let scale_bits = (LIMBS as u32 * 16).min(64);
+    #[cfg(target_pointer_width = "64")]
     let scale_bits = (LIMBS as u32 * 32).min(64);
     let total_scale_bits = 2 * scale_bits;
     // Scaling factor for the denominators of the expansion terms, 2^64.
