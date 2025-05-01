@@ -78,21 +78,11 @@ where
     Uint<LIMBS>: Concat<Output = Uint<RHS_LIMBS>>,
     Uint<RHS_LIMBS>: Split<Output = Uint<LIMBS>>,
 {
-    #[cfg(target_pointer_width = "64")]
-    assert!(
-        LIMBS >= 2,
-        "LIMBS must be at least 2; for smaller values, use precalculated values for π(x)"
-    );
-    #[cfg(target_pointer_width = "32")]
-    assert!(
-        LIMBS >= 4,
-        "LIMBS must be at least 4; for smaller values, use precalculated values for π(x)"
-    );
     // Number of bits to scale by (fractional bits during division)
-    const SCALE_BITS: u32 = 64;
-    const TOTAL_SCALE_BITS: u32 = 2 * SCALE_BITS;
+    let scale_bits = (LIMBS as u32 * 32).min(64);
+    let total_scale_bits = 2 * scale_bits;
     // Scaling factor for the denominators of the expansion terms, 2^64.
-    const DENOM_SCALE_FACTOR: f64 = (1u128 << SCALE_BITS) as f64;
+    let denom_scale_factor = (1u128 << scale_bits) as f64;
 
     let ln_x = ln(x);
 
@@ -107,7 +97,7 @@ where
 
     // Scale up a float by 2^64, round, cast to u128 and then to a wide `Uint`.
     let f64_to_scaled_uint = |value: f64| -> NonZero<Uint<RHS_LIMBS>> {
-        let scaled = value * DENOM_SCALE_FACTOR;
+        let scaled = value * denom_scale_factor;
         let scaled = libm::round(scaled).max(1.0) as u128;
         let denom = Uint::<RHS_LIMBS>::from_u128(scaled);
         NonZero::new(denom).expect("max(1.0) ensures value is at least 1")
@@ -119,17 +109,18 @@ where
     let d4 = f64_to_scaled_uint(ln_x_4);
 
     let x_wide: Uint<RHS_LIMBS> = x.concat(&Uint::ZERO);
+    let x_wide_scaled = x_wide.wrapping_shl_vartime(total_scale_bits);
 
-    let term1_scaled = (x_wide << TOTAL_SCALE_BITS).wrapping_div(&d1);
-    let term2_scaled = (x_wide << TOTAL_SCALE_BITS).wrapping_div(&d2);
+    let term1_scaled = x_wide_scaled.wrapping_div(&d1);
+    let term2_scaled = x_wide_scaled.wrapping_div(&d2);
 
-    // Term 3: (2x << TOTAL_SCALE_BITS) / d3  (Factorial 2!)
-    let term3_scaled = (x_wide << (TOTAL_SCALE_BITS + 1)).wrapping_div(&d3);
+    // Term 3: (2x << total_scale_bits) / d3  (Factorial 2!)
+    let term3_scaled = x_wide_scaled.wrapping_shl_vartime(1).wrapping_div(&d3);
 
-    // Term 4: (6x << TOTAL_SCALE_BITS) / d4  (Factorial 3!)
+    // Term 4: (6x << total_scale_bits) / d4  (Factorial 3!)
     let six = Uint::<LIMBS>::from(6u64);
-    let x_times_6 = x_wide.saturating_mul(&six);
-    let term4_scaled = (x_times_6 << TOTAL_SCALE_BITS).wrapping_div(&d4);
+    let x_times_6 = x_wide_scaled.saturating_mul(&six);
+    let term4_scaled = x_times_6.wrapping_div(&d4);
 
     let sum_scaled = term1_scaled
         .wrapping_add(&term2_scaled)
@@ -137,7 +128,7 @@ where
         .wrapping_add(&term4_scaled);
 
     // Descale by right-shifting
-    let li_x = sum_scaled >> SCALE_BITS;
+    let li_x = sum_scaled >> scale_bits;
     let (lo, hi) = li_x.split();
     assert_eq!(hi, Uint::ZERO, "De-scaling should leave the high half zero");
     lo
@@ -148,77 +139,81 @@ mod tests {
     use super::*;
     use alloc::vec;
     use alloc::vec::Vec;
-    use crypto_bigint::{U1024, U256, U64};
+    use crypto_bigint::{U1024, U128, U256, U64};
 
     #[test]
     fn pi_x_2_500() {
         let x = Uint::ONE << 500;
-        let sage_est = U1024::from_be_hex("0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000bda54dd744907290defac4f74bec507fdafd96e123c49bea56826f73702a469b67453a13a6abc40e81b760a0a5fd95870dbb8bbe99973c246c49561e101");
+        let sage_est = U1024::from_be_hex(concat![
+            "0000000000000000000000000000000000000000000000000000000000000000",
+            "0000000000000000000000000000000000000000000000000000000000000000",
+            "00000bda54dd744907290defac4f74bec507fdafd96e123c49bea56826f73702",
+            "a469b67453a13a6abc40e81b760a0a5fd95870dbb8bbe99973c246c49561e101"
+        ]);
         let estimate = estimate_primecount(&x);
-        let delta = if sage_est > estimate {
-            sage_est - estimate
-        } else {
-            estimate - sage_est
-        };
-        // Want the delta to be "far away" from Sage's estimate.
-        const MIN_BIT_DIFFERENCE: u32 = 29;
-        assert!(
-            sage_est.bits_vartime() - delta.bits_vartime() >= MIN_BIT_DIFFERENCE,
-            "Estimate not close enough: delta has {} bits, expected {} bits. Difference should be >= {}",
-            delta.bits_vartime(),
-            sage_est.bits_vartime(),
-            MIN_BIT_DIFFERENCE
-        );
+        assert_bit_difference(estimate, sage_est, 29);
     }
 
     #[test]
     fn pi_x_max() {
         let x = U1024::MAX;
         let estimate = estimate_primecount(&x);
-        let sage_est = Uint::from_be_hex("005c7682fe13533e630c22e716b35439b3dc61f1d4898d78a36dd9c9afc0745a06d3a0deb93b77423f6d11c107283fcfdb8ae17de22b5197972f37cb480a2737fe8d0f15202bb43bc1863b05f6d3849f865b95242eaec9789dcf3b40e92504d98258f80b394ebec1c63d1186f9552689076f709c2fd8497b5f78d82cea2c2137");
-        let delta = if sage_est > estimate {
-            sage_est - estimate
-        } else {
-            estimate - sage_est
-        };
-
-        // Want the delta to be "far away" from Sage's estimate.
-        const MIN_BIT_DIFFERENCE: u32 = 33;
-        assert!(
-            sage_est.bits_vartime() - delta.bits_vartime() >= MIN_BIT_DIFFERENCE,
-            "Estimate not close enough: delta has {} bits, expected {} bits. Difference should be >= {}; delta: {delta}, sage_est: {sage_est}, estimate: {estimate}",
-            delta.bits_vartime(),
-            sage_est.bits_vartime(),
-            MIN_BIT_DIFFERENCE
-        );
+        let sage_est = Uint::from_be_hex(concat![
+            "005c7682fe13533e630c22e716b35439b3dc61f1d4898d78a36dd9c9afc0745a",
+            "06d3a0deb93b77423f6d11c107283fcfdb8ae17de22b5197972f37cb480a2737",
+            "fe8d0f15202bb43bc1863b05f6d3849f865b95242eaec9789dcf3b40e92504d9",
+            "8258f80b394ebec1c63d1186f9552689076f709c2fd8497b5f78d82cea2c2137"
+        ]);
+        assert_bit_difference(estimate, sage_est, 33);
     }
     #[test]
     fn pi_x_random() {
         // This is a ChaCha8Rng with seed b"01234567890123456789012345678901"
-        let x = Uint::from_be_hex("62A211E0907141403FD3EB60A82EAB701524710BDB024EB68DFF309389258B632EB9975D29F028F5137AC9DE870EB622D2D45A0D3A9C5801E8A3109BED220F82890E108F1778E5523E3E89CCD5DEDB667E6C17E940E9D4C3F58575C86CB76403017AD59D33AC084D2E58D81F8BB87A61B44677037A7DBDE04814256570DCBD7A");
-        let sage_est = U1024::from_be_hex("0023ac3184a0c4c8e9025e0ae9b44d7980cee1baacf69032bb898677841fac0e516fa6bc8c1d1d3bb282622aa62c49f2d8e622d2f9aa80af3140c8c2251363017c99621943c90ab55a6dd69a678110233254a1a3c50ceb1cdb516e7220a7514a17b20114c7bef6f316e94cf7c9181187d70e751bda2e18695fa71e8015b8cf1c");
+        let x = Uint::from_be_hex(concat![
+            "62A211E0907141403FD3EB60A82EAB701524710BDB024EB68DFF309389258B63",
+            "2EB9975D29F028F5137AC9DE870EB622D2D45A0D3A9C5801E8A3109BED220F82",
+            "890E108F1778E5523E3E89CCD5DEDB667E6C17E940E9D4C3F58575C86CB76403",
+            "017AD59D33AC084D2E58D81F8BB87A61B44677037A7DBDE04814256570DCBD7A"
+        ]);
+        let sage_est = U1024::from_be_hex(concat![
+            "0023ac3184a0c4c8e9025e0ae9b44d7980cee1baacf69032bb898677841fac0e",
+            "516fa6bc8c1d1d3bb282622aa62c49f2d8e622d2f9aa80af3140c8c225136301",
+            "7c99621943c90ab55a6dd69a678110233254a1a3c50ceb1cdb516e7220a7514a",
+            "17b20114c7bef6f316e94cf7c9181187d70e751bda2e18695fa71e8015b8cf1c"
+        ]);
         let estimate = estimate_primecount(&x);
-        let delta = if sage_est > estimate {
-            sage_est - estimate
-        } else {
-            estimate - sage_est
-        };
-        // Want the delta to be "far away" from Sage's estimate.
-        const MIN_BIT_DIFFERENCE: u32 = 34;
-        assert!(
-            sage_est.bits_vartime() - delta.bits_vartime() >= MIN_BIT_DIFFERENCE,
-            "Estimate not close enough: delta has {} bits, expected {} bits. Difference should be >= {}",
-            delta.bits_vartime(),
-            sage_est.bits_vartime(),
-            MIN_BIT_DIFFERENCE
-        );
+        assert_bit_difference(estimate, sage_est, 34);
     }
 
     #[test]
-    #[should_panic(expected = "LIMBS must be at least ")]
-    fn pi_x_tiny() {
+    fn pi_x_u128() {
+        let x = U128::from_u128(1000000000000000000000000);
+        let sage_est = U128::from_be_hex("00000000000003e76557786d0933dca8");
+        let estimate = estimate_primecount(&x);
+        assert_bit_difference(estimate, sage_est, 18);
+    }
+
+    #[test]
+    fn pi_x_u64() {
         let x = U64::from_u64(10000000);
-        estimate_primecount(&x);
+        let sage_est = U64::from_be_hex("00000000000A2556");
+        let estimate = estimate_primecount(&x);
+        assert_bit_difference(estimate, sage_est, 9);
+    }
+
+    fn assert_bit_difference<const LIMBS: usize>(candidate: Uint<LIMBS>, reference: Uint<LIMBS>, min_bit_diff: u32) {
+        let delta = if reference > candidate {
+            reference - candidate
+        } else {
+            candidate - reference
+        };
+        assert!(
+            reference.bits_vartime() - delta.bits_vartime() >= min_bit_diff,
+            "Estimate not close enough: delta has {} bits, reference has {} bits. Difference should be >= {}\nEstimate: {candidate},\nReference: {reference}",
+            delta.bits_vartime(),
+            reference.bits_vartime(),
+            min_bit_diff
+        );
     }
 
     #[test]
