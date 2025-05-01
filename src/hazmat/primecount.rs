@@ -77,6 +77,8 @@ where
     Uint<RHS_LIMBS>: Split<Output = Uint<LIMBS>>,
 {
     // Number of bits to scale by (fractional bits during division)
+    // On 64 bit CPUs and x is a U64, we use 32 bits (1 limb * 32). Else 64.
+    // On 32 bit CPUs and x is a U64, we use 32 bits (2 limb * 16). Else 64.
     #[cfg(target_pointer_width = "32")]
     let scale_bits = (LIMBS as u32 * 16).min(64);
     #[cfg(target_pointer_width = "64")]

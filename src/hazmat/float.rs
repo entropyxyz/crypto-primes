@@ -171,10 +171,9 @@ mod tests {
     use alloc::vec;
     use alloc::vec::Vec;
 
-    use crypto_bigint::{Random, U1024, U128, U256, U512};
+    use crypto_bigint::{U1024, U128, U256, U512};
     use float_cmp::assert_approx_eq;
     use proptest::prelude::*;
-    use rand_core::SeedableRng;
 
     use super::{floor, floor_sqrt, ln, pow, two_powf_normalized_lower_bound};
 
@@ -276,28 +275,35 @@ mod tests {
 
     #[test]
     fn test_ln_x_large() {
-        let mut rng = rand_chacha::ChaCha8Rng::from_seed(*b"01234567890123456789012345678901");
+        // Random xs are from seed "01234567890123456789012345678901"/ChaCha8Rng
+        let x = U256::from_be_hex("017AD59D33AC084D2E58D81F8BB87A61B44677037A7DBDE04814256570DCBD7A");
         let expected_256 = 172.29242258375361;
 
-        let x = U256::random(&mut rng);
         let ln_x = ln(&x);
         assert!(
             (ln_x - expected_256).abs() < f64::EPSILON,
             "x: {x}, ln x: {ln_x}, expected: {expected_256}"
         );
 
+        let x = U512::from_be_hex(concat![
+            "890E108F1778E5523E3E89CCD5DEDB667E6C17E940E9D4C3F58575C86CB76403",
+            "017AD59D33AC084D2E58D81F8BB87A61B44677037A7DBDE04814256570DCBD7A"
+        ]);
         let expected_512 = 354.2665608707877;
-        let mut rng = rand_chacha::ChaCha8Rng::from_seed(*b"01234567890123456789012345678901");
-        let x = U512::random(&mut rng);
         let ln_x = ln(&x);
         assert!(
             (ln_x - expected_512).abs() < f64::EPSILON,
             "x: {x}, ln x: {ln_x}, expected: {expected_512}"
         );
 
+        let x = U1024::from_be_hex(concat![
+            "62A211E0907141403FD3EB60A82EAB701524710BDB024EB68DFF309389258B63",
+            "2EB9975D29F028F5137AC9DE870EB622D2D45A0D3A9C5801E8A3109BED220F82",
+            "890E108F1778E5523E3E89CCD5DEDB667E6C17E940E9D4C3F58575C86CB76403",
+            "017AD59D33AC084D2E58D81F8BB87A61B44677037A7DBDE04814256570DCBD7A"
+        ]);
+
         let expected_1024 = 708.828942204781;
-        let mut rng = rand_chacha::ChaCha8Rng::from_seed(*b"01234567890123456789012345678901");
-        let x = U1024::random(&mut rng);
         let ln_x = ln(&x);
         assert!(
             (ln_x - expected_1024).abs() < f64::EPSILON,
