@@ -6,14 +6,12 @@ use crypto_bigint::{Concat, NonZero, Split, Uint};
 ///
 ///   `𝜋(𝑥) ~ x/ln x * (1 + 1!/ln x + 2!/ln^2 x + 3!/ln^3 x).`
 ///
-/// # Panics
-///
-/// The number of limbs must be at least 2. For smaller values, use precalculated values for π(x) from
+/// For small values of x, consider using precalculated values for π(x) from
 /// e.g. https://sweet.ua.pt/tos/primes.html.
 ///
 /// # Error considerations
 ///
-/// There are two components to the error:
+/// In addition to the usual floating point math limitations, there are two components to the error:
 ///
 /// 1. The truncation error from using a limited number of terms (4) of the asymptotic expansion of Li(x): `|Li(x) -
 ///    Li_approx(x)|`
