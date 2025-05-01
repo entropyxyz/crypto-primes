@@ -31,10 +31,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `LucasCheck::Regular` (the recommended one from the FIPS-186.5 standard). ([#72])
 - `hamzat::minimum_mr_iterations()` (to calculate the number of MR checks according to the FIPS-186.5 standard). ([#72])
 - Add `fips_is_prime_with_rng()` and `fips_is_safe_prime_with_rng()`. ([#72])
-- Add `estimate_pi_x()` – estimate the number of prime numbers smaller than `x`. ([#81])
+- Add `estimate_primecount()` – estimate the number of prime numbers smaller than `x`. ([#81])
 
 
-[#70]: https://github.com/entropyxyz/crypto-primes/pull/72
+[#70]: https://github.com/entropyxyz/crypto-primes/pull/70
 [#72]: https://github.com/entropyxyz/crypto-primes/pull/72
 [#79]: https://github.com/entropyxyz/crypto-primes/pull/79
 [#80]: https://github.com/entropyxyz/crypto-primes/pull/80
