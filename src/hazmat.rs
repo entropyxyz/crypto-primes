@@ -16,7 +16,7 @@ mod sieve;
 
 pub use lucas::{lucas_test, AStarBase, BruteForceBase, LucasBase, LucasCheck, SelfridgeBase};
 pub use miller_rabin::{minimum_mr_iterations, MillerRabin};
-pub use primecount::estimate_pi_x;
+pub use primecount::estimate_primecount;
 pub use sieve::{random_odd_integer, SetBits, SieveFactory, SmallFactorsSieve, SmallFactorsSieveFactory};
 
 use crypto_bigint::{Integer, Word};
