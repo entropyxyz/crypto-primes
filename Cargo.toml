@@ -1,6 +1,6 @@
 [package]
 name = "crypto-primes"
-version = "0.7.0-dev"
+version = "0.7.0-pre.1"
 edition = "2024"
 license = "Apache-2.0 OR MIT"
 description = "Random prime number generation and primality checking library"

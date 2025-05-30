@@ -4,7 +4,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
-## [0.7.0] - in development
+## [0.7.0-pre.1] - 2025-05-30
 
 ### Changed
 
@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Moved `fips_is_prime()` to its own `fips` submodule and renamed to `is_prime`. ([#79])
 - Bumped `crypto-bigint` to 0.7.0-pre.1 and MSRV to 1.85. ([#80])
 - Bumped `crypto-bigint` to 0.7.0-pre.2. ([#84])
+- Bumped `crypto-bigint` to 0.7.0-pre.4. ([#85])
 - Bumped Rust edition to 2024. ([#84])
 
 
@@ -40,6 +41,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [#80]: https://github.com/entropyxyz/crypto-primes/pull/80
 [#81]: https://github.com/entropyxyz/crypto-primes/pull/81
 [#84]: https://github.com/entropyxyz/crypto-primes/pull/84
+[#85]: https://github.com/entropyxyz/crypto-primes/pull/85
 
 
 ## [0.7.0-pre.0] - 2025-02-22
@@ -252,3 +254,4 @@ Initial release.
 [0.6.1]: https://github.com/entropyxyz/crypto-primes/releases/tag/v0.6.1
 [0.6.2]: https://github.com/entropyxyz/crypto-primes/releases/tag/v0.6.2
 [0.7.0-pre.0]: https://github.com/entropyxyz/crypto-primes/releases/tag/v0.7.0-pre.0
+[0.7.0-pre.1]: https://github.com/entropyxyz/crypto-primes/releases/tag/v0.7.0-pre.1
