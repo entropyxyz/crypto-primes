@@ -15,10 +15,10 @@ use super::{
 ///
 /// The implementation satisfies the FIPS.186-5 standard[^FIPS].
 ///
-/// [^Pomerance1980]:
-///   C. Pomerance, J. L. Selfridge, S. S. Wagstaff "The Pseudoprimes to 25*10^9",
+/// [^Pomerance1980]: C. Pomerance, J. L. Selfridge, S. S. Wagstaff "The Pseudoprimes to 25*10^9",
 ///   Math. Comp. 35 1003-1026 (1980),
 ///   DOI: [10.2307/2006210](https://dx.doi.org/10.2307/2006210)
+///
 /// [^FIPS]: FIPS-186.5 standard, <https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.186-5.pdf>
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct MillerRabin<T: Integer> {
