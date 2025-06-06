@@ -130,3 +130,18 @@ jobs:
         with:
           crate: "cargo-careful"
       - run: cargo +nightly careful setup && cargo +nightly careful test --features=tests-exhaustive
+
+  semver:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@v1
+        with:
+          toolchain: stable
+          components: rustfmt
+          profile: minimal
+          override: true
+      - uses: obi1kenobi/cargo-semver-checks-action@v2
+        with:
+          package: crypto-primes
+          feature-group: all-features
