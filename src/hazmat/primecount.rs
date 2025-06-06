@@ -2,20 +2,20 @@ use crate::hazmat::float::ln;
 use core::f64;
 use crypto_bigint::{Concat, NonZero, Split, Uint};
 
-/// Estimate the number of primes smaller than x using the asymptotic expansion of Li(x) with 4 terms, i.e.:
+/// Estimate the number of primes smaller than x using the asymptotic expansion of `Li(x)` with 4 terms, i.e.:
 ///
 ///   `𝜋(𝑥) ~ x/ln x * (1 + 1!/ln x + 2!/ln^2 x + 3!/ln^3 x).`
 ///
-/// For small values of x, consider using precalculated values for π(x) from
-/// e.g. https://sweet.ua.pt/tos/primes.html.
+/// For small values of x, consider using precalculated values for π(x),
+/// for example from <https://sweet.ua.pt/tos/primes.html>.
 ///
 /// # Error considerations
 ///
 /// In addition to the usual floating point math limitations, there are two components to the error:
 ///
-/// 1. The truncation error from using a limited number of terms (4) of the asymptotic expansion of Li(x): `|Li(x) -
+/// 1. The truncation error from using a limited number of terms (4) of the asymptotic expansion of `Li(x)`: `|Li(x) -
 ///    Li_approx(x)|`
-/// 2. The theoretical error, given by the absolute difference between π(x) and Li(x): `|π(x) - Li(x)|`
+/// 2. The theoretical error, given by the absolute difference between `π(x)` and `Li(x)`: `|π(x) - Li(x)|`
 ///
 /// ## Truncation Error
 ///
@@ -28,12 +28,12 @@ use crypto_bigint::{Concat, NonZero, Split, Uint};
 /// | 2048 | ~2^2000                    | ~2^-37                 |
 /// | 4096 | ~2^4043                    | ~2^-41                 |
 ///
-/// *(Relative error is calculated as the first omitted term divided by / Li_approx(x)`)*
+/// *(Relative error is calculated as the first omitted term divided by `Li_approx(x)`)*
 ///
 /// ## Theoretical Error
 ///
-/// Assuming RH, we can use Schoenfeld’s bound `|π(x) - Li(x)| < (1 / 8π) * √x * ln x`. This gives a very small
-/// theoretical error bound compared to the best known unconditional bounds (by Trudgian).
+/// Assuming RH, we can use Schoenfeld’s bound `|π(x) - Li(x)| < (1 / 8π) * √x * ln x`[^Schoenfeld1976].
+/// This gives a very small theoretical error bound compared to the best known unconditional bounds[^Trudgian2014].
 ///
 /// | Bits | Error Bound (abs) | Error Bound (rel) |
 /// | :--- | :---------------- | :-----------------|
@@ -44,33 +44,35 @@ use crypto_bigint::{Concat, NonZero, Split, Uint};
 /// *(Relative error bound is calculated as `Schoenfeld’s Bound (abs) / Li_approx(x)`)*
 ///
 /// ## Discussion
+///
 /// Assuming RH, the dominant error term in estimating `π(x)` with `Li_approx(x)` comes from truncating the asymptotic
-/// expansion of Li(x). While this truncation error is extremely small in relative terms, it is large in absolute terms.
-/// Improving the Li(x) approximation to be the same order of magnitude as the Schoenfeld bound would require using
+/// expansion of `Li(x)`. While this truncation error is extremely small in relative terms, it is large in absolute terms.
+/// Improving the `Li(x)` approximation to be the same order of magnitude as the Schoenfeld bound would require using
 /// hundreds of terms from the asymptotic series (or employing more complex methods like continued fractions for the
 /// remainder, which is beyond the scope of this simple approximation). In relative terms the relative error bound is
-/// approximately ~2^-33 (for 1024 bits) down to ~2^-41 (for 4096 bits). This corresponds to an extremely small
-/// percentage error (significantly less than 10^-8 %).
+/// approximately `~2^-33` (for 1024 bits) down to `~2^-41` (for 4096 bits). This corresponds to an extremely small
+/// percentage error (significantly less than `10^-8%`).
 ///
-/// It should be noted that while Li(x) is generally smaller than π(x) for 'small' x, it is known that the sign of
-/// `π(x) - Li(x)` changes infinitely often. It has been proven that there must be a crossing below ~10^316 (~2^1051),
+/// It should be noted that while `Li(x)` is generally smaller than `π(x)` for 'small' x, it is known that the sign of
+/// `π(x) - Li(x)` changes infinitely often. It has been proven that there must be a crossing below `~10^316` (`~2^1051`),
 /// which is well within the ranges used in this library. Thus, users should be aware that the estimate provided here
-/// can be both greater than and smaller than the actual value of π(x).
+/// can be both greater than and smaller than the actual value of `π(x)`.
 ///
-/// # Sources
+/// [^Dusart2010]: P. Dusart, "Estimates of Some Functions Over Primes without R.H.",
+///   [arXiv:1002.0442](https://arxiv.org/pdf/1002.0442) (2010)
 ///
-/// Wikipedia, [Prime Counting Function][wikipedia-pcf]
-/// Pierre Dusart (2010), [ESTIMATES OF SOME FUNCTIONS OVER PRIMES WITHOUT R.H.][dusart2010].
-/// Pierre Dusart (2018), [Explicit estimates of some functions over primes][dusart2018].
-/// Lowell Schoenfeld (1976), [Sharper Bounds for the Chebyshev Functions θ(x) and ψ(x)](schoenfeld).
-/// Trudgian, T. S. (2014). [Updating the error term in the prime number theorem](trudgian)
+/// [^Dusart2018]: P. Dusart, "Explicit estimates of some functions over primes",
+///   The Ramanujan Journal 45(1) 227-251 (2018),
+///   DOI: [10.1007/s11139-016-9839-4](https://link.springer.com/article/10.1007/s11139-016-9839-4)
 ///
-/// [dusart2010]: https://arxiv.org/pdf/1002.0442
-/// [dusart2018]: https://www.researchgate.net/publication/309522478_Explicit_estimates_of_some_functions_over_primes
-/// [wikipedia-pcf]: https://en.wikipedia.org/wiki/Prime-counting_function
-/// [schoenfeld]: https://www.jstor.org/stable/2005976
-/// [trudgian]: https://arxiv.org/abs/1401.2689
+/// [^Wikipedia-pcf]: <https://en.wikipedia.org/wiki/Prime-counting_function>
 ///
+/// [^Schoenfeld1976]: L. Schoenfeld, "Sharper Bounds for the Chebyshev Functions θ(x) and ψ(x). II",
+///   Math. Comp. 30(134) 337-360 (1976),
+///   DOI: [10.2307/2005976](https://www.jstor.org/stable/2005976)
+///
+/// [^Trudgian2014]: T. Trudgian, "Updating the error term in the prime number theorem",
+///   [arXiv:1401.2689](https://arxiv.org/abs/1401.2689) (2014)
 pub fn estimate_primecount<const LIMBS: usize, const RHS_LIMBS: usize>(x: &Uint<LIMBS>) -> Uint<LIMBS>
 where
     Uint<LIMBS>: Concat<Output = Uint<RHS_LIMBS>>,
