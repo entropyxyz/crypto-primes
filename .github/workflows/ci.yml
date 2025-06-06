@@ -43,6 +43,8 @@ jobs:
           override: true
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@cargo-llvm-cov
+      - name: Test in release
+        run: cargo test --features multicore --benches --workspace --release
       - name: Generate code coverage
         run: cargo llvm-cov --features multicore --workspace --lcov --output-path lcov.info
       - name: Upload coverage to Codecov
