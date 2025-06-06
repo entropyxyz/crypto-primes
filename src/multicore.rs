@@ -98,6 +98,8 @@ where
 
 /// Returns a random prime of size `bit_length` using the provided RNG.
 ///
+/// The returned prime will have its MSB set.
+///
 /// Uses `threadcount` cores to parallelize the prime search.
 ///
 /// Panics if `bit_length` is less than the bit length of the smallest possible prime with the requested `flavor`.
