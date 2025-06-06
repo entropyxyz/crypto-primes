@@ -31,6 +31,18 @@ jobs:
           override: true
       - run: cargo build --target ${{ matrix.target }} --release --no-default-features
 
+  # Mimics the setup of docs.rs, but fails on warnings
+  build-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          override: true
+          profile: minimal
+      - run: env RUSTDOCFLAGS='--cfg docsrs -D warnings' cargo doc --all-features
+
   test-and-coverage:
     runs-on: ubuntu-latest
     steps:
