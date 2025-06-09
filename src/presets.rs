@@ -19,6 +19,8 @@ pub enum Flavor {
 
 /// Returns a random prime of size `bit_length` using the provided RNG.
 ///
+/// The returned prime will have its MSB set.
+///
 /// Panics if `bit_length` is less than the bit length of the smallest possible prime with the requested `flavor`.
 ///
 /// See [`is_prime`] for details about the performed checks.
