@@ -37,8 +37,7 @@ pub trait LucasBase {
 /// Try `D = 1 - 4Q = 5, -7, 9, -11, 13, ...` until `Jacobi(D, n) = -1`.
 /// Return `P = 1, Q = (1 - D) / 4)`.
 ///
-/// [^Baillie1980]:
-///   R. Baillie, S. S. Wagstaff, "Lucas pseudoprimes",
+/// [^Baillie1980]: R. Baillie, S. S. Wagstaff, "Lucas pseudoprimes",
 ///   Math. Comp. 35 1391-1417 (1980),
 ///   DOI: [10.2307/2006406](https://dx.doi.org/10.2307/2006406),
 ///   <http://mpqs.free.fr/LucasPseudoprimes.pdf>
@@ -102,8 +101,7 @@ impl LucasBase for SelfridgeBase {
 ///
 /// Same as [`SelfridgeBase`], but returns `(P = 5, Q = 5)` if the Selfridge base set `Q = -1`.
 ///
-/// [^Baillie1980]:
-///   R. Baillie, S. S. Wagstaff, "Lucas pseudoprimes",
+/// [^Baillie1980]: R. Baillie, S. S. Wagstaff, "Lucas pseudoprimes",
 ///   Math. Comp. 35 1391-1417 (1980),
 ///   DOI: [10.2307/2006406](https://dx.doi.org/10.2307/2006406),
 ///   <http://mpqs.free.fr/LucasPseudoprimes.pdf>
@@ -127,8 +125,7 @@ impl LucasBase for AStarBase {
 /// Try `P = 3, 4, 5, ...` until `Jacobi(D, n) = -1`, where `D = P^2 - 4Q`.
 /// Returns the found `P`, and `Q = 1`.
 ///
-/// [^Baillie]:
-///   R. Baillie, Mathematica code for extra strong Lucas pseudoprimes,
+/// [^Baillie]: R. Baillie, Mathematica code for extra strong Lucas pseudoprimes,
 ///   <https://oeis.org/A217719/a217719.txt>
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct BruteForceBase;
@@ -218,8 +215,7 @@ pub enum LucasCheck {
     ///
     /// If the base is [`SelfridgeBase`], known false positives constitute OEIS:A217120[^A217120].
     ///
-    /// [^Baillie1980]:
-    ///   R. Baillie, S. S. Wagstaff, "Lucas pseudoprimes",
+    /// [^Baillie1980]: R. Baillie, S. S. Wagstaff, "Lucas pseudoprimes",
     ///   Math. Comp. 35 1391-1417 (1980),
     ///   DOI: [10.2307/2006406](https://dx.doi.org/10.2307/2006406),
     ///   <http://mpqs.free.fr/LucasPseudoprimes.pdf>
@@ -238,8 +234,7 @@ pub enum LucasCheck {
     ///
     /// If the base is [`SelfridgeBase`], known false positives constitute OEIS:A217255[^A217255].
     ///
-    /// [^Baillie1980]:
-    ///   R. Baillie, S. S. Wagstaff, "Lucas pseudoprimes",
+    /// [^Baillie1980]: R. Baillie, S. S. Wagstaff, "Lucas pseudoprimes",
     ///   Math. Comp. 35 1391-1417 (1980),
     ///   DOI: [10.2307/2006406](https://dx.doi.org/10.2307/2006406),
     ///   <http://mpqs.free.fr/LucasPseudoprimes.pdf>
@@ -263,8 +258,7 @@ pub enum LucasCheck {
     /// Note: this option is intended for testing against known pseudoprimes;
     /// do not use unless you know what you are doing.
     ///
-    /// [^Jacobsen]:
-    ///   D. Jacobsen, "Pseudoprime Statistics, Tables, and Data",
+    /// [^Jacobsen]: D. Jacobsen, "Pseudoprime Statistics, Tables, and Data",
     ///   <http://ntheory.org/pseudoprimes.html>
     AlmostExtraStrong,
 
@@ -279,13 +273,11 @@ pub enum LucasCheck {
     ///
     /// If the base is [`BruteForceBase`], known false positives constitute OEIS:A217719[^A217719].
     ///
-    /// [^Mo1993]:
-    ///   Zhaiyu Mo, "Diophantine equations, Lucas sequences and pseudoprimes",
+    /// [^Mo1993]: Zhaiyu Mo, "Diophantine equations, Lucas sequences and pseudoprimes",
     ///   graduate thesis, University of Calgary, Calgary, AB (1993)
     ///   DOI: [10.11575/PRISM/10820](https://dx.doi.org/10.11575/PRISM/10820)
     ///
-    /// [^Grantham2001]:
-    ///   J. Grantham, "Frobenius pseudoprimes",
+    /// [^Grantham2001]: J. Grantham, "Frobenius pseudoprimes",
     ///   Math. Comp. 70 873-891 (2001),
     ///   DOI: [10.1090/S0025-5718-00-01197-2](https://dx.doi.org/10.1090/S0025-5718-00-01197-2)
     ///

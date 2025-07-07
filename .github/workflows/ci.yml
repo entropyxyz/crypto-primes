@@ -31,6 +31,18 @@ jobs:
           override: true
       - run: cargo build --target ${{ matrix.target }} --release --no-default-features
 
+  # Mimics the setup of docs.rs, but fails on warnings
+  build-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          override: true
+          profile: minimal
+      - run: env RUSTDOCFLAGS='--cfg docsrs -D warnings' cargo doc --all-features
+
   test-and-coverage:
     runs-on: ubuntu-latest
     steps:
@@ -43,6 +55,8 @@ jobs:
           override: true
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@cargo-llvm-cov
+      - name: Test in release
+        run: cargo test --features multicore --benches --workspace --release
       - name: Generate code coverage
         run: cargo llvm-cov --features multicore --workspace --lcov --output-path lcov.info
       - name: Upload coverage to Codecov
@@ -116,3 +130,18 @@ jobs:
         with:
           crate: "cargo-careful"
       - run: cargo +nightly careful setup && cargo +nightly careful test --features=tests-exhaustive
+
+  semver:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@v1
+        with:
+          toolchain: stable
+          components: rustfmt
+          profile: minimal
+          override: true
+      - uses: obi1kenobi/cargo-semver-checks-action@v2
+        with:
+          package: crypto-primes
+          feature-group: all-features
