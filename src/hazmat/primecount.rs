@@ -2,7 +2,7 @@ use crate::hazmat::float::ln;
 use core::f64;
 use crypto_bigint::{Concat, NonZero, Split, Uint};
 
-/// Estimate the number of primes smaller than x using the asymptotic expansion of Li(x) with 4 terms, i.e.:
+/// Estimate the number of primes smaller than x using the asymptotic expansion of `Li(x)` with 4 terms, i.e.:
 ///
 ///   $$\pi(x) \approx \frac{x}{\ln x} \left(1 + \frac{1!}{\ln x} + \frac{2!}{\ln^2 x} + \frac{3!}{\ln^3 x}\right)$$
 ///
@@ -33,7 +33,7 @@ use crypto_bigint::{Concat, NonZero, Split, Uint};
 /// ## Theoretical Error
 ///
 /// Assuming RH, we can use Schoenfeld’s bound $|\pi(x) - \text{Li}(x)| < \frac{\sqrt{x} \ln x}{8\pi}$.
-/// This gives a very small theoretical error bound compared to the best known unconditional bounds (by Trudgian).
+/// This gives a very small theoretical error bound compared to the best known unconditional bounds[^Trudgian2014].
 ///
 /// | Bits | Error Bound (abs) | Error Bound (rel) |
 /// | :--- | :---------------- | :-----------------|
@@ -44,6 +44,7 @@ use crypto_bigint::{Concat, NonZero, Split, Uint};
 /// *(Relative error bound is calculated as Schoenfeld’s Bound (abs) divided by $Li_{approx}(x)$)*
 ///
 /// ## Discussion
+///
 /// Assuming RH, the dominant error term in estimating $\pi(x)$ with $Li_{approx}(x)$ comes from truncating the asymptotic
 /// expansion of Li(x). While this truncation error is extremely small in relative terms, it is large in absolute terms.
 /// Improving the Li(x) approximation to be the same order of magnitude as the Schoenfeld bound would require using
@@ -57,24 +58,21 @@ use crypto_bigint::{Concat, NonZero, Split, Uint};
 /// ($\sim 2^{1051}$), which is well within the ranges used in this library. Thus, users should be aware that the
 /// estimate provided here can be both greater than and smaller than the actual value of $\pi(x)$.
 ///
-/// # Sources
+/// [^Dusart2010]: P. Dusart, "Estimates of Some Functions Over Primes without R.H.",
+///   [arXiv:1002.0442](https://arxiv.org/pdf/1002.0442) (2010)
 ///
-/// Wikipedia, [Prime Counting Function][wikipedia-pcf]
+/// [^Dusart2018]: P. Dusart, "Explicit estimates of some functions over primes",
+///   The Ramanujan Journal 45(1) 227-251 (2018),
+///   DOI: [10.1007/s11139-016-9839-4](https://link.springer.com/article/10.1007/s11139-016-9839-4)
 ///
-/// Pierre Dusart (2010), [ESTIMATES OF SOME FUNCTIONS OVER PRIMES WITHOUT R.H.][dusart2010].
+/// [^Wikipedia-pcf]: <https://en.wikipedia.org/wiki/Prime-counting_function>
 ///
-/// Pierre Dusart (2018), [Explicit estimates of some functions over primes][dusart2018].
+/// [^Schoenfeld1976]: L. Schoenfeld, "Sharper Bounds for the Chebyshev Functions θ(x) and ψ(x). II",
+///   Math. Comp. 30(134) 337-360 (1976),
+///   DOI: [10.2307/2005976](https://www.jstor.org/stable/2005976)
 ///
-/// Lowell Schoenfeld (1976), [Sharper Bounds for the Chebyshev Functions θ(x) and ψ(x)][schoenfeld].
-///
-/// Trudgian, T. S. (2014). [Updating the error term in the prime number theorem][trudgian].
-///
-/// [dusart2010]: https://arxiv.org/pdf/1002.0442
-/// [dusart2018]: https://www.researchgate.net/publication/309522478_Explicit_estimates_of_some_functions_over_primes
-/// [wikipedia-pcf]: https://en.wikipedia.org/wiki/Prime-counting_function
-/// [schoenfeld]: https://www.jstor.org/stable/2005976
-/// [trudgian]: https://arxiv.org/abs/1401.2689
-///
+/// [^Trudgian2014]: T. Trudgian, "Updating the error term in the prime number theorem",
+///   [arXiv:1401.2689](https://arxiv.org/abs/1401.2689) (2014)
 pub fn estimate_primecount<const LIMBS: usize, const RHS_LIMBS: usize>(x: &Uint<LIMBS>) -> Uint<LIMBS>
 where
     Uint<LIMBS>: Concat<Output = Uint<RHS_LIMBS>>,
