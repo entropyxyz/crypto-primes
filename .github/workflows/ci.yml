@@ -41,6 +41,8 @@ jobs:
           toolchain: nightly
           override: true
           profile: minimal
+      # Note that this command will not add the custom HTML header that adds the Latex support JS script,
+      # but we only run it here to check syntax and hyperlink correctness, so it does not matter.
       - run: env RUSTDOCFLAGS='--cfg docsrs -D warnings' cargo doc --all-features
 
   test-and-coverage:

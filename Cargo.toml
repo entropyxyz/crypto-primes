@@ -51,7 +51,9 @@ features = ["default"]
 # Pass arguments to rustdocs as rendered by docs.rs:
 # - `--cfg docsrs` is used to conditionally enable the unstable feature `doc-cfg`
 # - `--html-in-header` is used to enable LaTeX rendering in docs
-rustdoc-args = ["--cfg", "docsrs","--html-in-header", "./resources/docs-header.html"]
+#   (note that `rustdoc-args` overrides the global setting in `.cargo/config.toml` instead of extending it,
+#   so we need to repeat `--html-in-header` here)
+rustdoc-args = ["--cfg", "docsrs", "--html-in-header", "./resources/docs-header.html"]
 
 [[bench]]
 name = "bench"
