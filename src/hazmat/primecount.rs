@@ -4,59 +4,59 @@ use crypto_bigint::{Concat, NonZero, Split, Uint};
 
 /// Estimate the number of primes smaller than x using the asymptotic expansion of `Li(x)` with 4 terms, i.e.:
 ///
-///   `𝜋(𝑥) ~ x/ln x * (1 + 1!/ln x + 2!/ln^2 x + 3!/ln^3 x).`
+///   $$\pi(x) \approx \frac{x}{\ln x} \left(1 + \frac{1!}{\ln x} + \frac{2!}{\ln^2 x} + \frac{3!}{\ln^3 x}\right)$$
 ///
-/// For small values of x, consider using precalculated values for π(x),
-/// for example from <https://sweet.ua.pt/tos/primes.html>.
+/// For values of x up to ~$10^{29}$, consider using precalculated values for $\pi(x)$ from
+/// e.g. <https://sweet.ua.pt/tos/primes.html>.
 ///
 /// # Error considerations
 ///
 /// In addition to the usual floating point math limitations, there are two components to the error:
 ///
-/// 1. The truncation error from using a limited number of terms (4) of the asymptotic expansion of `Li(x)`: `|Li(x) -
-///    Li_approx(x)|`
-/// 2. The theoretical error, given by the absolute difference between `π(x)` and `Li(x)`: `|π(x) - Li(x)|`
+/// 1. The truncation error from using a limited number of terms (4) of the asymptotic expansion of Li(x): $|Li(x) -
+///    Li_{approx}(x)|$
+/// 2. The theoretical error, given by the absolute difference between $\pi(x)$ and Li(x): $|\pi(x) - Li(x)|$
 ///
 /// ## Truncation Error
 ///
-/// The size of the truncation error for the 4-term approximation `Li_approx(x)` is roughly the size of the first
-/// omitted term, which is `24x / (ln x)^5`.
+/// The size of the truncation error for the 4-term approximation $Li_{approx}(x)$ is roughly the size of the first
+/// omitted term, which is $\frac{24x}{\ln^5 x}$.
 ///
 /// | Bits | Truncation error (abs)     | Truncation error (rel) |
 /// | :--- | :------------------------- | :----------------------|
-/// | 1024 | ~2^981                     | ~2^-33                 |
-/// | 2048 | ~2^2000                    | ~2^-37                 |
-/// | 4096 | ~2^4043                    | ~2^-41                 |
+/// | 1024 | $\approx 2^{981}$          | $\approx 2^{-33}$      |
+/// | 2048 | $\approx 2^{2000}$         | $\approx 2^{-37}$      |
+/// | 4096 | $\approx 2^{4043}$         | $\approx 2^{-41}$      |
 ///
-/// *(Relative error is calculated as the first omitted term divided by `Li_approx(x)`)*
+/// *(Relative error is calculated as the first omitted term divided by $Li_{approx}(x)$)*
 ///
 /// ## Theoretical Error
 ///
-/// Assuming RH, we can use Schoenfeld’s bound `|π(x) - Li(x)| < (1 / 8π) * √x * ln x`[^Schoenfeld1976].
+/// Assuming RH, we can use Schoenfeld’s bound $|\pi(x) - \text{Li}(x)| < \frac{\sqrt{x} \ln x}{8\pi}$.
 /// This gives a very small theoretical error bound compared to the best known unconditional bounds[^Trudgian2014].
 ///
 /// | Bits | Error Bound (abs) | Error Bound (rel) |
 /// | :--- | :---------------- | :-----------------|
-/// | 1024 | < 2^517           | < 2^-497          |
-/// | 2048 | < 2^1030          | < 2^-1007         |
-/// | 4096 | < 2^2055          | < 2^-2029         |
+/// | 1024 | < $2^{517}$       | < $2^{-497}$      |
+/// | 2048 | < $2^{1030}$      | < $2^{-1007}$     |
+/// | 4096 | < $2^{2055}$      | < $2^{-2029}$     |
 ///
-/// *(Relative error bound is calculated as `Schoenfeld’s Bound (abs) / Li_approx(x)`)*
+/// *(Relative error bound is calculated as Schoenfeld’s Bound (abs) divided by $Li_{approx}(x)$)*
 ///
 /// ## Discussion
 ///
-/// Assuming RH, the dominant error term in estimating `π(x)` with `Li_approx(x)` comes from truncating the asymptotic
-/// expansion of `Li(x)`. While this truncation error is extremely small in relative terms, it is large in absolute terms.
-/// Improving the `Li(x)` approximation to be the same order of magnitude as the Schoenfeld bound would require using
+/// Assuming RH, the dominant error term in estimating $\pi(x)$ with $Li_{approx}(x)$ comes from truncating the asymptotic
+/// expansion of Li(x). While this truncation error is extremely small in relative terms, it is large in absolute terms.
+/// Improving the Li(x) approximation to be the same order of magnitude as the Schoenfeld bound would require using
 /// hundreds of terms from the asymptotic series (or employing more complex methods like continued fractions for the
-/// remainder, which is beyond the scope of this simple approximation). In relative terms the relative error bound is
-/// approximately `~2^-33` (for 1024 bits) down to `~2^-41` (for 4096 bits). This corresponds to an extremely small
-/// percentage error (significantly less than `10^-8%`).
+/// remainder, which is beyond the scope of this simple approximation). In relative terms the error bound is
+/// approximately $2^{-33}$ (for 1024 bits) down to $\sim 2^{-41}$ (for 4096 bits). This corresponds to an extremely small
+/// percentage error (significantly less than $10^{-8}$ %).
 ///
-/// It should be noted that while `Li(x)` is generally smaller than `π(x)` for 'small' x, it is known that the sign of
-/// `π(x) - Li(x)` changes infinitely often. It has been proven that there must be a crossing below `~10^316` (`~2^1051`),
-/// which is well within the ranges used in this library. Thus, users should be aware that the estimate provided here
-/// can be both greater than and smaller than the actual value of `π(x)`.
+/// It should be noted that while Li(x) is generally smaller than $\pi(x)$ for 'small' x, it is known that the sign of
+/// $\pi(x) - Li(x)$ changes infinitely often. It has been proven that there must be a crossing below $\sim 10^{316}$
+/// ($\sim 2^{1051}$), which is well within the ranges used in this library. Thus, users should be aware that the
+/// estimate provided here can be both greater than and smaller than the actual value of $\pi(x)$.
 ///
 /// [^Dusart2010]: P. Dusart, "Estimates of Some Functions Over Primes without R.H.",
 ///   [arXiv:1002.0442](https://arxiv.org/pdf/1002.0442) (2010)
