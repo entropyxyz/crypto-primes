@@ -5,7 +5,7 @@ use alloc::{vec, vec::Vec};
 use core::marker::PhantomData;
 use core::num::{NonZero, NonZeroU32};
 
-use crypto_bigint::{Integer, Odd, RandomBits, RandomBitsError};
+use crypto_bigint::{Odd, RandomBits, RandomBitsError, Unsigned};
 use rand_core::CryptoRng;
 
 use super::precomputed::{LAST_SMALL_PRIME, RECIPROCALS, SMALL_PRIMES, SmallPrime};
@@ -35,7 +35,7 @@ pub enum SetBits {
 /// (applies to fixed-length types).
 pub fn random_odd_integer<T, R>(rng: &mut R, bit_length: NonZeroU32, set_bits: SetBits) -> Result<Odd<T>, Error>
 where
-    T: Integer + RandomBits,
+    T: Unsigned + RandomBits,
     R: CryptoRng + ?Sized,
 {
     let bit_length = bit_length.get();
@@ -88,7 +88,7 @@ const INCR_LIMIT: Residue = Residue::MAX - LAST_SMALL_PRIME as Residue + 1;
 /// An iterator returning numbers with up to and including given bit length,
 /// starting from a given number, that are not multiples of the first 2048 small primes.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct SmallFactorsSieve<T: Integer> {
+pub struct SmallFactorsSieve<T: Unsigned> {
     // Instead of dividing a big integer by small primes every time (which is slow),
     // we keep a "base" and a small increment separately,
     // so that we can only calculate the residues of the increment.
@@ -105,7 +105,7 @@ pub struct SmallFactorsSieve<T: Integer> {
 
 impl<T> SmallFactorsSieve<T>
 where
-    T: Integer,
+    T: Unsigned,
 {
     /// Creates a new sieve, iterating from `start` and until the last number with `max_bit_length`
     /// bits, producing numbers that are not non-trivial multiples of a list of small primes in the
@@ -290,7 +290,7 @@ where
 
 impl<T> Iterator for SmallFactorsSieve<T>
 where
-    T: Integer,
+    T: Unsigned,
 {
     type Item = T;
 
@@ -330,7 +330,7 @@ pub struct SmallFactorsSieveFactory<T> {
 
 impl<T> SmallFactorsSieveFactory<T>
 where
-    T: Integer + RandomBits,
+    T: Unsigned + RandomBits,
 {
     /// Creates a factory that produces sieves returning numbers of at most `max_bit_length` bits
     /// that are not divisible by a number of small factors.
@@ -372,7 +372,7 @@ where
 
 impl<T> SieveFactory for SmallFactorsSieveFactory<T>
 where
-    T: Integer + RandomBits,
+    T: Unsigned + RandomBits,
 {
     type Item = T;
     type Sieve = SmallFactorsSieve<T>;
