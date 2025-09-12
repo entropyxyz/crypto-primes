@@ -1,7 +1,7 @@
 use core::num::NonZero;
 
 use criterion::{BatchSize, Criterion, criterion_group, criterion_main};
-use crypto_bigint::{BoxedUint, Integer, Odd, RandomBits, U128, U256, U1024, Uint, nlimbs};
+use crypto_bigint::{BoxedUint, Odd, RandomBits, U128, U256, U1024, Uint, Unsigned, nlimbs};
 use rand_chacha::ChaCha8Rng;
 use rand_core::{CryptoRng, OsRng, SeedableRng, TryRngCore};
 
@@ -32,7 +32,7 @@ fn make_random_rng() -> ChaCha8Rng {
     ChaCha8Rng::from_os_rng()
 }
 
-fn random_odd_uint<T: RandomBits + Integer, R: CryptoRng + ?Sized>(rng: &mut R, bit_length: u32) -> Odd<T> {
+fn random_odd_uint<T: RandomBits + Unsigned, R: CryptoRng + ?Sized>(rng: &mut R, bit_length: u32) -> Odd<T> {
     random_odd_integer::<T, _>(rng, NonZero::new(bit_length).unwrap(), SetBits::Msb).unwrap()
 }
 

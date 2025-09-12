@@ -2,7 +2,7 @@
 //!
 //! [^FIPS]: FIPS-186.5 standard, <https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.186-5.pdf>
 
-use crypto_bigint::{Integer, Odd, RandomMod};
+use crypto_bigint::{Odd, RandomMod, Unsigned};
 use rand_core::CryptoRng;
 
 use crate::{
@@ -30,7 +30,7 @@ pub fn is_prime<T>(
     add_lucas_test: bool,
 ) -> bool
 where
-    T: Integer + RandomMod,
+    T: Unsigned + RandomMod,
 {
     match flavor {
         Flavor::Any => {}
@@ -84,7 +84,7 @@ fn is_safe_prime<T>(
     add_lucas_test: bool,
 ) -> bool
 where
-    T: Integer + RandomMod,
+    T: Unsigned + RandomMod,
 {
     // Since, by the definition of safe prime, `(candidate - 1) / 2` must also be prime,
     // and therefore odd, `candidate` has to be equal to 3 modulo 4.

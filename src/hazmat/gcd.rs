@@ -1,12 +1,12 @@
 use core::num::NonZero;
-use crypto_bigint::{Integer, Limb, NonZero as CTNonZero, Word};
+use crypto_bigint::{Limb, NonZero as CTNonZero, Unsigned, Word};
 
 /// Calculates the greatest common divisor of `n` and `m`.
 /// By definition, `gcd(0, m) == m`.
 /// `n` must be non-zero.
 pub(crate) fn gcd_vartime<T>(n: &T, m: NonZero<Word>) -> Word
 where
-    T: Integer,
+    T: Unsigned,
 {
     let m = m.get();
     // This we can check since it doesn't affect the return type,

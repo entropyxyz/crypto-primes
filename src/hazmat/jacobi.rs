@@ -1,6 +1,6 @@
 //! Jacobi symbol calculation.
 
-use crypto_bigint::{Integer, Limb, NonZero as CTNonZero, Odd, Word};
+use crypto_bigint::{Limb, NonZero as CTNonZero, Odd, Unsigned, Word};
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub(crate) enum JacobiSymbol {
@@ -38,7 +38,7 @@ fn apply_reduce_numerator(j: JacobiSymbol, a: Word, p: Word) -> (JacobiSymbol, W
 
 fn reduce_numerator_long<T>(j: JacobiSymbol, a: Word, p: &T) -> (JacobiSymbol, Word)
 where
-    T: Integer,
+    T: Unsigned,
 {
     apply_reduce_numerator(j, a, p.as_ref()[0].0)
 }
@@ -54,7 +54,7 @@ fn apply_swap(j: JacobiSymbol, a: Word, p: Word) -> JacobiSymbol {
     if a & 3 == 1 || p & 3 == 1 { j } else { -j }
 }
 
-fn swap_long<T: Integer>(j: JacobiSymbol, a: Word, p: &Odd<T>) -> (JacobiSymbol, &Odd<T>, Word) {
+fn swap_long<T: Unsigned>(j: JacobiSymbol, a: Word, p: &Odd<T>) -> (JacobiSymbol, &Odd<T>, Word) {
     let j = apply_swap(j, a, p.as_ref().as_ref()[0].0);
     (j, p, a)
 }
@@ -67,7 +67,7 @@ fn swap_short(j: JacobiSymbol, a: Word, p: Word) -> (JacobiSymbol, Word, Word) {
 /// Returns the Jacobi symbol `(a/p)` given an odd `p`.
 pub(crate) fn jacobi_symbol_vartime<T>(abs_a: Word, a_is_negative: bool, p_long: &Odd<T>) -> JacobiSymbol
 where
-    T: Integer,
+    T: Unsigned,
 {
     let result = JacobiSymbol::One; // Keep track of all the sign flips here.
 

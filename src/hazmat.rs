@@ -19,7 +19,7 @@ pub use miller_rabin::{MillerRabin, minimum_mr_iterations};
 pub use primecount::estimate_primecount;
 pub use sieve::{SetBits, SieveFactory, SmallFactorsSieve, SmallFactorsSieveFactory, random_odd_integer};
 
-use crypto_bigint::{Integer, Word};
+use crypto_bigint::{Unsigned, Word};
 
 /// Possible results of various primality tests.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -46,7 +46,7 @@ impl Primality {
 
 pub(crate) fn equals_primitive<T>(num: &T, primitive: Word) -> bool
 where
-    T: Integer,
+    T: Unsigned,
 {
     num.bits_vartime() <= Word::BITS && num.as_ref()[0].0 == primitive
 }
