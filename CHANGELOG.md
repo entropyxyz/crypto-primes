@@ -4,6 +4,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.7.0-pre.2] - 2025-09-12
+
+### Changed
+
+- Bumped `crypto-bigint` dependency to 0.7.0-pre.5. ([#91])
+- The crate's methods are now bound on `crypto_bigint::Unsigned` instead of `Integer` ([#91])
+
+
+[#91]: https://github.com/entropyxyz/crypto-primes/pull/91
+
+
 ## [0.7.0-pre.1] - 2025-05-30
 
 ### Changed
@@ -255,3 +266,4 @@ Initial release.
 [0.6.2]: https://github.com/entropyxyz/crypto-primes/releases/tag/v0.6.2
 [0.7.0-pre.0]: https://github.com/entropyxyz/crypto-primes/releases/tag/v0.7.0-pre.0
 [0.7.0-pre.1]: https://github.com/entropyxyz/crypto-primes/releases/tag/v0.7.0-pre.1
+[0.7.0-pre.2]: https://github.com/entropyxyz/crypto-primes/releases/tag/v0.7.0-pre.2
