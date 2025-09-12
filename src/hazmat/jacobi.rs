@@ -1,24 +1,8 @@
 //! Jacobi symbol calculation.
 
+pub(crate) use crypto_bigint::JacobiSymbol;
+
 use crypto_bigint::{Limb, NonZero as CTNonZero, Odd, Unsigned, Word};
-
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub(crate) enum JacobiSymbol {
-    Zero,
-    One,
-    MinusOne,
-}
-
-impl core::ops::Neg for JacobiSymbol {
-    type Output = Self;
-    fn neg(self) -> Self {
-        match self {
-            Self::Zero => Self::Zero,
-            Self::One => Self::MinusOne,
-            Self::MinusOne => Self::One,
-        }
-    }
-}
 
 /// Transforms `(a/p)` -> `(r/p)` for odd `p`, where the resulting `r` is odd, and `a = r * 2^s`.
 /// Takes a Jacobi symbol value, and returns `r` and the new Jacobi symbol,
