@@ -47,7 +47,7 @@ tests-all = ["tests-openssl", "tests-gmp", "tests-exhaustive", "tests-glass-pump
 multicore = ["rayon"]
 
 [package.metadata.docs.rs]
-features = ["default"]
+all-features = true
 # Pass arguments to rustdocs as rendered by docs.rs:
 # - `--cfg docsrs` is used to conditionally enable the unstable feature `doc-cfg`
 # - `--html-in-header` is used to enable LaTeX rendering in docs
