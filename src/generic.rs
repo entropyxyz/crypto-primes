@@ -37,7 +37,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use rand_core::{CryptoRng, OsRng, TryRngCore};
+    use rand_core::CryptoRng;
 
     use super::sieve_and_find;
     use crate::{Error, hazmat::SieveFactory};
@@ -67,12 +67,14 @@ mod tests {
             }
         }
 
+        let mut rng = rand::rng();
+
         let factory = TestSieveFactory { count: 0 };
-        let result = sieve_and_find(&mut OsRng.unwrap_mut(), factory, |_rng, num| *num == 11);
+        let result = sieve_and_find(&mut rng, factory, |_rng, num| *num == 11);
         assert!(result.unwrap().is_some());
 
         let factory = TestSieveFactory { count: 0 };
-        let result = sieve_and_find(&mut OsRng.unwrap_mut(), factory, |_rng, num| *num == 20);
+        let result = sieve_and_find(&mut rng, factory, |_rng, num| *num == 20);
         assert!(result.unwrap().is_none());
     }
 }

@@ -272,7 +272,8 @@ mod tests {
     #[test]
     fn test_ln_x_large() {
         // Random xs are from seed "01234567890123456789012345678901"/ChaCha8Rng
-        let x = U256::from_be_hex("017AD59D33AC084D2E58D81F8BB87A61B44677037A7DBDE04814256570DCBD7A");
+        let x =
+            U256::from_be_hex("017AD59D33AC084D2E58D81F8BB87A61B44677037A7DBDE04814256570DCBD7A");
         let expected_256 = 172.29242258375361;
 
         let ln_x = ln(&x);

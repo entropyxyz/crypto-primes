@@ -4,7 +4,8 @@ use rand_core::CryptoRng;
 use crate::{
     generic::sieve_and_find,
     hazmat::{
-        AStarBase, LucasCheck, MillerRabin, Primality, SetBits, SmallFactorsSieveFactory, equals_primitive, lucas_test,
+        AStarBase, LucasCheck, MillerRabin, Primality, SetBits, SmallFactorsSieveFactory,
+        equals_primitive, lucas_test,
     },
 };
 
@@ -121,9 +122,10 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crypto_bigint::{BoxedUint, CheckedAdd, RandomMod, U64, U128, Uint, Unsigned, Word, nlimbs};
+    use crypto_bigint::{
+        BoxedUint, CheckedAdd, RandomMod, U64, U128, Uint, Unsigned, Word, nlimbs,
+    };
     use num_prime::nt_funcs::is_prime64;
-    use rand_core::{OsRng, TryRngCore};
 
     use super::{Flavor, is_prime, random_prime};
     use crate::{
@@ -132,8 +134,9 @@ mod tests {
     };
 
     fn fips_is_prime<T: Unsigned + RandomMod>(flavor: Flavor, num: &T) -> bool {
+        let mut rng = rand::rng();
         let mr_iterations = minimum_mr_iterations(128, 100).unwrap();
-        fips::is_prime(&mut OsRng.unwrap_mut(), flavor, num, mr_iterations, false)
+        fips::is_prime(&mut rng, flavor, num, mr_iterations, false)
     }
 
     fn test_large_primes<const L: usize>(nums: &[Uint<L>]) {
@@ -174,8 +177,14 @@ mod tests {
             assert!(!fips_is_prime(Flavor::Any, num));
         }
 
-        assert!(!is_prime(Flavor::Any, &pseudoprimes::LARGE_CARMICHAEL_NUMBER));
-        assert!(!fips_is_prime(Flavor::Any, &pseudoprimes::LARGE_CARMICHAEL_NUMBER));
+        assert!(!is_prime(
+            Flavor::Any,
+            &pseudoprimes::LARGE_CARMICHAEL_NUMBER
+        ));
+        assert!(!fips_is_prime(
+            Flavor::Any,
+            &pseudoprimes::LARGE_CARMICHAEL_NUMBER
+        ));
     }
 
     fn test_cunningham_chain<const L: usize>(length: usize, num: &Uint<L>) {
@@ -190,7 +199,10 @@ mod tests {
                 assert!(fips_is_prime(Flavor::Safe, &next));
             }
 
-            next = next.wrapping_shl_vartime(1).checked_add(&Uint::<L>::ONE).unwrap();
+            next = next
+                .wrapping_shl_vartime(1)
+                .checked_add(&Uint::<L>::ONE)
+                .unwrap();
         }
 
         // The chain ended.
@@ -210,8 +222,10 @@ mod tests {
 
     #[test]
     fn prime_generation() {
+        let mut rng = rand::rng();
+
         for bit_length in (28..=128).step_by(10) {
-            let p: U128 = random_prime(&mut OsRng.unwrap_mut(), Flavor::Any, bit_length);
+            let p: U128 = random_prime(&mut rng, Flavor::Any, bit_length);
             assert!(p.bits_vartime() == bit_length);
             assert!(is_prime(Flavor::Any, &p));
             assert!(fips_is_prime(Flavor::Any, &p));
@@ -220,8 +234,10 @@ mod tests {
 
     #[test]
     fn prime_generation_boxed() {
+        let mut rng = rand::rng();
+
         for bit_length in (28..=128).step_by(10) {
-            let p: BoxedUint = random_prime(&mut OsRng.unwrap_mut(), Flavor::Any, bit_length);
+            let p: BoxedUint = random_prime(&mut rng, Flavor::Any, bit_length);
             assert!(p.bits_vartime() == bit_length);
             assert!(p.to_words().len() == nlimbs!(bit_length));
             assert!(is_prime(Flavor::Any, &p));
@@ -231,8 +247,10 @@ mod tests {
 
     #[test]
     fn safe_prime_generation() {
+        let mut rng = rand::rng();
+
         for bit_length in (28..=128).step_by(10) {
-            let p: U128 = random_prime(&mut OsRng.unwrap_mut(), Flavor::Safe, bit_length);
+            let p: U128 = random_prime(&mut rng, Flavor::Safe, bit_length);
             assert!(p.bits_vartime() == bit_length);
             assert!(is_prime(Flavor::Safe, &p));
             assert!(fips_is_prime(Flavor::Safe, &p));
@@ -241,8 +259,10 @@ mod tests {
 
     #[test]
     fn safe_prime_generation_boxed() {
+        let mut rng = rand::rng();
+
         for bit_length in (28..=189).step_by(10) {
-            let p: BoxedUint = random_prime(&mut OsRng.unwrap_mut(), Flavor::Safe, bit_length);
+            let p: BoxedUint = random_prime(&mut rng, Flavor::Safe, bit_length);
             assert!(p.bits_vartime() == bit_length);
             assert!(p.to_words().len() == nlimbs!(bit_length));
             assert!(is_prime(Flavor::Safe, &p));
@@ -291,7 +311,10 @@ mod tests {
         // so the initial sieving cannot tell if it is prime or not,
         // and a full primality test is run.
         assert!(!is_prime(Flavor::Safe, &U64::from(17881u32 * 17891u32)));
-        assert!(!fips_is_prime(Flavor::Safe, &U64::from(17881u32 * 17891u32)));
+        assert!(!fips_is_prime(
+            Flavor::Safe,
+            &U64::from(17881u32 * 17891u32)
+        ));
     }
 
     #[test]
@@ -299,7 +322,8 @@ mod tests {
         expected = "Error generating random candidates: The requested bit length of the candidate (65) is larger than the maximum size of the target integer type (64)."
     )]
     fn generate_prime_too_many_bits() {
-        let _p: U64 = random_prime(&mut OsRng.unwrap_mut(), Flavor::Any, 65);
+        let mut rng = rand::rng();
+        let _p: U64 = random_prime(&mut rng, Flavor::Any, 65);
     }
 
     #[test]
@@ -307,7 +331,8 @@ mod tests {
         expected = "Error generating random candidates: The requested bit length of the candidate (65) is larger than the maximum size of the target integer type (64)."
     )]
     fn generate_safe_prime_too_many_bits() {
-        let _p: U64 = random_prime(&mut OsRng.unwrap_mut(), Flavor::Safe, 65);
+        let mut rng = rand::rng();
+        let _p: U64 = random_prime(&mut rng, Flavor::Safe, 65);
     }
 
     fn is_prime_ref(num: Word) -> bool {
@@ -316,9 +341,10 @@ mod tests {
 
     #[test]
     fn corner_cases_generate_prime() {
+        let mut rng = rand::rng();
         for bits in 2..5 {
             for _ in 0..100 {
-                let p: U64 = random_prime(&mut OsRng.unwrap_mut(), Flavor::Any, bits);
+                let p: U64 = random_prime(&mut rng, Flavor::Any, bits);
                 let p_word = p.as_words()[0];
                 assert!(is_prime_ref(p_word));
             }
@@ -327,9 +353,10 @@ mod tests {
 
     #[test]
     fn corner_cases_generate_safe_prime() {
+        let mut rng = rand::rng();
         for bits in 3..5 {
             for _ in 0..100 {
-                let p: U64 = random_prime(&mut OsRng.unwrap_mut(), Flavor::Safe, bits);
+                let p: U64 = random_prime(&mut rng, Flavor::Safe, bits);
                 let p_word = p.as_words()[0];
                 assert!(is_prime_ref(p_word) && is_prime_ref(p_word / 2));
             }
@@ -345,7 +372,6 @@ mod tests_openssl {
 
     use crypto_bigint::U128;
     use openssl::bn::{BigNum, BigNumContext};
-    use rand_core::{OsRng, TryRngCore};
 
     use super::{Flavor, is_prime, random_prime};
     use crate::{
@@ -368,12 +394,16 @@ mod tests_openssl {
     #[test]
     fn openssl_cross_check() {
         let mut ctx = BigNumContext::new().unwrap();
+        let mut rng = rand::rng();
 
         // Generate primes, let OpenSSL check them
         for _ in 0..100 {
-            let p: U128 = random_prime(&mut OsRng.unwrap_mut(), Flavor::Any, 128);
+            let p: U128 = random_prime(&mut rng, Flavor::Any, 128);
             let p_bn = to_openssl(&p);
-            assert!(openssl_is_prime(&p_bn, &mut ctx), "OpenSSL reports {p} as composite",);
+            assert!(
+                openssl_is_prime(&p_bn, &mut ctx),
+                "OpenSSL reports {p} as composite",
+            );
         }
 
         let mr_iterations = minimum_mr_iterations(U128::BITS, 100).unwrap();
@@ -385,15 +415,16 @@ mod tests_openssl {
             let p = from_openssl(&p_bn);
             assert!(is_prime(Flavor::Any, &p), "we report {p} as composite");
             assert!(
-                fips::is_prime(&mut OsRng.unwrap_mut(), Flavor::Any, &p, mr_iterations, false),
+                fips::is_prime(&mut rng, Flavor::Any, &p, mr_iterations, false),
                 "we report {p} as composite"
             );
         }
 
         // Generate random numbers, check if our test agrees with OpenSSL
         for _ in 0..100 {
-            let p = random_odd_integer::<U128, _>(&mut OsRng.unwrap_mut(), NonZero::new(128).unwrap(), SetBits::Msb)
-                .unwrap();
+            let p =
+                random_odd_integer::<U128, _>(&mut rng, NonZero::new(128).unwrap(), SetBits::Msb)
+                    .unwrap();
             let p_bn = to_openssl(&p);
             let expected = openssl_is_prime(&p_bn, &mut ctx);
 
@@ -403,7 +434,7 @@ mod tests_openssl {
                 "difference between OpenSSL and us: OpenSSL reports {expected}, we report {actual}",
             );
 
-            let actual = fips::is_prime(&mut OsRng.unwrap_mut(), Flavor::Any, p.as_ref(), mr_iterations, false);
+            let actual = fips::is_prime(&mut rng, Flavor::Any, p.as_ref(), mr_iterations, false);
             assert_eq!(
                 actual, expected,
                 "difference between OpenSSL and us: OpenSSL reports {expected}, we report {actual}",
@@ -418,7 +449,6 @@ mod tests_gmp {
     use core::num::NonZero;
 
     use crypto_bigint::U128;
-    use rand_core::{OsRng, TryRngCore};
     use rug::{
         Integer,
         integer::{IsPrime, Order},
@@ -444,9 +474,10 @@ mod tests_gmp {
 
     #[test]
     fn gmp_cross_check() {
+        let mut rng = rand::rng();
         // Generate primes, let GMP check them
         for _ in 0..100 {
-            let p: U128 = random_prime(&mut OsRng.unwrap_mut(), Flavor::Any, 128);
+            let p: U128 = random_prime(&mut rng, Flavor::Any, 128);
             let p_bn = to_gmp(&p);
             assert!(gmp_is_prime(&p_bn), "GMP reports {p} as composite");
         }
@@ -456,22 +487,23 @@ mod tests_gmp {
         // Generate primes with GMP, check them
         for _ in 0..100 {
             let start =
-                random_odd_integer::<U128, _>(&mut OsRng.unwrap_mut(), NonZero::new(128).unwrap(), SetBits::Msb)
+                random_odd_integer::<U128, _>(&mut rng, NonZero::new(128).unwrap(), SetBits::Msb)
                     .unwrap();
             let start_bn = to_gmp(&start);
             let p_bn = start_bn.next_prime();
             let p = from_gmp(&p_bn);
             assert!(is_prime(Flavor::Any, &p), "we report {p} as composite");
             assert!(
-                fips::is_prime(&mut OsRng.unwrap_mut(), Flavor::Any, &p, mr_iterations, false),
+                fips::is_prime(&mut rng, Flavor::Any, &p, mr_iterations, false),
                 "we report {p} as composite"
             );
         }
 
         // Generate random numbers, check if our test agrees with GMP
         for _ in 0..100 {
-            let p = random_odd_integer::<U128, _>(&mut OsRng.unwrap_mut(), NonZero::new(128).unwrap(), SetBits::Msb)
-                .unwrap();
+            let p =
+                random_odd_integer::<U128, _>(&mut rng, NonZero::new(128).unwrap(), SetBits::Msb)
+                    .unwrap();
             let p_bn = to_gmp(&p);
             let expected = gmp_is_prime(&p_bn);
 
@@ -481,7 +513,7 @@ mod tests_gmp {
                 "difference between GMP and us: GMP reports {expected}, we report {actual}",
             );
 
-            let actual = fips::is_prime(&mut OsRng.unwrap_mut(), Flavor::Any, p.as_ref(), mr_iterations, false);
+            let actual = fips::is_prime(&mut rng, Flavor::Any, p.as_ref(), mr_iterations, false);
             assert_eq!(
                 actual, expected,
                 "difference between GMP and us: GMP reports {expected}, we report {actual}",

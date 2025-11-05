@@ -12,7 +12,7 @@ rust-version = "1.85"
 [dependencies]
 crypto-bigint = { version = "0.7.0-pre.5", default-features = false, features = ["rand_core"] }
 libm = { version = "0.2.13", default-features = false, features = ["arch"] }
-rand_core = { version = "0.9.2", default-features = false }
+rand_core = { version = "0.10.0-rc.2", default-features = false }
 rayon = { version = "1", optional = true, default-features = false }
 
 # Optional dependencies used in tests and benchmarks
@@ -21,10 +21,10 @@ rug = { version = "1.26", optional = true, default-features = false, features = 
 glass_pumpkin = { version = "1", optional = true }
 
 [dev-dependencies]
-rand_core = { version = "0.9.2", default-features = false, features = ["os_rng"] }
+rand = { version = "0.10.0-rc.1", features = ["chacha"] }
+rand_core = { version = "0.10.0-rc.2", default-features = false }
 # need `crypto-bigint` with `alloc` to test `BoxedUint`
-crypto-bigint = { version = "0.7.0-pre.5", default-features = false, features = ["alloc"] }
-rand_chacha = "0.9"
+crypto-bigint = { version = "0.7.0-pre.10", default-features = false, features = ["alloc"] }
 criterion = { version = "0.5", features = ["html_reports"] }
 num-modular = { version = "0.5", features = ["num-bigint"] }
 num-bigint = "0.4"
@@ -62,3 +62,7 @@ harness = false
 [[bench]]
 name = "cctv"
 harness = false
+
+[patch.crates-io]
+# https://github.com/rust-random/core/pull/17
+rand_core = { git = "https://github.com/baloo/rand-core.git", branch = "baloo/seedablerng/fork" }
