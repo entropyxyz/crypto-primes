@@ -7,7 +7,7 @@ use rayon::iter::{ParallelBridge, ParallelIterator};
 use crate::{
     error::Error,
     hazmat::{SetBits, SieveFactory, SmallFactorsSieveFactory},
-    presets::{Flavor, is_prime},
+    presets::{is_prime, Flavor},
 };
 
 /// Sieves through the results of `sieve_factory` using a thread pool with `threadcount` threads,
@@ -83,7 +83,7 @@ where
     fn next(&mut self) -> Option<Self::Item> {
         loop {
             if let Some(result) = self.sieve.next() {
-                return Some((self.rng.fork(), result));
+                return Some((R::from_rng(self.rng), result));
             }
 
             self.sieve = self
@@ -117,7 +117,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crypto_bigint::{BoxedUint, U128, nlimbs};
+    use crypto_bigint::{nlimbs, BoxedUint, U128};
     use rand::rngs::ChaCha12Rng;
     use rand_core::SeedableRng;
 
@@ -149,7 +149,7 @@ mod tests {
     fn parallel_safe_prime_generation() {
         let mut rng = ChaCha12Rng::from_rng(&mut rand::rng());
         for bit_length in (28..=128).step_by(10) {
-            let p: U128 = random_prime(&mut rng.fork(), Flavor::Safe, bit_length, 8);
+            let p: U128 = random_prime(&mut ChaCha12Rng::from_rng(&mut rng), Flavor::Safe, bit_length, 8);
             assert!(p.bits_vartime() == bit_length);
             assert!(is_prime(Flavor::Safe, &p));
         }
