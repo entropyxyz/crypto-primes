@@ -1,7 +1,7 @@
 //! Prime-finding functions that can parallelize across multiple cores.
 
 use crypto_bigint::{RandomBits, RandomMod, Unsigned};
-use rand_core::CryptoRng;
+use rand_core::{CryptoRng, SeedableRng};
 use rayon::iter::{ParallelBridge, ParallelIterator};
 
 use crate::{
@@ -21,7 +21,7 @@ pub fn sieve_and_find<R, S, F>(
     threadcount: usize,
 ) -> Result<Option<S::Item>, Error>
 where
-    R: CryptoRng + Clone + Send + Sync,
+    R: CryptoRng + Send + Sync + SeedableRng,
     S: Send + Sync + SieveFactory,
     S::Sieve: Send,
     S::Item: Send,
@@ -32,17 +32,15 @@ where
         .build()
         .expect("If the platform can spawn threads, then this call will work.");
 
-    let mut iter_rng = rng.clone();
-    let iter = match SieveIterator::new(&mut iter_rng, sieve_factory)? {
+    let iter = match SieveIterator::new(rng, sieve_factory)? {
         Some(iter) => iter,
         None => return Ok(None),
     };
 
     threadpool.install(|| {
-        Ok(iter.par_bridge().find_any(|c| {
-            let mut rng = rng.clone();
-            predicate(&mut rng, c)
-        }))
+        Ok(iter
+            .par_bridge()
+            .find_map_any(|(mut rng, c)| if predicate(&mut rng, &c) { Some(c) } else { None }))
     })
 }
 
@@ -77,15 +75,15 @@ where
 
 impl<R, S> Iterator for SieveIterator<'_, R, S>
 where
-    R: CryptoRng + ?Sized,
+    R: CryptoRng + SeedableRng,
     S: SieveFactory,
 {
-    type Item = S::Item;
+    type Item = (R, S::Item);
 
     fn next(&mut self) -> Option<Self::Item> {
         loop {
             if let Some(result) = self.sieve.next() {
-                return Some(result);
+                return Some((R::from_rng(self.rng), result));
             }
 
             self.sieve = self
@@ -108,7 +106,7 @@ where
 pub fn random_prime<T, R>(rng: &mut R, flavor: Flavor, bit_length: u32, threadcount: usize) -> T
 where
     T: Unsigned + RandomBits + RandomMod,
-    R: CryptoRng + Send + Sync + Clone,
+    R: CryptoRng + Send + Sync + SeedableRng,
 {
     let factory = SmallFactorsSieveFactory::new(flavor, bit_length, SetBits::Msb)
         .unwrap_or_else(|err| panic!("Error creating the sieve: {err}"));
@@ -120,15 +118,17 @@ where
 #[cfg(test)]
 mod tests {
     use crypto_bigint::{BoxedUint, U128, nlimbs};
-    use rand_core::{OsRng, TryRngCore};
+    use rand::rngs::ChaCha12Rng;
+    use rand_core::SeedableRng;
 
     use super::{is_prime, random_prime};
     use crate::Flavor;
 
     #[test]
     fn parallel_prime_generation() {
+        let mut rng = ChaCha12Rng::from_rng(&mut rand::rng());
         for bit_length in (28..=128).step_by(10) {
-            let p: U128 = random_prime(&mut OsRng.unwrap_err(), Flavor::Any, bit_length, 4);
+            let p: U128 = random_prime(&mut rng, Flavor::Any, bit_length, 4);
             assert!(p.bits_vartime() == bit_length);
             assert!(is_prime(Flavor::Any, &p));
         }
@@ -136,8 +136,9 @@ mod tests {
 
     #[test]
     fn parallel_prime_generation_boxed() {
+        let mut rng = ChaCha12Rng::from_rng(&mut rand::rng());
         for bit_length in (28..=128).step_by(10) {
-            let p: BoxedUint = random_prime(&mut OsRng.unwrap_err(), Flavor::Any, bit_length, 2);
+            let p: BoxedUint = random_prime(&mut rng, Flavor::Any, bit_length, 2);
             assert!(p.bits_vartime() == bit_length);
             assert!(p.to_words().len() == nlimbs!(bit_length));
             assert!(is_prime(Flavor::Any, &p));
@@ -146,8 +147,9 @@ mod tests {
 
     #[test]
     fn parallel_safe_prime_generation() {
+        let mut rng = ChaCha12Rng::from_rng(&mut rand::rng());
         for bit_length in (28..=128).step_by(10) {
-            let p: U128 = random_prime(&mut OsRng.unwrap_err(), Flavor::Safe, bit_length, 8);
+            let p: U128 = random_prime(&mut ChaCha12Rng::from_rng(&mut rng), Flavor::Safe, bit_length, 8);
             assert!(p.bits_vartime() == bit_length);
             assert!(is_prime(Flavor::Safe, &p));
         }
@@ -155,8 +157,9 @@ mod tests {
 
     #[test]
     fn parallel_safe_prime_generation_boxed() {
+        let mut rng = ChaCha12Rng::from_rng(&mut rand::rng());
         for bit_length in (28..=128).step_by(10) {
-            let p: BoxedUint = random_prime(&mut OsRng.unwrap_err(), Flavor::Safe, bit_length, 4);
+            let p: BoxedUint = random_prime(&mut rng, Flavor::Safe, bit_length, 4);
             assert!(p.bits_vartime() == bit_length);
             assert!(p.to_words().len() == nlimbs!(bit_length));
             assert!(is_prime(Flavor::Safe, &p));

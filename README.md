@@ -28,10 +28,9 @@ Find a 196 bit prime returned in a 256-bit long `crypto_bigint::U256`:
 
 ```rust
 use crypto_bigint::U256;
-use rand_core::{OsRng, TryRngCore};
 use crypto_primes::{Flavor, is_prime, random_prime};
 
-let prime = random_prime::<U256, _>(&mut OsRng.unwrap_mut(), Flavor::Any, 196);
+let prime = random_prime::<U256, _>(&mut rand::rng(), Flavor::Any, 196);
 assert!(is_prime(Flavor::Any, &prime));
 ```
 
@@ -39,10 +38,9 @@ Find a 64 bit safe prime returned in a `crypto_bigint::U1024`:
 
 ```rust
 use crypto_bigint::U1024;
-use rand_core::{OsRng, TryRngCore};
 use crypto_primes::{Flavor, is_prime, random_prime};
 
-let prime = random_prime::<U1024, _>(&mut OsRng.unwrap_mut(), Flavor::Safe, 64);
+let prime = random_prime::<U1024, _>(&mut rand::rng(), Flavor::Safe, 64);
 assert!(is_prime(Flavor::Safe, &prime));
 ```
 
@@ -56,12 +54,11 @@ use crypto_primes::{
     is_prime, random_prime, sieve_and_find,
 };
 use crypto_bigint::U256;
-use rand_core::{OsRng, TryRngCore};
 
 let flavor = Flavor::Any;
 let factory = SmallFactorsSieveFactory::<U256>::new(flavor, 256, SetBits::TwoMsb).unwrap();
 let prime = sieve_and_find(
-    &mut OsRng.unwrap_mut(),
+    &mut rand::rng(),
     factory,
     |_rng, candidate| is_prime(flavor, candidate)
 ).unwrap().unwrap();

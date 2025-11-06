@@ -234,8 +234,8 @@ mod tests {
     use core::num::NonZero;
 
     use crypto_bigint::{Odd, RandomMod, U64, U128, U1024, U1536, Uint, Unsigned};
-    use rand_chacha::ChaCha8Rng;
-    use rand_core::{CryptoRng, OsRng, SeedableRng, TryRngCore};
+    use rand::rngs::ChaCha8Rng;
+    use rand_core::{CryptoRng, SeedableRng};
 
     #[cfg(feature = "tests-exhaustive")]
     use num_prime::nt_funcs::is_prime64;
@@ -252,11 +252,13 @@ mod tests {
 
     #[test]
     fn random_base_corner_cases() {
+        let mut rng = rand::rng();
+
         let mr = MillerRabin::new(Odd::new(U64::from(1u32)).unwrap());
-        assert!(mr.test_random_base(&mut OsRng.unwrap_mut()) == Primality::Composite);
+        assert!(mr.test_random_base(&mut rng) == Primality::Composite);
 
         let mr = MillerRabin::new(Odd::new(U64::from(3u32)).unwrap());
-        assert!(mr.test_random_base(&mut OsRng.unwrap_mut()) == Primality::Prime);
+        assert!(mr.test_random_base(&mut rng) == Primality::Prime);
     }
 
     fn is_spsp(num: u32) -> bool {

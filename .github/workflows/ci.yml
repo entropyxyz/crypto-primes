@@ -2,10 +2,10 @@ name: ci
 on:
   workflow_dispatch:
   pull_request:
-    paths-ignore: [README.md]
+    paths-ignore: [ README.md ]
   push:
     branches: master
-    paths-ignore: [README.md]
+    paths-ignore: [ README.md ]
 
 env:
   CARGO_INCREMENTAL: 0
@@ -143,6 +143,7 @@ jobs:
           components: rustfmt
           profile: minimal
           override: true
+      - run: rm .cargo/config.toml # HACK: remove rustdocflags to avoid breaking build
       - uses: obi1kenobi/cargo-semver-checks-action@v2
         with:
           package: crypto-primes

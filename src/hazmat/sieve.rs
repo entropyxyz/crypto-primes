@@ -402,8 +402,8 @@ mod tests {
 
     use crypto_bigint::{U64, U256};
     use num_prime::nt_funcs::factorize64;
-    use rand_chacha::ChaCha8Rng;
-    use rand_core::{OsRng, SeedableRng, TryRngCore};
+    use rand::rngs::ChaCha8Rng;
+    use rand_core::SeedableRng;
 
     use super::{SetBits, SmallFactorsSieve, SmallFactorsSieveFactory, random_odd_integer};
     use crate::{Error, Flavor, hazmat::precomputed::SMALL_PRIMES};
@@ -523,8 +523,9 @@ mod tests {
 
     #[test]
     fn random_below_max_length() {
+        let mut rng = rand::rng();
         for _ in 0..10 {
-            let r = random_odd_integer::<U64, _>(&mut OsRng.unwrap_mut(), NonZero::new(50).unwrap(), SetBits::Msb)
+            let r = random_odd_integer::<U64, _>(&mut rng, NonZero::new(50).unwrap(), SetBits::Msb)
                 .unwrap()
                 .get();
             assert_eq!(r.bits(), 50);
@@ -533,9 +534,8 @@ mod tests {
 
     #[test]
     fn random_odd_uint_too_many_bits() {
-        assert!(
-            random_odd_integer::<U64, _>(&mut OsRng.unwrap_mut(), NonZero::new(65).unwrap(), SetBits::Msb).is_err()
-        );
+        let mut rng = rand::rng();
+        assert!(random_odd_integer::<U64, _>(&mut rng, NonZero::new(65).unwrap(), SetBits::Msb).is_err());
     }
 
     #[test]
@@ -584,15 +584,15 @@ mod tests {
 
     #[test]
     fn set_bits() {
+        let mut rng = rand::rng();
+
         for _ in 0..10 {
-            let x =
-                random_odd_integer::<U64, _>(&mut OsRng.unwrap_mut(), NonZero::new(64).unwrap(), SetBits::Msb).unwrap();
+            let x = random_odd_integer::<U64, _>(&mut rng, NonZero::new(64).unwrap(), SetBits::Msb).unwrap();
             assert!(bool::from(x.bit(63)));
         }
 
         for _ in 0..10 {
-            let x = random_odd_integer::<U64, _>(&mut OsRng.unwrap_mut(), NonZero::new(64).unwrap(), SetBits::TwoMsb)
-                .unwrap();
+            let x = random_odd_integer::<U64, _>(&mut rng, NonZero::new(64).unwrap(), SetBits::TwoMsb).unwrap();
             assert!(bool::from(x.bit(63)));
             assert!(bool::from(x.bit(62)));
         }
@@ -600,19 +600,18 @@ mod tests {
         // 1 in 2^30 chance of spurious failure... good enough?
         assert!(
             (0..30)
-                .map(|_| {
-                    random_odd_integer::<U64, _>(&mut OsRng.unwrap_mut(), NonZero::new(64).unwrap(), SetBits::None)
-                        .unwrap()
-                })
+                .map(|_| { random_odd_integer::<U64, _>(&mut rng, NonZero::new(64).unwrap(), SetBits::None).unwrap() })
                 .any(|x| !bool::from(x.bit(63)))
         );
     }
 
     #[test]
     fn set_two_msb_small_bit_length() {
+        let mut rng = rand::rng();
+
         // Check that when technically there isn't a second most significant bit,
         // `random_odd_integer()` still returns a number.
-        let x = random_odd_integer::<U64, _>(&mut OsRng.unwrap_mut(), NonZero::new(1).unwrap(), SetBits::TwoMsb)
+        let x = random_odd_integer::<U64, _>(&mut rng, NonZero::new(1).unwrap(), SetBits::TwoMsb)
             .unwrap()
             .get();
         assert_eq!(x, U64::ONE);
