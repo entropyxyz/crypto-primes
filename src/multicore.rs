@@ -7,7 +7,7 @@ use rayon::iter::{ParallelBridge, ParallelIterator};
 use crate::{
     error::Error,
     hazmat::{SetBits, SieveFactory, SmallFactorsSieveFactory},
-    presets::{is_prime, Flavor},
+    presets::{Flavor, is_prime},
 };
 
 /// Sieves through the results of `sieve_factory` using a thread pool with `threadcount` threads,
@@ -117,7 +117,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crypto_bigint::{nlimbs, BoxedUint, U128};
+    use crypto_bigint::{BoxedUint, U128, nlimbs};
     use rand::rngs::ChaCha12Rng;
     use rand_core::SeedableRng;
 

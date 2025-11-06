@@ -589,9 +589,7 @@ where
     // Euler criterion: if `Q^((n+1)/2) != Q * (Q/n) mod n`, report `n` as composite.
     let q_jacobi = jacobi_symbol_vartime(abs_q, q_is_negative, &candidate);
     let t = match q_jacobi {
-        JacobiSymbol::Zero => {
-            unreachable!("we previously checked that either `Q = 1` or `gcd(Q, n) != 1")
-        }
+        JacobiSymbol::Zero => unreachable!("we previously checked that either `Q = 1` or `gcd(Q, n) != 1"),
         JacobiSymbol::One => q,
         JacobiSymbol::MinusOne => -q,
     };
@@ -722,9 +720,7 @@ mod tests {
             (BaseType::BruteForce, LucasCheck::ExtraStrong) => pseudoprimes::EXTRA_STRONG_LUCAS,
             (BaseType::AStar, LucasCheck::LucasV) => pseudoprimes::LUCAS_V,
             (BaseType::AStar, LucasCheck::Bpsw21) => &[],
-            _ => {
-                panic!("We do not have pseudoprimes listed for this combination of base and check")
-            }
+            _ => panic!("We do not have pseudoprimes listed for this combination of base and check"),
         };
 
         pseudoprimes.contains(&num)

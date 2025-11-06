@@ -41,9 +41,7 @@ where
     let bit_length = bit_length.get();
 
     let mut random = T::try_random_bits(rng, bit_length).map_err(|err| match err {
-        RandomBitsError::RandCore(_) => {
-            unreachable!("`rng` impls `CryptoRng` and therefore is infallible")
-        }
+        RandomBitsError::RandCore(_) => unreachable!("`rng` impls `CryptoRng` and therefore is infallible"),
         RandomBitsError::BitsPrecisionMismatch { .. } => {
             unreachable!("we are not requesting a specific `bits_precision`")
         }
