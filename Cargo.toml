@@ -22,7 +22,6 @@ glass_pumpkin = { version = "1", optional = true }
 
 [dev-dependencies]
 rand = { version = "0.10.0-rc.1", features = ["chacha"] }
-rand_core = { version = "0.10.0-rc.2", default-features = false }
 # need `crypto-bigint` with `alloc` to test `BoxedUint`
 crypto-bigint = { version = "0.7.0-pre.10", default-features = false, features = ["alloc"] }
 criterion = { version = "0.5", features = ["html_reports"] }
