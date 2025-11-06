@@ -73,9 +73,7 @@ use crypto_bigint::{Concat, NonZero, Split, Uint};
 ///
 /// [^Trudgian2014]: T. Trudgian, "Updating the error term in the prime number theorem",
 ///   [arXiv:1401.2689](https://arxiv.org/abs/1401.2689) (2014)
-pub fn estimate_primecount<const LIMBS: usize, const RHS_LIMBS: usize>(
-    x: &Uint<LIMBS>,
-) -> Uint<LIMBS>
+pub fn estimate_primecount<const LIMBS: usize, const RHS_LIMBS: usize>(x: &Uint<LIMBS>) -> Uint<LIMBS>
 where
     Uint<LIMBS>: Concat<Output = Uint<RHS_LIMBS>>,
     Uint<RHS_LIMBS>: Split<Output = Uint<LIMBS>>,
@@ -208,11 +206,7 @@ mod tests {
         assert_bit_difference(estimate, sage_est, 9);
     }
 
-    fn assert_bit_difference<const LIMBS: usize>(
-        candidate: Uint<LIMBS>,
-        reference: Uint<LIMBS>,
-        min_bit_diff: u32,
-    ) {
+    fn assert_bit_difference<const LIMBS: usize>(candidate: Uint<LIMBS>, reference: Uint<LIMBS>, min_bit_diff: u32) {
         let delta = if reference > candidate {
             reference - candidate
         } else {

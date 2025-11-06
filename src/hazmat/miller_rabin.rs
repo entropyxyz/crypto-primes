@@ -1,8 +1,6 @@
 //! Miller-Rabin primality test.
 
-use crypto_bigint::{
-    Limb, Monty, NonZero as CTNonZero, Odd, PowBoundedExp, RandomMod, Square, Unsigned,
-};
+use crypto_bigint::{Limb, Monty, NonZero as CTNonZero, Odd, PowBoundedExp, RandomMod, Square, Unsigned};
 use rand_core::CryptoRng;
 
 use super::{
@@ -128,8 +126,7 @@ impl<T: Unsigned + RandomMod> MillerRabin<T> {
 
         // The candidate is odd, so by now it is guaranteed to be >= 5.
         let range = self.candidate.wrapping_sub(&T::from(3u32));
-        let range_nonzero =
-            CTNonZero::new(range).expect("the range should be non-zero by construction");
+        let range_nonzero = CTNonZero::new(range).expect("the range should be non-zero by construction");
         // This should not overflow as long as `random_mod()` behaves according to the contract
         // (that is, returns a number within the given range).
         let random = T::random_mod(rng, &range_nonzero)
@@ -188,9 +185,7 @@ const fn pseudoprime_probability(k: u32, t: u32, cap_m: u32) -> f64 {
             // Note that we are using `two_powf_upper_bound()` which means we are getting a slightly larger result,
             // and therefore very slightly overestimating the resulting probability.
             // This means safety is not compromised.
-            s += two_powf_upper_bound(
-                (m - (m - 1) * (t as i32) - j) as f64 - (k - 1) as f64 / j as f64,
-            );
+            s += two_powf_upper_bound((m - (m - 1) * (t as i32) - j) as f64 - (k - 1) as f64 / j as f64);
             j += 1;
         }
         m += 1;
@@ -246,9 +241,7 @@ mod tests {
     use num_prime::nt_funcs::is_prime64;
 
     use super::{MillerRabin, minimum_mr_iterations};
-    use crate::hazmat::{
-        Primality, SetBits, SmallFactorsSieve, primes, pseudoprimes, random_odd_integer,
-    };
+    use crate::hazmat::{Primality, SetBits, SmallFactorsSieve, primes, pseudoprimes, random_odd_integer};
 
     #[test]
     fn miller_rabin_derived_traits() {
@@ -286,21 +279,14 @@ mod tests {
         let mut rng = ChaCha8Rng::from_seed(*b"01234567890123456789012345678901");
         for num in numbers.iter() {
             let base_2_false_positive = is_spsp(*num);
-            let actual_expected_result = if base_2_false_positive {
-                true
-            } else {
-                expected_result
-            };
+            let actual_expected_result = if base_2_false_positive { true } else { expected_result };
 
             // A random base MR test is expected to report a composite as a prime
             // with about 1/4 probability. So we're expecting less than
             // 35 out of 100 false positives, seems to work.
 
             let mr = MillerRabin::new(Odd::new(U64::from(*num)).unwrap());
-            assert_eq!(
-                mr.test_base_two().is_probably_prime(),
-                actual_expected_result
-            );
+            assert_eq!(mr.test_base_two().is_probably_prime(), actual_expected_result);
             let reported_prime = random_checks(&mut rng, &mr, 100);
             assert!(
                 reported_prime < 35,
@@ -312,9 +298,7 @@ mod tests {
     #[test]
     fn trivial() {
         let mut rng = ChaCha8Rng::from_seed(*b"01234567890123456789012345678901");
-        let start =
-            random_odd_integer::<U1024, _>(&mut rng, NonZero::new(1024).unwrap(), SetBits::Msb)
-                .unwrap();
+        let start = random_odd_integer::<U1024, _>(&mut rng, NonZero::new(1024).unwrap(), SetBits::Msb).unwrap();
         for num in SmallFactorsSieve::new(start.get(), NonZero::new(1024).unwrap(), false)
             .unwrap()
             .take(10)

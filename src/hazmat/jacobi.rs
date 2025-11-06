@@ -49,11 +49,7 @@ fn swap_short(j: JacobiSymbol, a: Word, p: Word) -> (JacobiSymbol, Word, Word) {
 }
 
 /// Returns the Jacobi symbol `(a/p)` given an odd `p`.
-pub(crate) fn jacobi_symbol_vartime<T>(
-    abs_a: Word,
-    a_is_negative: bool,
-    p_long: &Odd<T>,
-) -> JacobiSymbol
+pub(crate) fn jacobi_symbol_vartime<T>(abs_a: Word, a_is_negative: bool, p_long: &Odd<T>) -> JacobiSymbol
 where
     T: Unsigned,
 {
@@ -89,8 +85,7 @@ where
         let (result, a_long, p) = swap_long(result, a, p_long);
         // Can unwrap here, since `p` is swapped with `a`,
         // and `a` would be odd after `reduce_numerator()`.
-        let a = a_long
-            .rem_limb(CTNonZero::new(Limb::from(p)).expect("divisor should be non-zero here"));
+        let a = a_long.rem_limb(CTNonZero::new(Limb::from(p)).expect("divisor should be non-zero here"));
         (result, a.0, p)
     };
 
@@ -200,10 +195,7 @@ mod tests {
         let a = 2147483648;
         let a_is_negative = true;
         let p = Odd::new(U128::from_be_hex("000000007ffffffeffffffe28000003b")).unwrap(); // (2^31 - 1) * (2^64 - 59)
-        assert_eq!(
-            jacobi_symbol_vartime(a, a_is_negative, &p),
-            JacobiSymbol::One
-        );
+        assert_eq!(jacobi_symbol_vartime(a, a_is_negative, &p), JacobiSymbol::One);
         assert_eq!(jacobi_symbol_ref(a, a_is_negative, &p), JacobiSymbol::One);
     }
 

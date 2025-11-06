@@ -85,19 +85,10 @@ mod tests {
     #[test]
     fn corner_cases() {
         assert_eq!(gcd_vartime(&U128::from(0u64), NonZero::new(5).unwrap()), 5);
+        assert_eq!(gcd_vartime(&U128::from(1u64), NonZero::new(11 * 13 * 19).unwrap()), 1);
+        assert_eq!(gcd_vartime(&U128::from(7u64 * 11 * 13), NonZero::new(1).unwrap()), 1);
         assert_eq!(
-            gcd_vartime(&U128::from(1u64), NonZero::new(11 * 13 * 19).unwrap()),
-            1
-        );
-        assert_eq!(
-            gcd_vartime(&U128::from(7u64 * 11 * 13), NonZero::new(1).unwrap()),
-            1
-        );
-        assert_eq!(
-            gcd_vartime(
-                &U128::from(7u64 * 11 * 13),
-                NonZero::new(11 * 13 * 19).unwrap()
-            ),
+            gcd_vartime(&U128::from(7u64 * 11 * 13), NonZero::new(11 * 13 * 19).unwrap()),
             11 * 13
         );
     }

@@ -33,11 +33,7 @@ pub enum SetBits {
 ///
 /// Returns an error variant if `bit_length` is greater than the maximum allowed for `T`
 /// (applies to fixed-length types).
-pub fn random_odd_integer<T, R>(
-    rng: &mut R,
-    bit_length: NonZeroU32,
-    set_bits: SetBits,
-) -> Result<Odd<T>, Error>
+pub fn random_odd_integer<T, R>(rng: &mut R, bit_length: NonZeroU32, set_bits: SetBits) -> Result<Odd<T>, Error>
 where
     T: Unsigned + RandomBits,
     R: CryptoRng + ?Sized,
@@ -440,13 +436,10 @@ mod tests {
         let max_prime = SMALL_PRIMES[SMALL_PRIMES.len() - 1];
 
         let mut rng = ChaCha8Rng::from_seed(*b"01234567890123456789012345678901");
-        let start = random_odd_integer::<crypto_bigint::BoxedUint, _>(
-            &mut rng,
-            NonZero::new(32).unwrap(),
-            SetBits::Msb,
-        )
-        .unwrap()
-        .get();
+        let start =
+            random_odd_integer::<crypto_bigint::BoxedUint, _>(&mut rng, NonZero::new(32).unwrap(), SetBits::Msb)
+                .unwrap()
+                .get();
 
         for num in SmallFactorsSieve::new(start, NonZero::new(32).unwrap(), false)
             .unwrap()
@@ -465,13 +458,9 @@ mod tests {
     }
 
     fn check_sieve(start: u32, bit_length: u32, safe_prime: bool, reference: &[u32]) {
-        let test = SmallFactorsSieve::new(
-            U64::from(start),
-            NonZero::new(bit_length).unwrap(),
-            safe_prime,
-        )
-        .unwrap()
-        .collect::<Vec<_>>();
+        let test = SmallFactorsSieve::new(U64::from(start), NonZero::new(bit_length).unwrap(), safe_prime)
+            .unwrap()
+            .collect::<Vec<_>>();
         assert_eq!(test.len(), reference.len());
         for (x, y) in test.iter().zip(reference.iter()) {
             assert_eq!(x, &U64::from(*y));
@@ -548,10 +537,7 @@ mod tests {
     #[test]
     fn random_odd_uint_too_many_bits() {
         let mut rng = rand::rng();
-        assert!(
-            random_odd_integer::<U64, _>(&mut rng, NonZero::new(65).unwrap(), SetBits::Msb)
-                .is_err()
-        );
+        assert!(random_odd_integer::<U64, _>(&mut rng, NonZero::new(65).unwrap(), SetBits::Msb).is_err());
     }
 
     #[test]
@@ -572,8 +558,7 @@ mod tests {
     #[test]
     fn sieve_with_max_start() {
         let start = U64::MAX;
-        let mut sieve =
-            SmallFactorsSieve::new(start, NonZero::new(U64::BITS).unwrap(), false).unwrap();
+        let mut sieve = SmallFactorsSieve::new(start, NonZero::new(U64::BITS).unwrap(), false).unwrap();
         assert!(sieve.next().is_none());
     }
 
@@ -604,15 +589,12 @@ mod tests {
         let mut rng = rand::rng();
 
         for _ in 0..10 {
-            let x = random_odd_integer::<U64, _>(&mut rng, NonZero::new(64).unwrap(), SetBits::Msb)
-                .unwrap();
+            let x = random_odd_integer::<U64, _>(&mut rng, NonZero::new(64).unwrap(), SetBits::Msb).unwrap();
             assert!(bool::from(x.bit(63)));
         }
 
         for _ in 0..10 {
-            let x =
-                random_odd_integer::<U64, _>(&mut rng, NonZero::new(64).unwrap(), SetBits::TwoMsb)
-                    .unwrap();
+            let x = random_odd_integer::<U64, _>(&mut rng, NonZero::new(64).unwrap(), SetBits::TwoMsb).unwrap();
             assert!(bool::from(x.bit(63)));
             assert!(bool::from(x.bit(62)));
         }
@@ -620,10 +602,7 @@ mod tests {
         // 1 in 2^30 chance of spurious failure... good enough?
         assert!(
             (0..30)
-                .map(|_| {
-                    random_odd_integer::<U64, _>(&mut rng, NonZero::new(64).unwrap(), SetBits::None)
-                        .unwrap()
-                })
+                .map(|_| { random_odd_integer::<U64, _>(&mut rng, NonZero::new(64).unwrap(), SetBits::None).unwrap() })
                 .any(|x| !bool::from(x.bit(63)))
         );
     }
@@ -644,19 +623,17 @@ mod tests {
     fn platform_independence() {
         let mut rng = ChaCha8Rng::from_seed([7u8; 32]);
 
-        let x =
-            random_odd_integer::<U256, _>(&mut rng, NonZero::new(200).unwrap(), SetBits::TwoMsb)
-                .unwrap()
-                .get();
+        let x = random_odd_integer::<U256, _>(&mut rng, NonZero::new(200).unwrap(), SetBits::TwoMsb)
+            .unwrap()
+            .get();
         assert_eq!(
             x,
             U256::from_be_hex("00000000000000E94A74F9D90C0982D7D4F5378BDA8143E6391EBC3F59CBD0E5")
         );
 
-        let x =
-            random_odd_integer::<U256, _>(&mut rng, NonZero::new(220).unwrap(), SetBits::TwoMsb)
-                .unwrap()
-                .get();
+        let x = random_odd_integer::<U256, _>(&mut rng, NonZero::new(220).unwrap(), SetBits::TwoMsb)
+            .unwrap()
+            .get();
         assert_eq!(
             x,
             U256::from_be_hex("000000000E28CE6059E357411C67F6539AEF56F2B4653F0583D6A2195A9897BB")

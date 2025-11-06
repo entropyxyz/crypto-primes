@@ -38,13 +38,9 @@ where
     };
 
     threadpool.install(|| {
-        Ok(iter.par_bridge().find_map_any(|(mut rng, c)| {
-            if predicate(&mut rng, &c) {
-                Some(c)
-            } else {
-                None
-            }
-        }))
+        Ok(iter
+            .par_bridge()
+            .find_map_any(|(mut rng, c)| if predicate(&mut rng, &c) { Some(c) } else { None }))
     })
 }
 
@@ -93,9 +89,7 @@ where
             self.sieve = self
                 .sieve_factory
                 .make_sieve(self.rng, Some(&self.sieve))
-                .expect(
-                    "the first attempt to make a sieve succeeded, so the next ones should too",
-                )?;
+                .expect("the first attempt to make a sieve succeeded, so the next ones should too")?;
         }
     }
 }
@@ -116,14 +110,9 @@ where
 {
     let factory = SmallFactorsSieveFactory::new(flavor, bit_length, SetBits::Msb)
         .unwrap_or_else(|err| panic!("Error creating the sieve: {err}"));
-    sieve_and_find(
-        rng,
-        factory,
-        |_rng, candidate| is_prime(flavor, candidate),
-        threadcount,
-    )
-    .unwrap_or_else(|err| panic!("Error generating random candidates: {}", err))
-    .expect("will produce a result eventually")
+    sieve_and_find(rng, factory, |_rng, candidate| is_prime(flavor, candidate), threadcount)
+        .unwrap_or_else(|err| panic!("Error generating random candidates: {}", err))
+        .expect("will produce a result eventually")
 }
 
 #[cfg(test)]

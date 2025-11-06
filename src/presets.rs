@@ -4,8 +4,7 @@ use rand_core::CryptoRng;
 use crate::{
     generic::sieve_and_find,
     hazmat::{
-        AStarBase, LucasCheck, MillerRabin, Primality, SetBits, SmallFactorsSieveFactory,
-        equals_primitive, lucas_test,
+        AStarBase, LucasCheck, MillerRabin, Primality, SetBits, SmallFactorsSieveFactory, equals_primitive, lucas_test,
     },
 };
 
@@ -122,9 +121,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crypto_bigint::{
-        BoxedUint, CheckedAdd, RandomMod, U64, U128, Uint, Unsigned, Word, nlimbs,
-    };
+    use crypto_bigint::{BoxedUint, CheckedAdd, RandomMod, U64, U128, Uint, Unsigned, Word, nlimbs};
     use num_prime::nt_funcs::is_prime64;
 
     use super::{Flavor, is_prime, random_prime};
@@ -177,14 +174,8 @@ mod tests {
             assert!(!fips_is_prime(Flavor::Any, num));
         }
 
-        assert!(!is_prime(
-            Flavor::Any,
-            &pseudoprimes::LARGE_CARMICHAEL_NUMBER
-        ));
-        assert!(!fips_is_prime(
-            Flavor::Any,
-            &pseudoprimes::LARGE_CARMICHAEL_NUMBER
-        ));
+        assert!(!is_prime(Flavor::Any, &pseudoprimes::LARGE_CARMICHAEL_NUMBER));
+        assert!(!fips_is_prime(Flavor::Any, &pseudoprimes::LARGE_CARMICHAEL_NUMBER));
     }
 
     fn test_cunningham_chain<const L: usize>(length: usize, num: &Uint<L>) {
@@ -199,10 +190,7 @@ mod tests {
                 assert!(fips_is_prime(Flavor::Safe, &next));
             }
 
-            next = next
-                .wrapping_shl_vartime(1)
-                .checked_add(&Uint::<L>::ONE)
-                .unwrap();
+            next = next.wrapping_shl_vartime(1).checked_add(&Uint::<L>::ONE).unwrap();
         }
 
         // The chain ended.
@@ -311,10 +299,7 @@ mod tests {
         // so the initial sieving cannot tell if it is prime or not,
         // and a full primality test is run.
         assert!(!is_prime(Flavor::Safe, &U64::from(17881u32 * 17891u32)));
-        assert!(!fips_is_prime(
-            Flavor::Safe,
-            &U64::from(17881u32 * 17891u32)
-        ));
+        assert!(!fips_is_prime(Flavor::Safe, &U64::from(17881u32 * 17891u32)));
     }
 
     #[test]
@@ -400,10 +385,7 @@ mod tests_openssl {
         for _ in 0..100 {
             let p: U128 = random_prime(&mut rng, Flavor::Any, 128);
             let p_bn = to_openssl(&p);
-            assert!(
-                openssl_is_prime(&p_bn, &mut ctx),
-                "OpenSSL reports {p} as composite",
-            );
+            assert!(openssl_is_prime(&p_bn, &mut ctx), "OpenSSL reports {p} as composite",);
         }
 
         let mr_iterations = minimum_mr_iterations(U128::BITS, 100).unwrap();
@@ -422,9 +404,7 @@ mod tests_openssl {
 
         // Generate random numbers, check if our test agrees with OpenSSL
         for _ in 0..100 {
-            let p =
-                random_odd_integer::<U128, _>(&mut rng, NonZero::new(128).unwrap(), SetBits::Msb)
-                    .unwrap();
+            let p = random_odd_integer::<U128, _>(&mut rng, NonZero::new(128).unwrap(), SetBits::Msb).unwrap();
             let p_bn = to_openssl(&p);
             let expected = openssl_is_prime(&p_bn, &mut ctx);
 
@@ -486,9 +466,7 @@ mod tests_gmp {
 
         // Generate primes with GMP, check them
         for _ in 0..100 {
-            let start =
-                random_odd_integer::<U128, _>(&mut rng, NonZero::new(128).unwrap(), SetBits::Msb)
-                    .unwrap();
+            let start = random_odd_integer::<U128, _>(&mut rng, NonZero::new(128).unwrap(), SetBits::Msb).unwrap();
             let start_bn = to_gmp(&start);
             let p_bn = start_bn.next_prime();
             let p = from_gmp(&p_bn);
@@ -501,9 +479,7 @@ mod tests_gmp {
 
         // Generate random numbers, check if our test agrees with GMP
         for _ in 0..100 {
-            let p =
-                random_odd_integer::<U128, _>(&mut rng, NonZero::new(128).unwrap(), SetBits::Msb)
-                    .unwrap();
+            let p = random_odd_integer::<U128, _>(&mut rng, NonZero::new(128).unwrap(), SetBits::Msb).unwrap();
             let p_bn = to_gmp(&p);
             let expected = gmp_is_prime(&p_bn);
 
