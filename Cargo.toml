@@ -65,4 +65,4 @@ harness = false
 
 [patch.crates-io]
 # https://github.com/rust-random/core/pull/17
-rand_core = { git = "https://github.com/baloo/rand-core.git", branch = "baloo/seedablerng/fork" }
+rand_core = { git = "https://github.com/rust-random/core.git" }
