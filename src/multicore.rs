@@ -83,7 +83,7 @@ where
     fn next(&mut self) -> Option<Self::Item> {
         loop {
             if let Some(result) = self.sieve.next() {
-                return Some((R::from_rng(self.rng), result));
+                return Some((self.rng.fork(), result));
             }
 
             self.sieve = self
