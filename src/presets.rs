@@ -133,7 +133,7 @@ mod tests {
     fn fips_is_prime<T: Unsigned + RandomMod>(flavor: Flavor, num: &T) -> bool {
         let mut rng = rand::rng();
         let mr_iterations = minimum_mr_iterations(128, 100).unwrap();
-        fips::is_prime(&mut rng, flavor, num, mr_iterations, false)
+        fips::is_prime(&mut rng, flavor, num, mr_iterations, false, false)
     }
 
     fn test_large_primes<const L: usize>(nums: &[Uint<L>]) {
