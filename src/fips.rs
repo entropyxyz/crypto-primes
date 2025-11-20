@@ -18,6 +18,7 @@ use crate::{
 /// Performed checks:
 /// - `mr_iterations` of Miller-Rabin check with random bases;
 /// - Regular Lucas check with Selfridge base (see [`SelfridgeBase`] for details), if `add_lucas_test` is `true`.
+/// - Trial division as explained in Appendix B.3, if `add_trial_division_test` is `true`.
 ///
 /// See [`MillerRabin`] and [`lucas_test`] for more details about the checks;
 /// use [`minimum_mr_iterations`](`crate::hazmat::minimum_mr_iterations`)
