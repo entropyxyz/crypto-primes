@@ -36,18 +36,6 @@ pub fn is_prime<T>(
 where
     T: Unsigned + RandomMod,
 {
-    if add_trial_division_test {
-        let sieve = SmallFactorsSieve::new(
-            candidate.clone(),
-            NonZero::new(candidate.bits()).unwrap(),
-            flavor.eq(&Flavor::Safe),
-        )
-        .unwrap();
-        if sieve.current_is_composite() {
-            return true;
-        }
-    }
-
     match flavor {
         Flavor::Any => {}
         Flavor::Safe => return is_safe_prime(rng, candidate, mr_iterations, add_lucas_test, add_trial_division_test),
@@ -59,6 +47,18 @@ where
 
     if equals_primitive(candidate, 2) {
         return true;
+    }
+
+    if add_trial_division_test {
+        let sieve = SmallFactorsSieve::new(
+            candidate.clone(),
+            NonZero::new(candidate.bits()).unwrap(),
+            flavor.eq(&Flavor::Safe),
+        )
+        .unwrap();
+        if sieve.current_is_composite() {
+            return false;
+        }
     }
 
     let odd_candidate: Odd<T> = match Odd::new(candidate.clone()).into() {
