@@ -228,7 +228,7 @@ where
     }
 
     // Returns `true` if the current `base + incr` is divisible by any of the small primes.
-    pub fn current_is_composite(&self) -> bool {
+    pub(crate) fn current_is_composite(&self) -> bool {
         self.residues.iter().enumerate().any(|(i, m)| {
             let d = SMALL_PRIMES[i] as Residue;
             let r = (*m as Residue + self.incr) % d;
