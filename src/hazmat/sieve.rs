@@ -150,7 +150,7 @@ where
         }
 
         // Only calculate residues by primes up to and not including `start`, because when we only
-        // have the resiude, we cannot distinguish between a prime itself and a multiple of that
+        // have the residue, we cannot distinguish between a prime itself and a multiple of that
         // prime.
         let residues_len = if T::from(LAST_SMALL_PRIME) <= start {
             SMALL_PRIMES.len()
