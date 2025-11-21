@@ -41,7 +41,7 @@ where
         Flavor::Safe => return is_safe_prime(rng, candidate, mr_iterations, add_lucas_test, add_trial_division_test),
     }
 
-    if equals_primitive(candidate, 1) {
+    if equals_primitive(candidate, 0) || equals_primitive(candidate, 1) {
         return false;
     }
 
@@ -49,13 +49,18 @@ where
         return true;
     }
 
+    if candidate.bits() == 0 {
+        return false;
+    }
+
     if add_trial_division_test {
-        let sieve = SmallFactorsSieve::new(
+        let mut sieve = SmallFactorsSieve::new(
             candidate.clone(),
             NonZero::new(candidate.bits()).unwrap(),
             flavor.eq(&Flavor::Safe),
         )
         .unwrap();
+        sieve.update_residues();
         if sieve.current_is_composite() {
             return false;
         }

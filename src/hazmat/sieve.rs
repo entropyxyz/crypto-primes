@@ -174,7 +174,7 @@ where
         })
     }
 
-    fn update_residues(&mut self) -> bool {
+    pub(crate) fn update_residues(&mut self) -> bool {
         if self.incr_limit != 0 && self.incr <= self.incr_limit {
             return true;
         }
