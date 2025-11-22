@@ -234,13 +234,27 @@ fn bench_presets(c: &mut Criterion) {
 
     let iters = minimum_mr_iterations(1024, 128).unwrap();
 
-    group.bench_function("(U1024) Prime test (FIPS, 1/2^128 failure bound)", |b| {
-        b.iter_batched(
-            || random_odd_uint::<U1024, _>(&mut rng.clone(), 1024),
-            |num| fips::is_prime(&mut rng.clone(), Flavor::Any, num.as_ref(), iters, false),
-            BatchSize::SmallInput,
-        )
-    });
+    group.bench_function(
+        "(U1024) Prime test (FIPS, 1/2^128 failure bound) with no trial division",
+        |b| {
+            b.iter_batched(
+                || random_odd_uint::<U1024, _>(&mut rng.clone(), 1024),
+                |num| fips::is_prime(&mut rng.clone(), Flavor::Any, num.as_ref(), iters, false, false),
+                BatchSize::SmallInput,
+            )
+        },
+    );
+
+    group.bench_function(
+        "(U1024) Prime test (FIPS, 1/2^128 failure bound) with trial division",
+        |b| {
+            b.iter_batched(
+                || random_odd_uint::<U1024, _>(&mut rng.clone(), 1024),
+                |num| fips::is_prime(&mut rng.clone(), Flavor::Any, num.as_ref(), iters, false, true),
+                BatchSize::SmallInput,
+            )
+        },
+    );
 
     group.bench_function("(U128) Safe prime test", |b| {
         b.iter_batched(

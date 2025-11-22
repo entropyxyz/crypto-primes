@@ -133,13 +133,20 @@ mod tests {
     fn fips_is_prime<T: Unsigned + RandomMod>(flavor: Flavor, num: &T) -> bool {
         let mut rng = rand::rng();
         let mr_iterations = minimum_mr_iterations(128, 100).unwrap();
-        fips::is_prime(&mut rng, flavor, num, mr_iterations, false)
+        fips::is_prime(&mut rng, flavor, num, mr_iterations, false, false)
+    }
+
+    fn fips_is_prime_trial_division<T: Unsigned + RandomMod>(flavor: Flavor, num: &T) -> bool {
+        let mut rng = rand::rng();
+        let mr_iterations = minimum_mr_iterations(128, 100).unwrap();
+        fips::is_prime(&mut rng, flavor, num, mr_iterations, false, true)
     }
 
     fn test_large_primes<const L: usize>(nums: &[Uint<L>]) {
         for num in nums {
             assert!(is_prime(Flavor::Any, num));
             assert!(fips_is_prime(Flavor::Any, num));
+            assert!(fips_is_prime_trial_division(Flavor::Any, num));
         }
     }
 
@@ -156,6 +163,7 @@ mod tests {
         for num in nums {
             assert!(!is_prime(Flavor::Any, &U64::from(*num)));
             assert!(!fips_is_prime(Flavor::Any, &U64::from(*num)));
+            assert!(!fips_is_prime_trial_division(Flavor::Any, &U64::from(*num)));
         }
     }
 
@@ -172,10 +180,15 @@ mod tests {
         for num in pseudoprimes::STRONG_FIBONACCI {
             assert!(!is_prime(Flavor::Any, num));
             assert!(!fips_is_prime(Flavor::Any, num));
+            assert!(!fips_is_prime_trial_division(Flavor::Any, num));
         }
 
         assert!(!is_prime(Flavor::Any, &pseudoprimes::LARGE_CARMICHAEL_NUMBER));
         assert!(!fips_is_prime(Flavor::Any, &pseudoprimes::LARGE_CARMICHAEL_NUMBER));
+        assert!(!fips_is_prime_trial_division(
+            Flavor::Any,
+            &pseudoprimes::LARGE_CARMICHAEL_NUMBER
+        ));
     }
 
     fn test_cunningham_chain<const L: usize>(length: usize, num: &Uint<L>) {
@@ -183,11 +196,13 @@ mod tests {
         for i in 0..length {
             assert!(is_prime(Flavor::Any, &next));
             assert!(fips_is_prime(Flavor::Any, &next));
+            assert!(fips_is_prime_trial_division(Flavor::Any, &next));
 
             // The start of the chain isn't a safe prime by definition
             if i > 0 {
                 assert!(is_prime(Flavor::Safe, &next));
                 assert!(fips_is_prime(Flavor::Safe, &next));
+                assert!(fips_is_prime_trial_division(Flavor::Safe, &next));
             }
 
             next = next.wrapping_shl_vartime(1).checked_add(&Uint::<L>::ONE).unwrap();
@@ -196,6 +211,7 @@ mod tests {
         // The chain ended.
         assert!(!is_prime(Flavor::Any, &next));
         assert!(!fips_is_prime(Flavor::Any, &next));
+        assert!(!fips_is_prime_trial_division(Flavor::Any, &next));
     }
 
     #[test]
@@ -217,6 +233,7 @@ mod tests {
             assert!(p.bits_vartime() == bit_length);
             assert!(is_prime(Flavor::Any, &p));
             assert!(fips_is_prime(Flavor::Any, &p));
+            assert!(fips_is_prime_trial_division(Flavor::Any, &p));
         }
     }
 
@@ -230,6 +247,7 @@ mod tests {
             assert!(p.to_words().len() == nlimbs!(bit_length));
             assert!(is_prime(Flavor::Any, &p));
             assert!(fips_is_prime(Flavor::Any, &p));
+            assert!(fips_is_prime_trial_division(Flavor::Any, &p));
         }
     }
 
@@ -242,6 +260,7 @@ mod tests {
             assert!(p.bits_vartime() == bit_length);
             assert!(is_prime(Flavor::Safe, &p));
             assert!(fips_is_prime(Flavor::Safe, &p));
+            assert!(fips_is_prime_trial_division(Flavor::Safe, &p));
         }
     }
 
@@ -255,6 +274,7 @@ mod tests {
             assert!(p.to_words().len() == nlimbs!(bit_length));
             assert!(is_prime(Flavor::Safe, &p));
             assert!(fips_is_prime(Flavor::Safe, &p));
+            assert!(fips_is_prime_trial_division(Flavor::Safe, &p));
         }
     }
 
@@ -284,7 +304,19 @@ mod tests {
                 "num={num}, expected={is_prime_ref}, actual={is_prime_test}"
             );
 
+            let is_prime_test = fips_is_prime_trial_division(Flavor::Any, &num_uint);
+            assert_eq!(
+                is_prime_ref, is_prime_test,
+                "num={num}, expected={is_prime_ref}, actual={is_prime_test}"
+            );
+
             let is_safe_prime_test = fips_is_prime(Flavor::Safe, &num_uint);
+            assert_eq!(
+                is_safe_prime_ref, is_safe_prime_test,
+                "num={num}, expected={is_safe_prime_ref}, actual={is_safe_prime_test}"
+            );
+
+            let is_safe_prime_test = fips_is_prime_trial_division(Flavor::Safe, &num_uint);
             assert_eq!(
                 is_safe_prime_ref, is_safe_prime_test,
                 "num={num}, expected={is_safe_prime_ref}, actual={is_safe_prime_test}"
@@ -300,6 +332,10 @@ mod tests {
         // and a full primality test is run.
         assert!(!is_prime(Flavor::Safe, &U64::from(17881u32 * 17891u32)));
         assert!(!fips_is_prime(Flavor::Safe, &U64::from(17881u32 * 17891u32)));
+        assert!(!fips_is_prime_trial_division(
+            Flavor::Safe,
+            &U64::from(17881u32 * 17891u32)
+        ));
     }
 
     #[test]
@@ -397,7 +433,11 @@ mod tests_openssl {
             let p = from_openssl(&p_bn);
             assert!(is_prime(Flavor::Any, &p), "we report {p} as composite");
             assert!(
-                fips::is_prime(&mut rng, Flavor::Any, &p, mr_iterations, false),
+                fips::is_prime(&mut rng, Flavor::Any, &p, mr_iterations, false, false),
+                "we report {p} as composite"
+            );
+            assert!(
+                fips::is_prime(&mut rng, Flavor::Any, &p, mr_iterations, false, true),
                 "we report {p} as composite"
             );
         }
@@ -414,7 +454,13 @@ mod tests_openssl {
                 "difference between OpenSSL and us: OpenSSL reports {expected}, we report {actual}",
             );
 
-            let actual = fips::is_prime(&mut rng, Flavor::Any, p.as_ref(), mr_iterations, false);
+            let actual = fips::is_prime(&mut rng, Flavor::Any, p.as_ref(), mr_iterations, false, false);
+            assert_eq!(
+                actual, expected,
+                "difference between OpenSSL and us: OpenSSL reports {expected}, we report {actual}",
+            );
+
+            let actual = fips::is_prime(&mut rng, Flavor::Any, p.as_ref(), mr_iterations, false, true);
             assert_eq!(
                 actual, expected,
                 "difference between OpenSSL and us: OpenSSL reports {expected}, we report {actual}",
@@ -472,7 +518,11 @@ mod tests_gmp {
             let p = from_gmp(&p_bn);
             assert!(is_prime(Flavor::Any, &p), "we report {p} as composite");
             assert!(
-                fips::is_prime(&mut rng, Flavor::Any, &p, mr_iterations, false),
+                fips::is_prime(&mut rng, Flavor::Any, &p, mr_iterations, false, false),
+                "we report {p} as composite"
+            );
+            assert!(
+                fips::is_prime(&mut rng, Flavor::Any, &p, mr_iterations, false, true),
                 "we report {p} as composite"
             );
         }
@@ -489,7 +539,13 @@ mod tests_gmp {
                 "difference between GMP and us: GMP reports {expected}, we report {actual}",
             );
 
-            let actual = fips::is_prime(&mut rng, Flavor::Any, p.as_ref(), mr_iterations, false);
+            let actual = fips::is_prime(&mut rng, Flavor::Any, p.as_ref(), mr_iterations, false, false);
+            assert_eq!(
+                actual, expected,
+                "difference between GMP and us: GMP reports {expected}, we report {actual}",
+            );
+
+            let actual = fips::is_prime(&mut rng, Flavor::Any, p.as_ref(), mr_iterations, false, true);
             assert_eq!(
                 actual, expected,
                 "difference between GMP and us: GMP reports {expected}, we report {actual}",

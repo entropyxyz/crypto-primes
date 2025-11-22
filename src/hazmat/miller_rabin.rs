@@ -24,7 +24,7 @@ use super::{
 pub struct MillerRabin<T: Unsigned> {
     // The odd number that may or may not be a prime.
     candidate: T,
-    /// The number of bits necessesary to represent the candidate. Note: this is not the number of
+    /// The number of bits necessary to represent the candidate. Note: this is not the number of
     /// bits used by a `T` in memory.
     bits: u32,
     /// Pre-computed parameters for the Montgomery form of `T`.

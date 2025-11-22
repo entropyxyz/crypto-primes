@@ -2,11 +2,13 @@
 //!
 //! [^FIPS]: FIPS-186.5 standard, <https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.186-5.pdf>
 
+use core::num::NonZero;
+
 use crypto_bigint::{Odd, RandomMod, Unsigned};
 use rand_core::CryptoRng;
 
 use crate::{
-    hazmat::{LucasCheck, MillerRabin, Primality, SelfridgeBase, equals_primitive, lucas_test},
+    hazmat::{LucasCheck, MillerRabin, Primality, SelfridgeBase, SmallFactorsSieve, equals_primitive, lucas_test},
     presets::Flavor,
 };
 
@@ -16,6 +18,7 @@ use crate::{
 /// Performed checks:
 /// - `mr_iterations` of Miller-Rabin check with random bases;
 /// - Regular Lucas check with Selfridge base (see [`SelfridgeBase`] for details), if `add_lucas_test` is `true`.
+/// - Trial division as explained in Appendix B.3, if `add_trial_division_test` is `true`.
 ///
 /// See [`MillerRabin`] and [`lucas_test`] for more details about the checks;
 /// use [`minimum_mr_iterations`](`crate::hazmat::minimum_mr_iterations`)
@@ -28,21 +31,40 @@ pub fn is_prime<T>(
     candidate: &T,
     mr_iterations: usize,
     add_lucas_test: bool,
+    add_trial_division_test: bool,
 ) -> bool
 where
     T: Unsigned + RandomMod,
 {
     match flavor {
         Flavor::Any => {}
-        Flavor::Safe => return is_safe_prime(rng, candidate, mr_iterations, add_lucas_test),
+        Flavor::Safe => return is_safe_prime(rng, candidate, mr_iterations, add_lucas_test, add_trial_division_test),
     }
 
-    if equals_primitive(candidate, 1) {
+    if equals_primitive(candidate, 0) || equals_primitive(candidate, 1) {
         return false;
     }
 
     if equals_primitive(candidate, 2) {
         return true;
+    }
+
+    let canditate_bits = match NonZero::new(candidate.bits()) {
+        Some(x) => x,
+        None => return false,
+    };
+
+    if add_trial_division_test {
+        let mut sieve = SmallFactorsSieve::new(
+            candidate.clone(),
+            canditate_bits,
+            flavor.eq(&Flavor::Safe),
+        )
+        .expect("canditate_bits is always less than or equal to candidate.bits_precision(), which is the only way to get an error from this function");
+        sieve.update_residues();
+        if sieve.current_is_composite() {
+            return false;
+        }
     }
 
     let odd_candidate: Odd<T> = match Odd::new(candidate.clone()).into() {
@@ -82,6 +104,7 @@ fn is_safe_prime<T>(
     candidate: &T,
     mr_iterations: usize,
     add_lucas_test: bool,
+    add_trial_division_test: bool,
 ) -> bool
 where
     T: Unsigned + RandomMod,
@@ -100,12 +123,19 @@ where
         return false;
     }
 
-    is_prime(rng, Flavor::Any, candidate, mr_iterations, add_lucas_test)
-        && is_prime(
-            rng,
-            Flavor::Any,
-            &candidate.wrapping_shr_vartime(1),
-            mr_iterations,
-            add_lucas_test,
-        )
+    is_prime(
+        rng,
+        Flavor::Any,
+        candidate,
+        mr_iterations,
+        add_lucas_test,
+        add_trial_division_test,
+    ) && is_prime(
+        rng,
+        Flavor::Any,
+        &candidate.wrapping_shr_vartime(1),
+        mr_iterations,
+        add_lucas_test,
+        add_trial_division_test,
+    )
 }

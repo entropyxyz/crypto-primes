@@ -150,7 +150,7 @@ where
         }
 
         // Only calculate residues by primes up to and not including `start`, because when we only
-        // have the resiude, we cannot distinguish between a prime itself and a multiple of that
+        // have the residue, we cannot distinguish between a prime itself and a multiple of that
         // prime.
         let residues_len = if T::from(LAST_SMALL_PRIME) <= start {
             SMALL_PRIMES.len()
@@ -174,7 +174,7 @@ where
         })
     }
 
-    fn update_residues(&mut self) -> bool {
+    pub(crate) fn update_residues(&mut self) -> bool {
         if self.incr_limit != 0 && self.incr <= self.incr_limit {
             return true;
         }
@@ -228,7 +228,7 @@ where
     }
 
     // Returns `true` if the current `base + incr` is divisible by any of the small primes.
-    fn current_is_composite(&self) -> bool {
+    pub(crate) fn current_is_composite(&self) -> bool {
         self.residues.iter().enumerate().any(|(i, m)| {
             let d = SMALL_PRIMES[i] as Residue;
             let r = (*m as Residue + self.incr) % d;
