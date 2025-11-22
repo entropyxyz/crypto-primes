@@ -9,9 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Added an `add_trial_division_test` argument to `fips::is_prime()`. ([#99])
+- `fips::is_prime()` now takes a `FipsOptions` structure for additional options. ([#100])
 
 
 [#99]: https://github.com/entropyxyz/crypto-primes/pull/99
+[#100]: https://github.com/entropyxyz/crypto-primes/pull/100
 
 
 ## [0.7.0-pre.4] - 2025-11-06
