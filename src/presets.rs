@@ -133,13 +133,22 @@ mod tests {
     fn fips_is_prime<T: Unsigned + RandomMod>(flavor: Flavor, num: &T) -> bool {
         let mut rng = rand::rng();
         let mr_iterations = minimum_mr_iterations(128, 100).unwrap();
-        fips::is_prime(&mut rng, flavor, num, mr_iterations, false, false)
+        fips::is_prime(&mut rng, flavor, num, mr_iterations, fips::FipsOptions::default())
     }
 
     fn fips_is_prime_trial_division<T: Unsigned + RandomMod>(flavor: Flavor, num: &T) -> bool {
         let mut rng = rand::rng();
         let mr_iterations = minimum_mr_iterations(128, 100).unwrap();
-        fips::is_prime(&mut rng, flavor, num, mr_iterations, false, true)
+        fips::is_prime(
+            &mut rng,
+            flavor,
+            num,
+            mr_iterations,
+            fips::FipsOptions {
+                add_trial_division_test: true,
+                ..Default::default()
+            },
+        )
     }
 
     fn test_large_primes<const L: usize>(nums: &[Uint<L>]) {
@@ -433,11 +442,20 @@ mod tests_openssl {
             let p = from_openssl(&p_bn);
             assert!(is_prime(Flavor::Any, &p), "we report {p} as composite");
             assert!(
-                fips::is_prime(&mut rng, Flavor::Any, &p, mr_iterations, false, false),
+                fips::is_prime(&mut rng, Flavor::Any, &p, mr_iterations, fips::FipsOptions::default()),
                 "we report {p} as composite"
             );
             assert!(
-                fips::is_prime(&mut rng, Flavor::Any, &p, mr_iterations, false, true),
+                fips::is_prime(
+                    &mut rng,
+                    Flavor::Any,
+                    &p,
+                    mr_iterations,
+                    fips::FipsOptions {
+                        add_trial_division_test: true,
+                        ..Default::default()
+                    }
+                ),
                 "we report {p} as composite"
             );
         }
@@ -454,13 +472,28 @@ mod tests_openssl {
                 "difference between OpenSSL and us: OpenSSL reports {expected}, we report {actual}",
             );
 
-            let actual = fips::is_prime(&mut rng, Flavor::Any, p.as_ref(), mr_iterations, false, false);
+            let actual = fips::is_prime(
+                &mut rng,
+                Flavor::Any,
+                p.as_ref(),
+                mr_iterations,
+                fips::FipsOptions::default(),
+            );
             assert_eq!(
                 actual, expected,
                 "difference between OpenSSL and us: OpenSSL reports {expected}, we report {actual}",
             );
 
-            let actual = fips::is_prime(&mut rng, Flavor::Any, p.as_ref(), mr_iterations, false, true);
+            let actual = fips::is_prime(
+                &mut rng,
+                Flavor::Any,
+                p.as_ref(),
+                mr_iterations,
+                fips::FipsOptions {
+                    add_trial_division_test: true,
+                    ..Default::default()
+                },
+            );
             assert_eq!(
                 actual, expected,
                 "difference between OpenSSL and us: OpenSSL reports {expected}, we report {actual}",
@@ -518,11 +551,20 @@ mod tests_gmp {
             let p = from_gmp(&p_bn);
             assert!(is_prime(Flavor::Any, &p), "we report {p} as composite");
             assert!(
-                fips::is_prime(&mut rng, Flavor::Any, &p, mr_iterations, false, false),
+                fips::is_prime(&mut rng, Flavor::Any, &p, mr_iterations, fips::FipsOptions::default()),
                 "we report {p} as composite"
             );
             assert!(
-                fips::is_prime(&mut rng, Flavor::Any, &p, mr_iterations, false, true),
+                fips::is_prime(
+                    &mut rng,
+                    Flavor::Any,
+                    &p,
+                    mr_iterations,
+                    fips::FipsOptions {
+                        add_trial_division_test: true,
+                        ..Default::default()
+                    }
+                ),
                 "we report {p} as composite"
             );
         }
@@ -539,13 +581,28 @@ mod tests_gmp {
                 "difference between GMP and us: GMP reports {expected}, we report {actual}",
             );
 
-            let actual = fips::is_prime(&mut rng, Flavor::Any, p.as_ref(), mr_iterations, false, false);
+            let actual = fips::is_prime(
+                &mut rng,
+                Flavor::Any,
+                p.as_ref(),
+                mr_iterations,
+                fips::FipsOptions::default(),
+            );
             assert_eq!(
                 actual, expected,
                 "difference between GMP and us: GMP reports {expected}, we report {actual}",
             );
 
-            let actual = fips::is_prime(&mut rng, Flavor::Any, p.as_ref(), mr_iterations, false, true);
+            let actual = fips::is_prime(
+                &mut rng,
+                Flavor::Any,
+                p.as_ref(),
+                mr_iterations,
+                fips::FipsOptions {
+                    add_trial_division_test: true,
+                    ..Default::default()
+                },
+            );
             assert_eq!(
                 actual, expected,
                 "difference between GMP and us: GMP reports {expected}, we report {actual}",
