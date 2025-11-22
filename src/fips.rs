@@ -49,17 +49,18 @@ where
         return true;
     }
 
-    if candidate.bits() == 0 {
-        return false;
-    }
+    let canditate_bits = match NonZero::new(candidate.bits()) {
+        Some(x) => x,
+        None => return false,
+    };
 
     if add_trial_division_test {
         let mut sieve = SmallFactorsSieve::new(
             candidate.clone(),
-            NonZero::new(candidate.bits()).unwrap(),
+            canditate_bits,
             flavor.eq(&Flavor::Safe),
         )
-        .unwrap();
+        .expect("canditate_bits is always less than or equal to candidate.bits_precision(), which is the only way to get an error from this function");
         sieve.update_residues();
         if sieve.current_is_composite() {
             return false;
