@@ -1,10 +1,11 @@
-use crypto_bigint::{Odd, RandomBits, RandomMod, Unsigned};
+use crypto_bigint::{RandomBits, RandomMod, Unsigned};
 use rand_core::CryptoRng;
 
 use crate::{
     generic::sieve_and_find,
     hazmat::{
-        AStarBase, LucasCheck, MillerRabin, Primality, SetBits, SmallFactorsSieveFactory, equals_primitive, lucas_test,
+        AStarBase, ConventionsTestResult, LucasCheck, MillerRabin, Primality, SetBits, SmallFactorsSieveFactory,
+        conventions_test, equals_primitive, lucas_test,
     },
 };
 
@@ -69,17 +70,10 @@ where
         Flavor::Safe => return is_safe_prime(candidate),
     }
 
-    if equals_primitive(candidate, 1) {
-        return false;
-    }
-
-    if equals_primitive(candidate, 2) {
-        return true;
-    }
-
-    let odd_candidate: Odd<T> = match Odd::new(candidate.clone()).into() {
-        Some(x) => x,
-        None => return false,
+    let odd_candidate = match conventions_test(candidate.clone()) {
+        ConventionsTestResult::Prime => return true,
+        ConventionsTestResult::Composite => return false,
+        ConventionsTestResult::Undecided { odd_candidate } => odd_candidate,
     };
 
     let mr = MillerRabin::new(odd_candidate.clone());

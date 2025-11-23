@@ -5,10 +5,13 @@ use alloc::{vec, vec::Vec};
 use core::marker::PhantomData;
 use core::num::{NonZero, NonZeroU32};
 
-use crypto_bigint::{Odd, RandomBits, RandomBitsError, Unsigned};
+use crypto_bigint::{Limb, Odd, RandomBits, RandomBitsError, Unsigned, Word};
 use rand_core::CryptoRng;
 
-use super::precomputed::{LAST_SMALL_PRIME, RECIPROCALS, SMALL_PRIMES, SmallPrime};
+use super::{
+    Primality,
+    precomputed::{LAST_SMALL_PRIME, RECIPROCALS, SMALL_PRIMES, SmallPrime},
+};
 use crate::{error::Error, presets::Flavor};
 
 /// Decide how prime candidates are manipulated by setting certain bits before primality testing,
@@ -75,6 +78,13 @@ where
     }
 
     Ok(Odd::new(random).expect("the number is odd by construction"))
+}
+
+pub(crate) fn equals_primitive<T>(num: &T, primitive: Word) -> bool
+where
+    T: Unsigned,
+{
+    num.bits_vartime() <= Word::BITS && num.as_ref()[0].0 == primitive
 }
 
 // The type we use to calculate incremental residues.
@@ -165,7 +175,7 @@ where
         })
     }
 
-    pub(crate) fn update_residues(&mut self) -> bool {
+    fn update_residues(&mut self) -> bool {
         if self.incr_limit != 0 && self.incr <= self.incr_limit {
             return true;
         }
@@ -219,7 +229,7 @@ where
     }
 
     // Returns `true` if the current `base + incr` is divisible by any of the small primes.
-    pub(crate) fn current_is_composite(&self) -> bool {
+    fn current_is_composite(&self) -> bool {
         self.residues.iter().enumerate().any(|(i, m)| {
             let d = SMALL_PRIMES[i] as Residue;
             let r = (*m as Residue + self.incr) % d;
@@ -426,6 +436,53 @@ where
     SMALL_PRIMES.partition_point(|x| *x <= end_limit && *x < start_limit)
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) enum ConventionsTestResult<T> {
+    Prime,
+    Composite,
+    Undecided { odd_candidate: Odd<T> },
+}
+
+/// Performs basic checks for conventional values:
+/// - 0 and 1 are composite
+/// - 2 is prime
+/// - an even integer greater than 2 is composite
+pub(crate) fn conventions_test<T>(candidate: T) -> ConventionsTestResult<T>
+where
+    T: Unsigned,
+{
+    if equals_primitive(&candidate, 1) {
+        return ConventionsTestResult::Composite;
+    }
+
+    if equals_primitive(&candidate, 2) {
+        return ConventionsTestResult::Prime;
+    }
+
+    let odd_candidate: Odd<T> = match Odd::new(candidate).into() {
+        Some(x) => x,
+        None => return ConventionsTestResult::Composite,
+    };
+
+    ConventionsTestResult::Undecided { odd_candidate }
+}
+
+/// Performs a one-off trial division test on the `candidate`.
+pub(crate) fn small_factors_test<T>(candidate: &Odd<T>) -> Primality
+where
+    T: Unsigned,
+{
+    let candidate_bits = NonZeroU32::new(candidate.bits_vartime()).expect("an odd integer is non-zero");
+    let len = trial_primes_num(candidate.as_ref(), candidate_bits);
+    for rec in RECIPROCALS.iter().take(len) {
+        if candidate.rem_limb_with_reciprocal(rec) == Limb::ZERO {
+            return Primality::Composite;
+        }
+    }
+
+    Primality::ProbablyPrime
+}
+
 #[cfg(test)]
 mod tests {
 
@@ -433,15 +490,21 @@ mod tests {
     use alloc::vec::Vec;
     use core::num::NonZero;
 
-    use crypto_bigint::{U64, U256};
+    use crypto_bigint::{Odd, U64, U256};
     use num_prime::nt_funcs::factorize64;
     use rand::rngs::ChaCha8Rng;
     use rand_core::SeedableRng;
 
-    use super::{SetBits, SmallFactorsSieve, SmallFactorsSieveFactory, random_odd_integer, trial_primes_num};
+    use super::{
+        ConventionsTestResult, SetBits, SmallFactorsSieve, SmallFactorsSieveFactory, conventions_test,
+        random_odd_integer, small_factors_test, trial_primes_num,
+    };
     use crate::{
         Error, Flavor,
-        hazmat::precomputed::{LAST_SMALL_PRIME, SMALL_PRIMES},
+        hazmat::{
+            Primality,
+            precomputed::{LAST_SMALL_PRIME, SMALL_PRIMES},
+        },
     };
 
     #[test]
@@ -459,6 +522,31 @@ mod tests {
         // so the number of factors is determined by it.
         let len = trial_primes_num(&U64::from(LAST_SMALL_PRIME as u64 - 1), 64.try_into().unwrap());
         assert_eq!(len, SMALL_PRIMES.len() - 1);
+    }
+
+    #[test]
+    fn conventions() {
+        assert_eq!(conventions_test(U64::ZERO), ConventionsTestResult::Composite);
+        assert_eq!(conventions_test(U64::ONE), ConventionsTestResult::Composite);
+        assert_eq!(conventions_test(U64::from(2u64)), ConventionsTestResult::Prime);
+        assert_eq!(
+            conventions_test(U64::from(3u64)),
+            ConventionsTestResult::Undecided {
+                odd_candidate: Odd::new(U64::from(3u64)).unwrap()
+            }
+        );
+    }
+
+    #[test]
+    fn small_factors() {
+        assert_eq!(
+            small_factors_test(&Odd::new(U64::from(5u64)).unwrap()),
+            Primality::ProbablyPrime
+        );
+        assert_eq!(
+            small_factors_test(&Odd::new(U64::from(9u64)).unwrap()),
+            Primality::Composite
+        );
     }
 
     #[test]

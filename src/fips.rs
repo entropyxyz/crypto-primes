@@ -2,13 +2,14 @@
 //!
 //! [^FIPS]: FIPS-186.5 standard, <https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.186-5.pdf>
 
-use core::num::NonZero;
-
-use crypto_bigint::{Odd, RandomMod, Unsigned};
+use crypto_bigint::{RandomMod, Unsigned};
 use rand_core::CryptoRng;
 
 use crate::{
-    hazmat::{LucasCheck, MillerRabin, Primality, SelfridgeBase, SmallFactorsSieve, equals_primitive, lucas_test},
+    hazmat::{
+        ConventionsTestResult, LucasCheck, MillerRabin, Primality, SelfridgeBase, conventions_test, equals_primitive,
+        lucas_test, small_factors_test,
+    },
     presets::Flavor,
 };
 
@@ -55,35 +56,15 @@ where
         Flavor::Safe => return is_safe_prime(rng, candidate, mr_iterations, options),
     }
 
-    if equals_primitive(candidate, 0) || equals_primitive(candidate, 1) {
+    let odd_candidate = match conventions_test(candidate.clone()) {
+        ConventionsTestResult::Prime => return true,
+        ConventionsTestResult::Composite => return false,
+        ConventionsTestResult::Undecided { odd_candidate } => odd_candidate,
+    };
+
+    if options.add_trial_division_test && small_factors_test(&odd_candidate) == Primality::Composite {
         return false;
     }
-
-    if equals_primitive(candidate, 2) {
-        return true;
-    }
-
-    let canditate_bits = match NonZero::new(candidate.bits()) {
-        Some(x) => x,
-        None => return false,
-    };
-
-    if options.add_trial_division_test {
-        let mut sieve =
-            SmallFactorsSieve::new(candidate.clone(), canditate_bits, flavor.eq(&Flavor::Safe)).expect(concat![
-                "canditate_bits is always less than or equal to candidate.bits_precision(), ",
-                "which is the only way to get an error from this function"
-            ]);
-        sieve.update_residues();
-        if sieve.current_is_composite() {
-            return false;
-        }
-    }
-
-    let odd_candidate: Odd<T> = match Odd::new(candidate.clone()).into() {
-        Some(x) => x,
-        None => return false,
-    };
 
     // The random base test only makes sense when `candidate > 3`.
     if !equals_primitive(candidate, 3) {
