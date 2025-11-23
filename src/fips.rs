@@ -8,18 +8,53 @@ use rand_core::CryptoRng;
 use crate::{
     hazmat::{
         ConventionsTestResult, LucasCheck, MillerRabin, Primality, SelfridgeBase, conventions_test, equals_primitive,
-        lucas_test, small_factors_test,
+        lucas_test, minimum_mr_iterations, small_factors_test,
     },
     presets::Flavor,
 };
 
 /// Options for FIPS primality testing.
-#[derive(Copy, Clone, Debug, Default)]
+#[derive(Copy, Clone, Debug)]
 pub struct FipsOptions {
-    /// Use an additional regular Lucas check with Selfridge base (see [`SelfridgeBase`] for details).
+    mr_iterations: usize,
+    add_lucas_test: bool,
+    add_trial_division_test: bool,
+}
+
+impl FipsOptions {
+    /// Use a precalculated number of Miller-Rabin iterations (see [`MillerRabin`] for details).
+    ///
+    /// The number of iterations given the required error bound can be calculated with
+    /// [`minimum_mr_iterations`](`crate::hazmat::minimum_mr_iterations`).
+    pub const fn with_mr_iterations(mr_iterations: usize) -> Self {
+        Self {
+            mr_iterations,
+            add_lucas_test: false,
+            add_trial_division_test: false,
+        }
+    }
+
+    /// Use the minimum number of Miller-Rabin iterations (see [`MillerRabin`] for details)
+    /// required for the error to be below `1/2^log2_target` for candidates of size `bit_length`.
+    pub const fn with_error_bound(bit_length: u32, log2_target: u32) -> Option<Self> {
+        let iterations = match minimum_mr_iterations(bit_length, log2_target) {
+            None => return None,
+            Some(iterations) => iterations,
+        };
+        Some(Self::with_mr_iterations(iterations))
+    }
+
+    /// Use an additional strong Lucas test with Selfridge base (see [`lucas_test`] and [`SelfridgeBase`] for details).
     ///
     /// `false` by default.
-    pub add_lucas_test: bool,
+    pub const fn with_lucas_test(self) -> Self {
+        Self {
+            mr_iterations: self.mr_iterations,
+            add_lucas_test: true,
+            add_trial_division_test: self.add_trial_division_test,
+        }
+    }
+
     /// Use a trial division as explained in Appendix B.3.
     ///
     /// `false` by default.
@@ -27,7 +62,13 @@ pub struct FipsOptions {
     /// Note that it is a performance optimization for the cases when you expect the candidates to be random
     /// (and thus likely to have small factors).
     /// It does not affect the failure probability of the primality check.
-    pub add_trial_division_test: bool,
+    pub const fn with_trial_division_test(self) -> Self {
+        Self {
+            mr_iterations: self.mr_iterations,
+            add_lucas_test: self.add_lucas_test,
+            add_trial_division_test: true,
+        }
+    }
 }
 
 /// Probabilistically checks if the given number is prime using the provided RNG
@@ -41,19 +82,13 @@ pub struct FipsOptions {
 /// Additional checks can be specified in the [`FipsOptions`] structure.
 ///
 /// [^FIPS]: FIPS-186.5 standard, <https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.186-5.pdf>
-pub fn is_prime<T>(
-    rng: &mut (impl CryptoRng + ?Sized),
-    flavor: Flavor,
-    candidate: &T,
-    mr_iterations: usize,
-    options: FipsOptions,
-) -> bool
+pub fn is_prime<T>(rng: &mut (impl CryptoRng + ?Sized), flavor: Flavor, candidate: &T, options: FipsOptions) -> bool
 where
     T: Unsigned + RandomMod,
 {
     match flavor {
         Flavor::Any => {}
-        Flavor::Safe => return is_safe_prime(rng, candidate, mr_iterations, options),
+        Flavor::Safe => return is_safe_prime(rng, candidate, options),
     }
 
     let odd_candidate = match conventions_test(candidate.clone()) {
@@ -72,7 +107,7 @@ where
     }
 
     let mr = MillerRabin::new(odd_candidate.clone());
-    for _ in 0..mr_iterations {
+    for _ in 0..options.mr_iterations {
         if mr.test_random_base(rng).is_composite() {
             return false;
         }
@@ -91,12 +126,7 @@ where
 /// See [`fips_is_prime`] for details about the performed checks.
 ///
 /// [^FIPS]: FIPS-186.5 standard, <https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.186-5.pdf>
-fn is_safe_prime<T>(
-    rng: &mut (impl CryptoRng + ?Sized),
-    candidate: &T,
-    mr_iterations: usize,
-    options: FipsOptions,
-) -> bool
+fn is_safe_prime<T>(rng: &mut (impl CryptoRng + ?Sized), candidate: &T, options: FipsOptions) -> bool
 where
     T: Unsigned + RandomMod,
 {
@@ -114,14 +144,8 @@ where
         return false;
     }
 
-    is_prime(rng, Flavor::Any, candidate, mr_iterations, options)
-        && is_prime(
-            rng,
-            Flavor::Any,
-            &candidate.wrapping_shr_vartime(1),
-            mr_iterations,
-            options,
-        )
+    is_prime(rng, Flavor::Any, candidate, options)
+        && is_prime(rng, Flavor::Any, &candidate.wrapping_shr_vartime(1), options)
 }
 
 #[cfg(test)]
@@ -132,6 +156,12 @@ mod tests {
     use crate::Flavor;
 
     #[test]
+    fn cannot_create_options() {
+        // Test the case where the requested error probability cannot be reached.
+        assert!(FipsOptions::with_error_bound(128, 1024).is_none());
+    }
+
+    #[test]
     fn trial_division_only() {
         let mut rng = rand::rng();
 
@@ -139,21 +169,13 @@ mod tests {
             &mut rng,
             Flavor::Any,
             &U64::from(4651u64),
-            0,
-            FipsOptions {
-                add_trial_division_test: true,
-                ..Default::default()
-            }
+            FipsOptions::with_mr_iterations(0).with_trial_division_test(),
         ));
         assert!(!is_prime(
             &mut rng,
             Flavor::Any,
             &U64::from(113u64 * 137),
-            0,
-            FipsOptions {
-                add_trial_division_test: true,
-                ..Default::default()
-            }
+            FipsOptions::with_mr_iterations(0).with_trial_division_test(),
         ));
     }
 
@@ -165,21 +187,13 @@ mod tests {
             &mut rng,
             Flavor::Any,
             &U64::from(4651u64),
-            0,
-            FipsOptions {
-                add_lucas_test: true,
-                ..Default::default()
-            }
+            FipsOptions::with_mr_iterations(0).with_lucas_test(),
         ));
         assert!(!is_prime(
             &mut rng,
             Flavor::Any,
             &U64::from(113u64 * 137),
-            0,
-            FipsOptions {
-                add_lucas_test: true,
-                ..Default::default()
-            }
+            FipsOptions::with_mr_iterations(0).with_lucas_test(),
         ));
 
         // 5459 = 53 * 103 is a Lucas pseudoprime (strong Lucas + Selfridge base),
@@ -189,11 +203,7 @@ mod tests {
             &mut rng,
             Flavor::Any,
             &U64::from(53u64 * 103),
-            0,
-            FipsOptions {
-                add_lucas_test: true,
-                ..Default::default()
-            }
+            FipsOptions::with_mr_iterations(0).with_lucas_test(),
         ));
     }
 
@@ -206,8 +216,7 @@ mod tests {
             &mut rng,
             Flavor::Any,
             &U64::from(4651u64),
-            0,
-            FipsOptions::default()
+            FipsOptions::with_mr_iterations(0)
         ));
     }
 }

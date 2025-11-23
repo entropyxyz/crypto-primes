@@ -244,8 +244,7 @@ fn bench_presets(c: &mut Criterion) {
                         &mut rng.clone(),
                         Flavor::Any,
                         num.as_ref(),
-                        iters,
-                        fips::FipsOptions::default(),
+                        fips::FipsOptions::with_mr_iterations(iters),
                     )
                 },
                 BatchSize::SmallInput,
@@ -263,11 +262,7 @@ fn bench_presets(c: &mut Criterion) {
                         &mut rng.clone(),
                         Flavor::Any,
                         num.as_ref(),
-                        iters,
-                        fips::FipsOptions {
-                            add_trial_division_test: true,
-                            ..Default::default()
-                        },
+                        fips::FipsOptions::with_mr_iterations(iters).with_trial_division_test(),
                     )
                 },
                 BatchSize::SmallInput,

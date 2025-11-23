@@ -121,27 +121,28 @@ mod tests {
     use super::{Flavor, is_prime, random_prime};
     use crate::{
         fips,
-        hazmat::{minimum_mr_iterations, primes, pseudoprimes},
+        hazmat::{primes, pseudoprimes},
     };
 
     fn fips_is_prime<T: Unsigned + RandomMod>(flavor: Flavor, num: &T) -> bool {
         let mut rng = rand::rng();
-        let mr_iterations = minimum_mr_iterations(128, 100).unwrap();
-        fips::is_prime(&mut rng, flavor, num, mr_iterations, fips::FipsOptions::default())
-    }
-
-    fn fips_is_prime_trial_division<T: Unsigned + RandomMod>(flavor: Flavor, num: &T) -> bool {
-        let mut rng = rand::rng();
-        let mr_iterations = minimum_mr_iterations(128, 100).unwrap();
         fips::is_prime(
             &mut rng,
             flavor,
             num,
-            mr_iterations,
-            fips::FipsOptions {
-                add_trial_division_test: true,
-                ..Default::default()
-            },
+            fips::FipsOptions::with_error_bound(128, 100).unwrap(),
+        )
+    }
+
+    fn fips_is_prime_trial_division<T: Unsigned + RandomMod>(flavor: Flavor, num: &T) -> bool {
+        let mut rng = rand::rng();
+        fips::is_prime(
+            &mut rng,
+            flavor,
+            num,
+            fips::FipsOptions::with_error_bound(128, 100)
+                .unwrap()
+                .with_trial_division_test(),
         )
     }
 
@@ -445,7 +446,12 @@ mod tests_openssl {
             let p = from_openssl(&p_bn);
             assert!(is_prime(Flavor::Any, &p), "we report {p} as composite");
             assert!(
-                fips::is_prime(&mut rng, Flavor::Any, &p, mr_iterations, fips::FipsOptions::default()),
+                fips::is_prime(
+                    &mut rng,
+                    Flavor::Any,
+                    &p,
+                    fips::FipsOptions::with_mr_iterations(mr_iterations)
+                ),
                 "we report {p} as composite"
             );
             assert!(
@@ -453,11 +459,7 @@ mod tests_openssl {
                     &mut rng,
                     Flavor::Any,
                     &p,
-                    mr_iterations,
-                    fips::FipsOptions {
-                        add_trial_division_test: true,
-                        ..Default::default()
-                    }
+                    fips::FipsOptions::with_mr_iterations(mr_iterations).with_trial_division_test()
                 ),
                 "we report {p} as composite"
             );
@@ -479,8 +481,7 @@ mod tests_openssl {
                 &mut rng,
                 Flavor::Any,
                 p.as_ref(),
-                mr_iterations,
-                fips::FipsOptions::default(),
+                fips::FipsOptions::with_mr_iterations(mr_iterations),
             );
             assert_eq!(
                 actual, expected,
@@ -491,11 +492,7 @@ mod tests_openssl {
                 &mut rng,
                 Flavor::Any,
                 p.as_ref(),
-                mr_iterations,
-                fips::FipsOptions {
-                    add_trial_division_test: true,
-                    ..Default::default()
-                },
+                fips::FipsOptions::with_mr_iterations(mr_iterations).with_trial_division_test(),
             );
             assert_eq!(
                 actual, expected,
@@ -554,7 +551,12 @@ mod tests_gmp {
             let p = from_gmp(&p_bn);
             assert!(is_prime(Flavor::Any, &p), "we report {p} as composite");
             assert!(
-                fips::is_prime(&mut rng, Flavor::Any, &p, mr_iterations, fips::FipsOptions::default()),
+                fips::is_prime(
+                    &mut rng,
+                    Flavor::Any,
+                    &p,
+                    fips::FipsOptions::with_mr_iterations(mr_iterations)
+                ),
                 "we report {p} as composite"
             );
             assert!(
@@ -562,11 +564,7 @@ mod tests_gmp {
                     &mut rng,
                     Flavor::Any,
                     &p,
-                    mr_iterations,
-                    fips::FipsOptions {
-                        add_trial_division_test: true,
-                        ..Default::default()
-                    }
+                    fips::FipsOptions::with_mr_iterations(mr_iterations).with_trial_division_test()
                 ),
                 "we report {p} as composite"
             );
@@ -588,8 +586,7 @@ mod tests_gmp {
                 &mut rng,
                 Flavor::Any,
                 p.as_ref(),
-                mr_iterations,
-                fips::FipsOptions::default(),
+                fips::FipsOptions::with_mr_iterations(mr_iterations),
             );
             assert_eq!(
                 actual, expected,
@@ -600,11 +597,7 @@ mod tests_gmp {
                 &mut rng,
                 Flavor::Any,
                 p.as_ref(),
-                mr_iterations,
-                fips::FipsOptions {
-                    add_trial_division_test: true,
-                    ..Default::default()
-                },
+                fips::FipsOptions::with_mr_iterations(mr_iterations).with_trial_division_test(),
             );
             assert_eq!(
                 actual, expected,
