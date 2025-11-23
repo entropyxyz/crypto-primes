@@ -79,11 +79,7 @@ where
     }
 
     if options.add_lucas_test {
-        match lucas_test(odd_candidate, SelfridgeBase, LucasCheck::Strong) {
-            Primality::Composite => return false,
-            Primality::Prime => return true,
-            _ => {}
-        }
+        return lucas_test(odd_candidate, SelfridgeBase, LucasCheck::Strong).is_probably_prime();
     }
 
     true
@@ -126,4 +122,92 @@ where
             mr_iterations,
             options,
         )
+}
+
+#[cfg(test)]
+mod tests {
+    use crypto_bigint::U64;
+
+    use super::{FipsOptions, is_prime};
+    use crate::Flavor;
+
+    #[test]
+    fn trial_division_only() {
+        let mut rng = rand::rng();
+
+        assert!(is_prime(
+            &mut rng,
+            Flavor::Any,
+            &U64::from(4651u64),
+            0,
+            FipsOptions {
+                add_trial_division_test: true,
+                ..Default::default()
+            }
+        ));
+        assert!(!is_prime(
+            &mut rng,
+            Flavor::Any,
+            &U64::from(113u64 * 137),
+            0,
+            FipsOptions {
+                add_trial_division_test: true,
+                ..Default::default()
+            }
+        ));
+    }
+
+    #[test]
+    fn lucas_test_only() {
+        let mut rng = rand::rng();
+
+        assert!(is_prime(
+            &mut rng,
+            Flavor::Any,
+            &U64::from(4651u64),
+            0,
+            FipsOptions {
+                add_lucas_test: true,
+                ..Default::default()
+            }
+        ));
+        assert!(!is_prime(
+            &mut rng,
+            Flavor::Any,
+            &U64::from(113u64 * 137),
+            0,
+            FipsOptions {
+                add_lucas_test: true,
+                ..Default::default()
+            }
+        ));
+
+        // 5459 = 53 * 103 is a Lucas pseudoprime (strong Lucas + Selfridge base),
+        // that is it's a composite, but Lucas test reports it to be prime.
+        // This checks that we really only run the Lucas test.
+        assert!(is_prime(
+            &mut rng,
+            Flavor::Any,
+            &U64::from(53u64 * 103),
+            0,
+            FipsOptions {
+                add_lucas_test: true,
+                ..Default::default()
+            }
+        ));
+    }
+
+    #[test]
+    fn no_tests() {
+        let mut rng = rand::rng();
+
+        // When no tests at all are run, everything is a pseudoprime
+        assert!(is_prime(
+            &mut rng,
+            Flavor::Any,
+            &U64::from(4651u64),
+            0,
+            FipsOptions::default()
+        ));
+    }
 }
