@@ -12,17 +12,32 @@ use crate::{
     presets::Flavor,
 };
 
+/// Options for FIPS primality testing.
+#[derive(Copy, Clone, Debug, Default)]
+pub struct FipsOptions {
+    /// Use an additional regular Lucas check with Selfridge base (see [`SelfridgeBase`] for details).
+    ///
+    /// `false` by default.
+    pub add_lucas_test: bool,
+    /// Use a trial division as explained in Appendix B.3.
+    ///
+    /// `false` by default.
+    ///
+    /// Note that it is a performance optimization for the cases when you expect the candidates to be random
+    /// (and thus likely to have small factors).
+    /// It does not affect the failure probability of the primality check.
+    pub add_trial_division_test: bool,
+}
+
 /// Probabilistically checks if the given number is prime using the provided RNG
 /// according to FIPS-186.5[^FIPS] standard.
 ///
-/// Performed checks:
-/// - `mr_iterations` of Miller-Rabin check with random bases;
-/// - Regular Lucas check with Selfridge base (see [`SelfridgeBase`] for details), if `add_lucas_test` is `true`.
-/// - Trial division as explained in Appendix B.3, if `add_trial_division_test` is `true`.
-///
+/// By default, performs `mr_iterations` of Miller-Rabin check with random bases.
 /// See [`MillerRabin`] and [`lucas_test`] for more details about the checks;
 /// use [`minimum_mr_iterations`](`crate::hazmat::minimum_mr_iterations`)
 /// to calculate the number of required iterations.
+///
+/// Additional checks can be specified in the [`FipsOptions`] structure.
 ///
 /// [^FIPS]: FIPS-186.5 standard, <https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.186-5.pdf>
 pub fn is_prime<T>(
@@ -30,15 +45,14 @@ pub fn is_prime<T>(
     flavor: Flavor,
     candidate: &T,
     mr_iterations: usize,
-    add_lucas_test: bool,
-    add_trial_division_test: bool,
+    options: FipsOptions,
 ) -> bool
 where
     T: Unsigned + RandomMod,
 {
     match flavor {
         Flavor::Any => {}
-        Flavor::Safe => return is_safe_prime(rng, candidate, mr_iterations, add_lucas_test, add_trial_division_test),
+        Flavor::Safe => return is_safe_prime(rng, candidate, mr_iterations, options),
     }
 
     if equals_primitive(candidate, 0) || equals_primitive(candidate, 1) {
@@ -54,13 +68,12 @@ where
         None => return false,
     };
 
-    if add_trial_division_test {
-        let mut sieve = SmallFactorsSieve::new(
-            candidate.clone(),
-            canditate_bits,
-            flavor.eq(&Flavor::Safe),
-        )
-        .expect("canditate_bits is always less than or equal to candidate.bits_precision(), which is the only way to get an error from this function");
+    if options.add_trial_division_test {
+        let mut sieve =
+            SmallFactorsSieve::new(candidate.clone(), canditate_bits, flavor.eq(&Flavor::Safe)).expect(concat![
+                "canditate_bits is always less than or equal to candidate.bits_precision(), ",
+                "which is the only way to get an error from this function"
+            ]);
         sieve.update_residues();
         if sieve.current_is_composite() {
             return false;
@@ -82,7 +95,7 @@ where
         }
     }
 
-    if add_lucas_test {
+    if options.add_lucas_test {
         match lucas_test(odd_candidate, SelfridgeBase, LucasCheck::Strong) {
             Primality::Composite => return false,
             Primality::Prime => return true,
@@ -103,8 +116,7 @@ fn is_safe_prime<T>(
     rng: &mut (impl CryptoRng + ?Sized),
     candidate: &T,
     mr_iterations: usize,
-    add_lucas_test: bool,
-    add_trial_division_test: bool,
+    options: FipsOptions,
 ) -> bool
 where
     T: Unsigned + RandomMod,
@@ -123,19 +135,12 @@ where
         return false;
     }
 
-    is_prime(
-        rng,
-        Flavor::Any,
-        candidate,
-        mr_iterations,
-        add_lucas_test,
-        add_trial_division_test,
-    ) && is_prime(
-        rng,
-        Flavor::Any,
-        &candidate.wrapping_shr_vartime(1),
-        mr_iterations,
-        add_lucas_test,
-        add_trial_division_test,
-    )
+    is_prime(rng, Flavor::Any, candidate, mr_iterations, options)
+        && is_prime(
+            rng,
+            Flavor::Any,
+            &candidate.wrapping_shr_vartime(1),
+            mr_iterations,
+            options,
+        )
 }

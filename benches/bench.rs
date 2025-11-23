@@ -239,7 +239,15 @@ fn bench_presets(c: &mut Criterion) {
         |b| {
             b.iter_batched(
                 || random_odd_uint::<U1024, _>(&mut rng.clone(), 1024),
-                |num| fips::is_prime(&mut rng.clone(), Flavor::Any, num.as_ref(), iters, false, false),
+                |num| {
+                    fips::is_prime(
+                        &mut rng.clone(),
+                        Flavor::Any,
+                        num.as_ref(),
+                        iters,
+                        fips::FipsOptions::default(),
+                    )
+                },
                 BatchSize::SmallInput,
             )
         },
@@ -250,7 +258,18 @@ fn bench_presets(c: &mut Criterion) {
         |b| {
             b.iter_batched(
                 || random_odd_uint::<U1024, _>(&mut rng.clone(), 1024),
-                |num| fips::is_prime(&mut rng.clone(), Flavor::Any, num.as_ref(), iters, false, true),
+                |num| {
+                    fips::is_prime(
+                        &mut rng.clone(),
+                        Flavor::Any,
+                        num.as_ref(),
+                        iters,
+                        fips::FipsOptions {
+                            add_trial_division_test: true,
+                            ..Default::default()
+                        },
+                    )
+                },
                 BatchSize::SmallInput,
             )
         },
