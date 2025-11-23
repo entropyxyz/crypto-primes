@@ -118,6 +118,7 @@ where
     ///
     /// If `safe_primes` is `true`, both the returned `n` and `n/2` are sieved.
     pub fn new(start: T, max_bit_length: NonZeroU32, safe_primes: bool) -> Result<Self, Error> {
+        let max_bit_length_nz = max_bit_length;
         let max_bit_length = max_bit_length.get();
 
         if max_bit_length > start.bits_precision() {
@@ -149,17 +150,7 @@ where
             start |= T::one();
         }
 
-        // Only calculate residues by primes up to and not including `start`, because when we only
-        // have the residue, we cannot distinguish between a prime itself and a multiple of that
-        // prime.
-        let residues_len = if T::from(LAST_SMALL_PRIME) <= start {
-            SMALL_PRIMES.len()
-        } else {
-            // `start` is smaller than the last prime in the list so casting `start` to a `u16` is
-            // safe. We need to find out how many residues we can use.
-            let start_small = start.as_ref()[0].0 as SmallPrime;
-            SMALL_PRIMES.partition_point(|x| *x < start_small)
-        };
+        let residues_len = trial_primes_num(&start, max_bit_length_nz);
 
         Ok(Self {
             base: start,
@@ -393,6 +384,48 @@ where
     }
 }
 
+/// Returns the number of trial prime factors from `SMALL_PRIMES` to use for trial division of the candidates
+/// in range `[start, 2^max_bit_length)`.
+///
+/// None of the factors chosen this way will be greater or equal to `start`
+/// (this is important for the use in the sieve, because when we only
+/// have the residue, we cannot distinguish between a prime itself and a multiple of that prime).
+fn trial_primes_num<T>(start: &T, max_bit_length: NonZeroU32) -> usize
+where
+    T: Unsigned,
+{
+    // A quick ceiling approximation of the square root of the largest candidate in range.
+    // We don't need to test with factors greater than that.
+    let end_bits = max_bit_length.get().div_ceil(2);
+
+    let start_bits = start.bits_vartime();
+
+    let max_prime_bits = SmallPrime::BITS - LAST_SMALL_PRIME.leading_zeros();
+
+    // Both the limits defined by `start`, and by the sqrt of the end of the interval are large,
+    // so we use all the available factors.
+    if end_bits > max_prime_bits && start_bits > max_prime_bits {
+        return SMALL_PRIMES.len();
+    }
+
+    // Otherwise we calculate the `SmallPrime`-typed limits and partition the list of factors.
+
+    let end_limit: SmallPrime = if end_bits <= max_prime_bits {
+        1 << end_bits
+    } else {
+        SmallPrime::MAX
+    };
+    let start_limit: SmallPrime = if start_bits <= max_prime_bits {
+        // Can convert since we just checked the bit size
+        start.as_ref()[0].0.try_into().expect("The number is in range")
+    } else {
+        SmallPrime::MAX
+    };
+
+    // Again note the strict `< start_limit` - we cannot allow factors equal to `start`.
+    SMALL_PRIMES.partition_point(|x| *x <= end_limit && *x < start_limit)
+}
+
 #[cfg(test)]
 mod tests {
 
@@ -405,8 +438,28 @@ mod tests {
     use rand::rngs::ChaCha8Rng;
     use rand_core::SeedableRng;
 
-    use super::{SetBits, SmallFactorsSieve, SmallFactorsSieveFactory, random_odd_integer};
-    use crate::{Error, Flavor, hazmat::precomputed::SMALL_PRIMES};
+    use super::{SetBits, SmallFactorsSieve, SmallFactorsSieveFactory, random_odd_integer, trial_primes_num};
+    use crate::{
+        Error, Flavor,
+        hazmat::precomputed::{LAST_SMALL_PRIME, SMALL_PRIMES},
+    };
+
+    #[test]
+    fn trial_primes_num_corner_cases() {
+        // Typical case - large numbers, use all the factors
+        let len = trial_primes_num(&U64::from(0x123456789abcdef0u64), 64.try_into().unwrap());
+        assert_eq!(len, SMALL_PRIMES.len());
+
+        // Square root of the end of the interval (2^14) is lower than the last prime,
+        // so the number of factors is determined by it.
+        let len = trial_primes_num(&U64::from(1u64 << 13), 14.try_into().unwrap());
+        assert_eq!(len, SMALL_PRIMES.partition_point(|x| *x < (1 << 7)));
+
+        // The start of the interval is lower than the last prime,
+        // so the number of factors is determined by it.
+        let len = trial_primes_num(&U64::from(LAST_SMALL_PRIME as u64 - 1), 64.try_into().unwrap());
+        assert_eq!(len, SMALL_PRIMES.len() - 1);
+    }
 
     #[test]
     fn random() {
