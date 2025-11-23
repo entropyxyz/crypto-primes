@@ -359,6 +359,15 @@ mod tests {
         let _p: U64 = random_prime(&mut rng, Flavor::Safe, 65);
     }
 
+    #[test]
+    #[should_panic(
+        expected = "Error creating the sieve: The requested bit length of the candidate (2) is too small to fit a prime of the flavor Safe"
+    )]
+    fn generate_safe_prime_too_few_bits() {
+        let mut rng = rand::rng();
+        let _p: U64 = random_prime(&mut rng, Flavor::Safe, 2);
+    }
+
     fn is_prime_ref(num: Word) -> bool {
         num_prime::nt_funcs::is_prime(&num, None).probably()
     }
