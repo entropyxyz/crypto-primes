@@ -34,6 +34,15 @@ pub enum Primality {
 }
 
 impl Primality {
+    /// Returns `true` if the result indicates that the number is definitely composite.
+    pub fn is_composite(&self) -> bool {
+        match self {
+            Self::Prime => false,
+            Self::ProbablyPrime => false,
+            Self::Composite => true,
+        }
+    }
+
     /// Returns `true` if the result indicates that the number is probably or definitely prime.
     pub fn is_probably_prime(&self) -> bool {
         match self {
@@ -63,5 +72,9 @@ mod tests {
         assert!(Primality::Prime.is_probably_prime());
         assert!(Primality::ProbablyPrime.is_probably_prime());
         assert!(!Primality::Composite.is_probably_prime());
+
+        assert!(!Primality::Prime.is_composite());
+        assert!(!Primality::ProbablyPrime.is_composite());
+        assert!(Primality::Composite.is_composite());
     }
 }

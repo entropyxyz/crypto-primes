@@ -78,7 +78,7 @@ where
 
     let mr = MillerRabin::new(odd_candidate.clone());
 
-    if !mr.test_base_two().is_probably_prime() {
+    if mr.test_base_two().is_composite() {
         return false;
     }
 

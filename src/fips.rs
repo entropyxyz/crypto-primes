@@ -73,7 +73,7 @@ where
 
     let mr = MillerRabin::new(odd_candidate.clone());
     for _ in 0..mr_iterations {
-        if !mr.test_random_base(rng).is_probably_prime() {
+        if mr.test_random_base(rng).is_composite() {
             return false;
         }
     }

@@ -12,6 +12,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `fips::is_prime()` now takes a `FipsOptions` structure for additional options. ([#101])
 
 
+### Added
+
+- `Primality::is_composite()`. ([#101])
+
+
 [#99]: https://github.com/entropyxyz/crypto-primes/pull/99
 [#101]: https://github.com/entropyxyz/crypto-primes/pull/101
 
