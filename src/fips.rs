@@ -67,12 +67,14 @@ where
     }
 
     // The random base test only makes sense when `candidate > 3`.
-    if !equals_primitive(candidate, 3) {
-        let mr = MillerRabin::new(odd_candidate.clone());
-        for _ in 0..mr_iterations {
-            if !mr.test_random_base(rng).is_probably_prime() {
-                return false;
-            }
+    if equals_primitive(candidate, 3) {
+        return true;
+    }
+
+    let mr = MillerRabin::new(odd_candidate.clone());
+    for _ in 0..mr_iterations {
+        if !mr.test_random_base(rng).is_probably_prime() {
+            return false;
         }
     }
 
