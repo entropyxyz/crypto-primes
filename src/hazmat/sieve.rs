@@ -5,10 +5,13 @@ use alloc::{vec, vec::Vec};
 use core::marker::PhantomData;
 use core::num::{NonZero, NonZeroU32};
 
-use crypto_bigint::{Odd, RandomBits, RandomBitsError, Unsigned};
+use crypto_bigint::{Limb, Odd, RandomBits, RandomBitsError, Unsigned, Word};
 use rand_core::CryptoRng;
 
-use super::precomputed::{LAST_SMALL_PRIME, RECIPROCALS, SMALL_PRIMES, SmallPrime};
+use super::{
+    Primality,
+    precomputed::{LAST_SMALL_PRIME, RECIPROCALS, SMALL_PRIMES, SmallPrime},
+};
 use crate::{error::Error, presets::Flavor};
 
 /// Decide how prime candidates are manipulated by setting certain bits before primality testing,
@@ -77,6 +80,13 @@ where
     Ok(Odd::new(random).expect("the number is odd by construction"))
 }
 
+pub(crate) fn equals_primitive<T>(num: &T, primitive: Word) -> bool
+where
+    T: Unsigned,
+{
+    num.bits_vartime() <= Word::BITS && num.as_ref()[0].0 == primitive
+}
+
 // The type we use to calculate incremental residues.
 // Should be >= `SmallPrime` in size.
 type Residue = u32;
@@ -118,6 +128,7 @@ where
     ///
     /// If `safe_primes` is `true`, both the returned `n` and `n/2` are sieved.
     pub fn new(start: T, max_bit_length: NonZeroU32, safe_primes: bool) -> Result<Self, Error> {
+        let max_bit_length_nz = max_bit_length;
         let max_bit_length = max_bit_length.get();
 
         if max_bit_length > start.bits_precision() {
@@ -149,17 +160,7 @@ where
             start |= T::one();
         }
 
-        // Only calculate residues by primes up to and not including `start`, because when we only
-        // have the residue, we cannot distinguish between a prime itself and a multiple of that
-        // prime.
-        let residues_len = if T::from(LAST_SMALL_PRIME) <= start {
-            SMALL_PRIMES.len()
-        } else {
-            // `start` is smaller than the last prime in the list so casting `start` to a `u16` is
-            // safe. We need to find out how many residues we can use.
-            let start_small = start.as_ref()[0].0 as SmallPrime;
-            SMALL_PRIMES.partition_point(|x| *x < start_small)
-        };
+        let residues_len = trial_primes_num(&start, max_bit_length_nz);
 
         Ok(Self {
             base: start,
@@ -174,7 +175,7 @@ where
         })
     }
 
-    pub(crate) fn update_residues(&mut self) -> bool {
+    fn update_residues(&mut self) -> bool {
         if self.incr_limit != 0 && self.incr <= self.incr_limit {
             return true;
         }
@@ -228,7 +229,7 @@ where
     }
 
     // Returns `true` if the current `base + incr` is divisible by any of the small primes.
-    pub(crate) fn current_is_composite(&self) -> bool {
+    fn current_is_composite(&self) -> bool {
         self.residues.iter().enumerate().any(|(i, m)| {
             let d = SMALL_PRIMES[i] as Residue;
             let r = (*m as Residue + self.incr) % d;
@@ -393,6 +394,95 @@ where
     }
 }
 
+/// Returns the number of trial prime factors from `SMALL_PRIMES` to use for trial division of the candidates
+/// in range `[start, 2^max_bit_length)`.
+///
+/// None of the factors chosen this way will be greater or equal to `start`
+/// (this is important for the use in the sieve, because when we only
+/// have the residue, we cannot distinguish between a prime itself and a multiple of that prime).
+fn trial_primes_num<T>(start: &T, max_bit_length: NonZeroU32) -> usize
+where
+    T: Unsigned,
+{
+    // A quick ceiling approximation of the square root of the largest candidate in range.
+    // We don't need to test with factors greater than that.
+    let end_bits = max_bit_length.get().div_ceil(2);
+
+    let start_bits = start.bits_vartime();
+
+    let max_prime_bits = SmallPrime::BITS - LAST_SMALL_PRIME.leading_zeros();
+
+    // Both the limits defined by `start`, and by the sqrt of the end of the interval are large,
+    // so we use all the available factors.
+    if end_bits > max_prime_bits && start_bits > max_prime_bits {
+        return SMALL_PRIMES.len();
+    }
+
+    // Otherwise we calculate the `SmallPrime`-typed limits and partition the list of factors.
+
+    let end_limit: SmallPrime = if end_bits <= max_prime_bits {
+        1 << end_bits
+    } else {
+        SmallPrime::MAX
+    };
+    let start_limit: SmallPrime = if start_bits <= max_prime_bits {
+        // Can convert since we just checked the bit size
+        start.as_ref()[0].0.try_into().expect("The number is in range")
+    } else {
+        SmallPrime::MAX
+    };
+
+    // Again note the strict `< start_limit` - we cannot allow factors equal to `start`.
+    SMALL_PRIMES.partition_point(|x| *x <= end_limit && *x < start_limit)
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) enum ConventionsTestResult<T> {
+    Prime,
+    Composite,
+    Undecided { odd_candidate: Odd<T> },
+}
+
+/// Performs basic checks for conventional values:
+/// - 0 and 1 are composite
+/// - 2 is prime
+/// - an even integer greater than 2 is composite
+pub(crate) fn conventions_test<T>(candidate: T) -> ConventionsTestResult<T>
+where
+    T: Unsigned,
+{
+    if equals_primitive(&candidate, 1) {
+        return ConventionsTestResult::Composite;
+    }
+
+    if equals_primitive(&candidate, 2) {
+        return ConventionsTestResult::Prime;
+    }
+
+    let odd_candidate: Odd<T> = match Odd::new(candidate).into() {
+        Some(x) => x,
+        None => return ConventionsTestResult::Composite,
+    };
+
+    ConventionsTestResult::Undecided { odd_candidate }
+}
+
+/// Performs a one-off trial division test on the `candidate`.
+pub(crate) fn small_factors_test<T>(candidate: &Odd<T>) -> Primality
+where
+    T: Unsigned,
+{
+    let candidate_bits = NonZeroU32::new(candidate.bits_vartime()).expect("an odd integer is non-zero");
+    let len = trial_primes_num(candidate.as_ref(), candidate_bits);
+    for rec in RECIPROCALS.iter().take(len) {
+        if candidate.rem_limb_with_reciprocal(rec) == Limb::ZERO {
+            return Primality::Composite;
+        }
+    }
+
+    Primality::ProbablyPrime
+}
+
 #[cfg(test)]
 mod tests {
 
@@ -400,13 +490,64 @@ mod tests {
     use alloc::vec::Vec;
     use core::num::NonZero;
 
-    use crypto_bigint::{U64, U256};
+    use crypto_bigint::{Odd, U64, U256};
     use num_prime::nt_funcs::factorize64;
     use rand::rngs::ChaCha8Rng;
     use rand_core::SeedableRng;
 
-    use super::{SetBits, SmallFactorsSieve, SmallFactorsSieveFactory, random_odd_integer};
-    use crate::{Error, Flavor, hazmat::precomputed::SMALL_PRIMES};
+    use super::{
+        ConventionsTestResult, SetBits, SmallFactorsSieve, SmallFactorsSieveFactory, conventions_test,
+        random_odd_integer, small_factors_test, trial_primes_num,
+    };
+    use crate::{
+        Error, Flavor,
+        hazmat::{
+            Primality,
+            precomputed::{LAST_SMALL_PRIME, SMALL_PRIMES},
+        },
+    };
+
+    #[test]
+    fn trial_primes_num_corner_cases() {
+        // Typical case - large numbers, use all the factors
+        let len = trial_primes_num(&U64::from(0x123456789abcdef0u64), 64.try_into().unwrap());
+        assert_eq!(len, SMALL_PRIMES.len());
+
+        // Square root of the end of the interval (2^14) is lower than the last prime,
+        // so the number of factors is determined by it.
+        let len = trial_primes_num(&U64::from(1u64 << 13), 14.try_into().unwrap());
+        assert_eq!(len, SMALL_PRIMES.partition_point(|x| *x < (1 << 7)));
+
+        // The start of the interval is lower than the last prime,
+        // so the number of factors is determined by it.
+        let len = trial_primes_num(&U64::from(LAST_SMALL_PRIME as u64 - 1), 64.try_into().unwrap());
+        assert_eq!(len, SMALL_PRIMES.len() - 1);
+    }
+
+    #[test]
+    fn conventions() {
+        assert_eq!(conventions_test(U64::ZERO), ConventionsTestResult::Composite);
+        assert_eq!(conventions_test(U64::ONE), ConventionsTestResult::Composite);
+        assert_eq!(conventions_test(U64::from(2u64)), ConventionsTestResult::Prime);
+        assert_eq!(
+            conventions_test(U64::from(3u64)),
+            ConventionsTestResult::Undecided {
+                odd_candidate: Odd::new(U64::from(3u64)).unwrap()
+            }
+        );
+    }
+
+    #[test]
+    fn small_factors() {
+        assert_eq!(
+            small_factors_test(&Odd::new(U64::from(5u64)).unwrap()),
+            Primality::ProbablyPrime
+        );
+        assert_eq!(
+            small_factors_test(&Odd::new(U64::from(9u64)).unwrap()),
+            Primality::Composite
+        );
+    }
 
     #[test]
     fn random() {

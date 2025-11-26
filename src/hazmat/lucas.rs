@@ -751,14 +751,12 @@ mod tests {
     fn strong_fibonacci_pseudoprimes() {
         // Can't use `test_pseudoprimes()` since `STRONG_FIBONACCI` is `U64`.
         for num in pseudoprimes::STRONG_FIBONACCI.iter() {
-            assert!(!lucas_test(Odd::new(*num).unwrap(), SelfridgeBase, LucasCheck::Regular).is_probably_prime());
-            assert!(!lucas_test(Odd::new(*num).unwrap(), SelfridgeBase, LucasCheck::Strong).is_probably_prime());
-            assert!(!lucas_test(Odd::new(*num).unwrap(), AStarBase, LucasCheck::LucasV).is_probably_prime());
-            assert!(
-                !lucas_test(Odd::new(*num).unwrap(), BruteForceBase, LucasCheck::AlmostExtraStrong).is_probably_prime()
-            );
-            assert!(!lucas_test(Odd::new(*num).unwrap(), BruteForceBase, LucasCheck::ExtraStrong).is_probably_prime());
-            assert!(!lucas_test(Odd::new(*num).unwrap(), AStarBase, LucasCheck::Bpsw21).is_probably_prime());
+            assert!(lucas_test(Odd::new(*num).unwrap(), SelfridgeBase, LucasCheck::Regular).is_composite());
+            assert!(lucas_test(Odd::new(*num).unwrap(), SelfridgeBase, LucasCheck::Strong).is_composite());
+            assert!(lucas_test(Odd::new(*num).unwrap(), AStarBase, LucasCheck::LucasV).is_composite());
+            assert!(lucas_test(Odd::new(*num).unwrap(), BruteForceBase, LucasCheck::AlmostExtraStrong).is_composite());
+            assert!(lucas_test(Odd::new(*num).unwrap(), BruteForceBase, LucasCheck::ExtraStrong).is_composite());
+            assert!(lucas_test(Odd::new(*num).unwrap(), AStarBase, LucasCheck::Bpsw21).is_composite());
         }
     }
 
@@ -856,12 +854,12 @@ mod tests {
     #[test]
     fn large_carmichael_number() {
         let p = Odd::new(pseudoprimes::LARGE_CARMICHAEL_NUMBER).unwrap();
-        assert!(!lucas_test(p, SelfridgeBase, LucasCheck::Regular).is_probably_prime());
-        assert!(!lucas_test(p, SelfridgeBase, LucasCheck::Strong).is_probably_prime());
-        assert!(!lucas_test(p, AStarBase, LucasCheck::LucasV).is_probably_prime());
-        assert!(!lucas_test(p, BruteForceBase, LucasCheck::AlmostExtraStrong).is_probably_prime());
-        assert!(!lucas_test(p, BruteForceBase, LucasCheck::ExtraStrong).is_probably_prime());
-        assert!(!lucas_test(p, AStarBase, LucasCheck::Bpsw21).is_probably_prime());
+        assert!(lucas_test(p, SelfridgeBase, LucasCheck::Regular).is_composite());
+        assert!(lucas_test(p, SelfridgeBase, LucasCheck::Strong).is_composite());
+        assert!(lucas_test(p, AStarBase, LucasCheck::LucasV).is_composite());
+        assert!(lucas_test(p, BruteForceBase, LucasCheck::AlmostExtraStrong).is_composite());
+        assert!(lucas_test(p, BruteForceBase, LucasCheck::ExtraStrong).is_composite());
+        assert!(lucas_test(p, AStarBase, LucasCheck::Bpsw21).is_composite());
     }
 
     fn test_large_primes<const L: usize>(nums: &[Uint<L>]) {
@@ -893,10 +891,10 @@ mod tests {
             assert!(lucas_test(num, AStarBase, LucasCheck::LucasV).is_probably_prime());
 
             // These tests should work correctly
-            assert!(!lucas_test(num, SelfridgeBase, LucasCheck::Strong).is_probably_prime());
-            assert!(!lucas_test(num, BruteForceBase, LucasCheck::AlmostExtraStrong).is_probably_prime());
-            assert!(!lucas_test(num, BruteForceBase, LucasCheck::ExtraStrong).is_probably_prime());
-            assert!(!lucas_test(num, AStarBase, LucasCheck::Bpsw21).is_probably_prime());
+            assert!(lucas_test(num, SelfridgeBase, LucasCheck::Strong).is_composite());
+            assert!(lucas_test(num, BruteForceBase, LucasCheck::AlmostExtraStrong).is_composite());
+            assert!(lucas_test(num, BruteForceBase, LucasCheck::ExtraStrong).is_composite());
+            assert!(lucas_test(num, AStarBase, LucasCheck::Bpsw21).is_composite());
         }
     }
 

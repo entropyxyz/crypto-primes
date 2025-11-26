@@ -19,7 +19,7 @@ pub use miller_rabin::{MillerRabin, minimum_mr_iterations};
 pub use primecount::estimate_primecount;
 pub use sieve::{SetBits, SieveFactory, SmallFactorsSieve, SmallFactorsSieveFactory, random_odd_integer};
 
-use crypto_bigint::{Unsigned, Word};
+pub(crate) use sieve::{ConventionsTestResult, conventions_test, equals_primitive, small_factors_test};
 
 /// Possible results of various primality tests.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -34,6 +34,15 @@ pub enum Primality {
 }
 
 impl Primality {
+    /// Returns `true` if the result indicates that the number is definitely composite.
+    pub fn is_composite(&self) -> bool {
+        match self {
+            Self::Prime => false,
+            Self::ProbablyPrime => false,
+            Self::Composite => true,
+        }
+    }
+
     /// Returns `true` if the result indicates that the number is probably or definitely prime.
     pub fn is_probably_prime(&self) -> bool {
         match self {
@@ -42,13 +51,6 @@ impl Primality {
             Self::Composite => false,
         }
     }
-}
-
-pub(crate) fn equals_primitive<T>(num: &T, primitive: Word) -> bool
-where
-    T: Unsigned,
-{
-    num.bits_vartime() <= Word::BITS && num.as_ref()[0].0 == primitive
 }
 
 #[cfg(test)]
@@ -70,5 +72,9 @@ mod tests {
         assert!(Primality::Prime.is_probably_prime());
         assert!(Primality::ProbablyPrime.is_probably_prime());
         assert!(!Primality::Composite.is_probably_prime());
+
+        assert!(!Primality::Prime.is_composite());
+        assert!(!Primality::ProbablyPrime.is_composite());
+        assert!(Primality::Composite.is_composite());
     }
 }

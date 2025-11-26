@@ -239,7 +239,14 @@ fn bench_presets(c: &mut Criterion) {
         |b| {
             b.iter_batched(
                 || random_odd_uint::<U1024, _>(&mut rng.clone(), 1024),
-                |num| fips::is_prime(&mut rng.clone(), Flavor::Any, num.as_ref(), iters, false, false),
+                |num| {
+                    fips::is_prime(
+                        &mut rng.clone(),
+                        Flavor::Any,
+                        num.as_ref(),
+                        fips::FipsOptions::with_mr_iterations(iters),
+                    )
+                },
                 BatchSize::SmallInput,
             )
         },
@@ -250,7 +257,14 @@ fn bench_presets(c: &mut Criterion) {
         |b| {
             b.iter_batched(
                 || random_odd_uint::<U1024, _>(&mut rng.clone(), 1024),
-                |num| fips::is_prime(&mut rng.clone(), Flavor::Any, num.as_ref(), iters, false, true),
+                |num| {
+                    fips::is_prime(
+                        &mut rng.clone(),
+                        Flavor::Any,
+                        num.as_ref(),
+                        fips::FipsOptions::with_mr_iterations(iters).with_trial_division_test(),
+                    )
+                },
                 BatchSize::SmallInput,
             )
         },
@@ -493,7 +507,7 @@ fn bench_glass_pumpkin(c: &mut Criterion) {
                 let odd_num = Odd::new(num.clone()).unwrap();
 
                 let mr = MillerRabin::new(odd_num.clone());
-                if (0..required_checks(bit_length)).any(|_| !mr.test_random_base(rng).is_probably_prime()) {
+                if (0..required_checks(bit_length)).any(|_| mr.test_random_base(rng).is_composite()) {
                     continue;
                 }
 
@@ -529,7 +543,7 @@ fn bench_glass_pumpkin(c: &mut Criterion) {
                 let checks = required_checks(bit_length) - 5;
 
                 let mr = MillerRabin::new(odd_num.clone());
-                if (0..checks).any(|_| !mr.test_random_base(rng).is_probably_prime()) {
+                if (0..checks).any(|_| mr.test_random_base(rng).is_composite()) {
                     continue;
                 }
 
@@ -538,7 +552,7 @@ fn bench_glass_pumpkin(c: &mut Criterion) {
                 }
 
                 let mr = MillerRabin::new(odd_half.clone());
-                if (0..checks).any(|_| !mr.test_random_base(rng).is_probably_prime()) {
+                if (0..checks).any(|_| mr.test_random_base(rng).is_composite()) {
                     continue;
                 }
 
