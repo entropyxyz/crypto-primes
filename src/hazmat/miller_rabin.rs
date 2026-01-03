@@ -129,7 +129,7 @@ impl<T: Unsigned + RandomMod> MillerRabin<T> {
         let range_nonzero = CTNonZero::new(range).expect("the range should be non-zero by construction");
         // This should not overflow as long as `random_mod()` behaves according to the contract
         // (that is, returns a number within the given range).
-        let random = T::random_mod(rng, &range_nonzero)
+        let random = T::random_mod_vartime(rng, &range_nonzero)
             .checked_add(&T::from(2u32))
             .expect("addition should not overflow by construction");
         self.test(&random)
