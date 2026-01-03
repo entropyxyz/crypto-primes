@@ -4,12 +4,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
-## 0.7.0 - in development
+## [0.7.0-pre.5] - 2026-01-03
 
 ### Changed
 
 - Added an `add_trial_division_test` argument to `fips::is_prime()`. ([#99])
 - `fips::is_prime()` now takes a `FipsOptions` structure for additional options. ([#101])
+- Bumped `crypto-bigint` dependency to 0.7.0-rc.13. ([#104])
 
 
 ### Added
@@ -19,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 [#99]: https://github.com/entropyxyz/crypto-primes/pull/99
 [#101]: https://github.com/entropyxyz/crypto-primes/pull/101
+[#104]: https://github.com/entropyxyz/crypto-primes/pull/104
 
 
 ## [0.7.0-pre.4] - 2025-11-06
@@ -303,3 +305,4 @@ Initial release.
 [0.7.0-pre.2]: https://github.com/entropyxyz/crypto-primes/releases/tag/v0.7.0-pre.2
 [0.7.0-pre.3]: https://github.com/entropyxyz/crypto-primes/releases/tag/v0.7.0-pre.3
 [0.7.0-pre.4]: https://github.com/entropyxyz/crypto-primes/releases/tag/v0.7.0-pre.4
+[0.7.0-pre.5]: https://github.com/entropyxyz/crypto-primes/releases/tag/v0.7.0-pre.5
