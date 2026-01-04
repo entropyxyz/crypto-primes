@@ -21,7 +21,7 @@ rug = { version = "1.26", optional = true, default-features = false, features = 
 glass_pumpkin = { version = "1", optional = true }
 
 [dev-dependencies]
-rand = { version = "0.10.0-rc.5", features = ["chacha"] }
+rand = { version = "0.10.0-rc.6", features = ["chacha"] }
 # need `crypto-bigint` with `alloc` to test `BoxedUint`
 crypto-bigint = { version = "0.7.0-pre.13", default-features = false, features = ["alloc"] }
 criterion = { version = "0.5", features = ["html_reports"] }
@@ -61,7 +61,3 @@ harness = false
 [[bench]]
 name = "cctv"
 harness = false
-
-[patch.crates-io]
-# needs a `rand` v0.10.0-rc.6 release: https://github.com/rust-random/rand/pull/1697
-rand = { git = "https://github.com/rust-random/rand", rev = "75fe38fff59e5abb16ed5a146d61960cad27dc0f" }
