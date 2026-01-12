@@ -4,6 +4,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.7.0-pre.6] - 2026-01-12
+
+### Changed
+
+- Bumped `crypto-bigint` dependency to 0.7.0-rc.16. ([#106])
+
+
+[#106]: https://github.com/entropyxyz/crypto-primes/pull/106
+
+
 ## [0.7.0-pre.5] - 2026-01-03
 
 ### Changed
@@ -306,3 +316,4 @@ Initial release.
 [0.7.0-pre.3]: https://github.com/entropyxyz/crypto-primes/releases/tag/v0.7.0-pre.3
 [0.7.0-pre.4]: https://github.com/entropyxyz/crypto-primes/releases/tag/v0.7.0-pre.4
 [0.7.0-pre.5]: https://github.com/entropyxyz/crypto-primes/releases/tag/v0.7.0-pre.5
+[0.7.0-pre.6]: https://github.com/entropyxyz/crypto-primes/releases/tag/v0.7.0-pre.6
