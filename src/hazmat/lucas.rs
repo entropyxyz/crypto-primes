@@ -57,7 +57,7 @@ impl LucasBase for SelfridgeBase {
             }
 
             if attempts >= ATTEMPTS_BEFORE_SQRT {
-                let sqrt_n = n.sqrt_vartime();
+                let sqrt_n = n.floor_sqrt_vartime();
                 if &sqrt_n.wrapping_mul(&sqrt_n) == n.as_ref() {
                     return Err(Primality::Composite);
                 }
@@ -141,7 +141,7 @@ impl LucasBase for BruteForceBase {
             }
 
             if attempts >= ATTEMPTS_BEFORE_SQRT {
-                let sqrt_n = n.sqrt_vartime();
+                let sqrt_n = n.floor_sqrt_vartime();
                 if &sqrt_n.wrapping_mul(&sqrt_n) == n.as_ref() {
                     return Err(Primality::Composite);
                 }
@@ -387,7 +387,7 @@ where
     let q = if q_is_one {
         one.clone()
     } else {
-        let abs_q = <T as Unsigned>::Monty::new(to_integer(abs_q), params.clone());
+        let abs_q = <T as Unsigned>::Monty::new(to_integer(abs_q), &params);
         if q_is_negative { -abs_q } else { abs_q }
     };
 
@@ -396,7 +396,7 @@ where
     let p = if p_is_one {
         one.clone()
     } else {
-        <T as Unsigned>::Monty::new(to_integer(p), params.clone())
+        <T as Unsigned>::Monty::new(to_integer(p), &params)
     };
 
     // Compute d-th element of Lucas sequence (U_d(P, Q), V_d(P, Q)), where:
@@ -423,7 +423,7 @@ where
     let mut mm = <<T as Unsigned>::Monty as Monty>::Multiplier::from(&params);
 
     // D in Montgomery representation - note that it can be negative.
-    let abs_d = <T as Unsigned>::Monty::new(to_integer(abs_d), params.clone());
+    let abs_d = <T as Unsigned>::Monty::new(to_integer(abs_d), &params);
     let d_m = if d_is_negative { -abs_d } else { abs_d };
 
     for i in (0..d.bits_vartime()).rev() {

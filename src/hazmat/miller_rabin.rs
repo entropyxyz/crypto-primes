@@ -79,7 +79,7 @@ impl<T: Unsigned + RandomMod> MillerRabin<T> {
         // One could check here if `gcd(base, candidate) == 1` and return `Composite` otherwise.
         // In practice it doesn't make any performance difference in normal operation.
 
-        let base = <T as Unsigned>::Monty::new(base.clone(), self.montgomery_params.clone());
+        let base = <T as Unsigned>::Monty::new(base.clone(), &self.montgomery_params);
 
         // Implementation detail: bounded exp gets faster every time we decrease the bound
         // by the window length it uses, which is currently 4 bits.
