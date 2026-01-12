@@ -61,3 +61,6 @@ harness = false
 [[bench]]
 name = "cctv"
 harness = false
+
+[patch.crates-io.crypto-bigint]
+git = "https://github.com/RustCrypto/crypto-bigint"
