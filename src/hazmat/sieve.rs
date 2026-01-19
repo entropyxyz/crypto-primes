@@ -84,7 +84,7 @@ pub(crate) fn equals_primitive<T>(num: &T, primitive: Word) -> bool
 where
     T: Unsigned,
 {
-    num.bits_vartime() <= Word::BITS && num.as_ref()[0].0 == primitive
+    num.bits_vartime() <= Word::BITS && num.as_limbs()[0].0 == primitive
 }
 
 // The type we use to calculate incremental residues.
@@ -202,10 +202,7 @@ where
         }
 
         // Find the increment limit.
-        let max_value = match T::one_like(&self.base)
-            .overflowing_shl_vartime(self.max_bit_length)
-            .into()
-        {
+        let max_value = match T::one_like(&self.base).overflowing_shl_vartime(self.max_bit_length) {
             Some(val) => val,
             None => T::one_like(&self.base),
         };
@@ -218,7 +215,7 @@ where
             self.last_round = true;
             // Can unwrap here since we just checked above that `incr_limit <= INCR_LIMIT`,
             // and `INCR_LIMIT` fits into `Residue`.
-            let incr_limit_small: Residue = incr_limit.as_ref()[0]
+            let incr_limit_small: Residue = incr_limit.as_limbs()[0]
                 .0
                 .try_into()
                 .expect("the increment limit should fit within `Residue`");
@@ -427,7 +424,7 @@ where
     };
     let start_limit: SmallPrime = if start_bits <= max_prime_bits {
         // Can convert since we just checked the bit size
-        start.as_ref()[0].0.try_into().expect("The number is in range")
+        start.as_limbs()[0].0.try_into().expect("The number is in range")
     } else {
         SmallPrime::MAX
     };

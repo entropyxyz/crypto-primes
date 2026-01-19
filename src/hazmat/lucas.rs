@@ -49,7 +49,7 @@ impl LucasBase for SelfridgeBase {
         let mut abs_d = 5;
         let mut d_is_negative = false;
         let n_is_small = n.bits_vartime() < Word::BITS; // if true, `n` fits into one `Word`
-        let small_n = n.as_ref().as_ref()[0].0;
+        let small_n = n.as_ref().as_limbs()[0].0;
         let mut attempts = 0;
         loop {
             if attempts >= MAX_ATTEMPTS {
