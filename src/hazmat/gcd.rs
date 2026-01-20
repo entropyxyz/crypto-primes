@@ -23,7 +23,7 @@ where
     } else {
         // In this branch `n` is `Word::BITS` bits or shorter,
         // so we can safely take the first limb.
-        let n = n.as_ref()[0].0;
+        let n = n.as_limbs()[0].0;
         if n > m { (n, m) } else { (m, n) }
     };
 

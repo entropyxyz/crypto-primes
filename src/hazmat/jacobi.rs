@@ -24,7 +24,7 @@ fn reduce_numerator_long<T>(j: JacobiSymbol, a: Word, p: &T) -> (JacobiSymbol, W
 where
     T: Unsigned,
 {
-    apply_reduce_numerator(j, a, p.as_ref()[0].0)
+    apply_reduce_numerator(j, a, p.as_limbs()[0].0)
 }
 
 fn reduce_numerator_short(j: JacobiSymbol, a: Word, p: Word) -> (JacobiSymbol, Word) {
@@ -39,7 +39,7 @@ fn apply_swap(j: JacobiSymbol, a: Word, p: Word) -> JacobiSymbol {
 }
 
 fn swap_long<T: Unsigned>(j: JacobiSymbol, a: Word, p: &Odd<T>) -> (JacobiSymbol, &Odd<T>, Word) {
-    let j = apply_swap(j, a, p.as_ref().as_ref()[0].0);
+    let j = apply_swap(j, a, p.as_ref().as_limbs()[0].0);
     (j, p, a)
 }
 
@@ -59,7 +59,7 @@ where
     // (-a/n) = (-1/n) * (a/n)
     //        = (-1)^((n-1)/2) * (a/n)
     //        = (-1 if n = 3 mod 4 else 1) * (a/n)
-    let result = if a_is_negative && p_long.as_ref().as_ref()[0].0 & 3 == 3 {
+    let result = if a_is_negative && p_long.as_ref().as_limbs()[0].0 & 3 == 3 {
         -result
     } else {
         result
@@ -75,7 +75,7 @@ where
     // Normalize input: at the end we want `a < p`, `p` odd, and both fitting into a `Word`.
     let (result, a, p): (JacobiSymbol, Word, Word) = if p_long.bits_vartime() <= Limb::BITS {
         let a = a_limb.0;
-        let p = p_long.as_ref().as_ref()[0].0;
+        let p = p_long.as_ref().as_limbs()[0].0;
         (result, a % p, p)
     } else {
         let (result, a) = reduce_numerator_long(result, a_limb.0, p_long.as_ref());
