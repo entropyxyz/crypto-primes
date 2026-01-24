@@ -1,6 +1,6 @@
 //! Miller-Rabin primality test.
 
-use crypto_bigint::{Limb, Monty, NonZero as CTNonZero, Odd, PowBoundedExp, RandomMod, Square, Unsigned};
+use crypto_bigint::{Limb, MontyForm, NonZero as CTNonZero, Odd, PowBoundedExp, RandomMod, Square, UnsignedMontyForm};
 use rand_core::CryptoRng;
 
 use super::{
@@ -21,18 +21,18 @@ use super::{
 ///
 /// [^FIPS]: FIPS-186.5 standard, <https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.186-5.pdf>
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct MillerRabin<T: Unsigned> {
+pub struct MillerRabin<T: UnsignedMontyForm> {
     // The odd number that may or may not be a prime.
     candidate: T,
     /// The number of bits necessary to represent the candidate. Note: this is not the number of
     /// bits used by a `T` in memory.
     bits: u32,
     /// Pre-computed parameters for the Montgomery form of `T`.
-    montgomery_params: <<T as Unsigned>::Monty as Monty>::Params,
+    montgomery_params: <<T as UnsignedMontyForm>::MontyForm as MontyForm>::Params,
     /// The number 1 in Montgomery form.
-    one: <T as Unsigned>::Monty,
+    one: <T as UnsignedMontyForm>::MontyForm,
     /// The number -1 in Montgomery form.
-    minus_one: <T as Unsigned>::Monty,
+    minus_one: <T as UnsignedMontyForm>::MontyForm,
     /// The `s` exponent in the Miller-Rabin test, that finds `s` and `d` odd s.t. `candidate - 1 ==
     /// 2^s * d` (the pair `s` and `d` is unique).
     s: u32,
@@ -41,11 +41,11 @@ pub struct MillerRabin<T: Unsigned> {
     d: T,
 }
 
-impl<T: Unsigned + RandomMod> MillerRabin<T> {
+impl<T: UnsignedMontyForm + RandomMod> MillerRabin<T> {
     /// Initializes a Miller-Rabin test for `candidate`.
     pub fn new(candidate: Odd<T>) -> Self {
-        let params = <T as Unsigned>::Monty::new_params_vartime(candidate.clone());
-        let m_one = <T as Unsigned>::Monty::one(params.clone());
+        let params = <T as UnsignedMontyForm>::MontyForm::new_params_vartime(candidate.clone());
+        let m_one = <T as UnsignedMontyForm>::MontyForm::one(&params);
         let m_minus_one = -m_one.clone();
 
         let one = T::one_like(candidate.as_ref());
@@ -79,7 +79,7 @@ impl<T: Unsigned + RandomMod> MillerRabin<T> {
         // One could check here if `gcd(base, candidate) == 1` and return `Composite` otherwise.
         // In practice it doesn't make any performance difference in normal operation.
 
-        let base = <T as Unsigned>::Monty::new(base.clone(), &self.montgomery_params);
+        let base = <T as UnsignedMontyForm>::MontyForm::new(base.clone(), &self.montgomery_params);
 
         // Implementation detail: bounded exp gets faster every time we decrease the bound
         // by the window length it uses, which is currently 4 bits.
@@ -233,7 +233,7 @@ mod tests {
     use alloc::format;
     use core::num::NonZero;
 
-    use crypto_bigint::{Odd, RandomMod, U64, U128, U1024, U1536, Uint, Unsigned};
+    use crypto_bigint::{Odd, RandomMod, U64, U128, U1024, U1536, Uint, UnsignedMontyForm};
     use rand::rngs::ChaCha8Rng;
     use rand_core::{CryptoRng, SeedableRng};
 
@@ -265,7 +265,7 @@ mod tests {
         pseudoprimes::STRONG_BASE_2.contains(&num)
     }
 
-    fn random_checks<T: Unsigned + RandomMod, R: CryptoRng + ?Sized>(
+    fn random_checks<T: UnsignedMontyForm + RandomMod, R: CryptoRng + ?Sized>(
         rng: &mut R,
         mr: &MillerRabin<T>,
         count: usize,
