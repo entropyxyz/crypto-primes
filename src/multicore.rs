@@ -1,6 +1,6 @@
 //! Prime-finding functions that can parallelize across multiple cores.
 
-use crypto_bigint::{RandomBits, RandomMod, Unsigned};
+use crypto_bigint::{RandomBits, RandomMod, UnsignedMontyForm};
 use rand_core::{CryptoRng, SeedableRng};
 use rayon::iter::{ParallelBridge, ParallelIterator};
 
@@ -105,7 +105,7 @@ where
 /// Panics if the platform is unable to spawn threads.
 pub fn random_prime<T, R>(rng: &mut R, flavor: Flavor, bit_length: u32, threadcount: usize) -> T
 where
-    T: Unsigned + RandomBits + RandomMod,
+    T: UnsignedMontyForm + RandomBits + RandomMod,
     R: CryptoRng + Send + Sync + SeedableRng,
 {
     let factory = SmallFactorsSieveFactory::new(flavor, bit_length, SetBits::Msb)
