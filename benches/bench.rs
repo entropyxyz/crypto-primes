@@ -65,7 +65,7 @@ fn bench_sieve(c: &mut Criterion) {
     // 5 is the average number of pre-sieved samples we need to take before we encounter a prime
     group.bench_function("(U128) average sieve samples for a prime (5)", |b| {
         b.iter_batched(
-            || make_sieve::<{ nlimbs!(128) }, _>(&mut rng),
+            || make_sieve::<{ nlimbs(128) }, _>(&mut rng),
             |sieve| sieve.take(5).for_each(drop),
             BatchSize::SmallInput,
         )
@@ -86,7 +86,7 @@ fn bench_sieve(c: &mut Criterion) {
     // 42 is the average number of pre-sieved samples we need to take before we encounter a prime
     group.bench_function("(U1024) average sieve samples for a prime (42)", |b| {
         b.iter_batched(
-            || make_sieve::<{ nlimbs!(1024) }, _>(&mut rng),
+            || make_sieve::<{ nlimbs(1024) }, _>(&mut rng),
             |sieve| sieve.take(42).for_each(drop),
             BatchSize::SmallInput,
         )
@@ -96,7 +96,7 @@ fn bench_sieve(c: &mut Criterion) {
     // before we encounter a safe prime
     group.bench_function("(U1024) average sieve samples for a safe prime (42^2)", |b| {
         b.iter_batched(
-            || make_sieve::<{ nlimbs!(1024) }, _>(&mut rng),
+            || make_sieve::<{ nlimbs(1024) }, _>(&mut rng),
             |sieve| sieve.take(42 * 42).for_each(drop),
             BatchSize::SmallInput,
         )
@@ -119,7 +119,7 @@ fn bench_miller_rabin(c: &mut Criterion) {
 
     group.bench_function("(U128) random base test (pre-sieved)", |b| {
         b.iter_batched(
-            || MillerRabin::new(make_presieved_num::<{ nlimbs!(128) }, _>(&mut rng.clone())),
+            || MillerRabin::new(make_presieved_num::<{ nlimbs(128) }, _>(&mut rng.clone())),
             |mr| mr.test_random_base(&mut rng.clone()),
             BatchSize::SmallInput,
         )
@@ -135,7 +135,7 @@ fn bench_miller_rabin(c: &mut Criterion) {
 
     group.bench_function("(U1024) random base test (pre-sieved)", |b| {
         b.iter_batched(
-            || MillerRabin::new(make_presieved_num::<{ nlimbs!(1024) }, _>(&mut rng.clone())),
+            || MillerRabin::new(make_presieved_num::<{ nlimbs(1024) }, _>(&mut rng.clone())),
             |mr| mr.test_random_base(&mut rng.clone()),
             BatchSize::SmallInput,
         )
@@ -148,7 +148,7 @@ fn bench_lucas(c: &mut Criterion) {
     let mut rng = make_rng();
     group.bench_function("(U128) Selfridge base, strong check (pre-sieved)", |b| {
         b.iter_batched(
-            || make_presieved_num::<{ nlimbs!(128) }, _>(&mut rng),
+            || make_presieved_num::<{ nlimbs(128) }, _>(&mut rng),
             |n| lucas_test(n, SelfridgeBase, LucasCheck::Strong),
             BatchSize::SmallInput,
         )
@@ -157,7 +157,7 @@ fn bench_lucas(c: &mut Criterion) {
     let mut rng = make_rng();
     group.bench_function("(U1024) Selfridge base, strong check (pre-sieved)", |b| {
         b.iter_batched(
-            || make_presieved_num::<{ nlimbs!(1024) }, _>(&mut rng),
+            || make_presieved_num::<{ nlimbs(1024) }, _>(&mut rng),
             |n| lucas_test(n, SelfridgeBase, LucasCheck::Strong),
             BatchSize::SmallInput,
         )
@@ -166,7 +166,7 @@ fn bench_lucas(c: &mut Criterion) {
     let mut rng = make_rng();
     group.bench_function("(U1024) A* base, Lucas-V check (pre-sieved)", |b| {
         b.iter_batched(
-            || make_presieved_num::<{ nlimbs!(1024) }, _>(&mut rng),
+            || make_presieved_num::<{ nlimbs(1024) }, _>(&mut rng),
             |n| lucas_test(n, AStarBase, LucasCheck::LucasV),
             BatchSize::SmallInput,
         )
@@ -175,7 +175,7 @@ fn bench_lucas(c: &mut Criterion) {
     let mut rng = make_rng();
     group.bench_function("(U1024) brute force base, almost extra strong (pre-sieved)", |b| {
         b.iter_batched(
-            || make_presieved_num::<{ nlimbs!(1024) }, _>(&mut rng),
+            || make_presieved_num::<{ nlimbs(1024) }, _>(&mut rng),
             |n| lucas_test(n, BruteForceBase, LucasCheck::AlmostExtraStrong),
             BatchSize::SmallInput,
         )
@@ -184,7 +184,7 @@ fn bench_lucas(c: &mut Criterion) {
     let mut rng = make_rng();
     group.bench_function("(U1024) brute force base, extra strong (pre-sieved)", |b| {
         b.iter_batched(
-            || make_presieved_num::<{ nlimbs!(1024) }, _>(&mut rng),
+            || make_presieved_num::<{ nlimbs(1024) }, _>(&mut rng),
             |n| lucas_test(n, BruteForceBase, LucasCheck::ExtraStrong),
             BatchSize::SmallInput,
         )
@@ -405,7 +405,7 @@ fn bench_gmp(c: &mut Criterion) {
 
     group.bench_function("(U128) Random prime", |b| {
         b.iter_batched(
-            || random::<{ nlimbs!(128) }, _>(&mut rng),
+            || random::<{ nlimbs(128) }, _>(&mut rng),
             |n| n.next_prime(),
             BatchSize::SmallInput,
         )
@@ -413,7 +413,7 @@ fn bench_gmp(c: &mut Criterion) {
 
     group.bench_function("(U1024) Random prime", |b| {
         b.iter_batched(
-            || random::<{ nlimbs!(1024) }, _>(&mut rng),
+            || random::<{ nlimbs(1024) }, _>(&mut rng),
             |n| n.next_prime(),
             BatchSize::SmallInput,
         )

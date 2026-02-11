@@ -1,7 +1,7 @@
 //! Const-context floating point functions that are currently not present in `core`.
 
 use core::f64;
-use crypto_bigint::Uint;
+use crypto_bigint::{Uint, cpubits};
 
 /// Calculates `base^exp`.
 const fn pow(mut base: f64, mut exp: u32) -> f64 {
@@ -122,19 +122,19 @@ pub(crate) fn ln<const LIMBS: usize>(x: &Uint<LIMBS>) -> f64 {
     // if x is small enough to be cast losslessly to an f64 we use the normal 64-bit log2() from `libm`.
     if ilog2_x < f64::MANTISSA_DIGITS {
         let x = {
-            #[cfg(target_pointer_width = "64")]
-            {
-                x.as_limbs()[0].0
-            }
-            #[cfg(target_pointer_width = "32")]
-            {
-                // Small enough to fit in 32 bits
-                if ilog2_x < 32 {
-                    x.as_limbs()[0].0 as u64
-                } else {
-                    let lo = x.as_limbs()[0].0;
-                    let hi = x.as_limbs()[1].0;
-                    (hi as u64) << 32 | lo as u64
+            cpubits! {
+                32 => {
+                    // Small enough to fit in 32 bits
+                    if ilog2_x < 32 {
+                        x.as_limbs()[0].0 as u64
+                    } else {
+                        let lo = x.as_limbs()[0].0;
+                        let hi = x.as_limbs()[1].0;
+                        (hi as u64) << 32 | lo as u64
+                    }
+                }
+                64 => {
+                    x.as_limbs()[0].0
                 }
             }
         };
@@ -145,14 +145,18 @@ pub(crate) fn ln<const LIMBS: usize>(x: &Uint<LIMBS>) -> f64 {
     // log2(x) ~ log2(M*2^shift) ~ log2(M) + shift ~ log2(M) + ilog2(x) - 52
     let shift = ilog2_x.saturating_sub(f64::MANTISSA_DIGITS - 1);
     let shifted_x = x.wrapping_shr_vartime(shift);
-    #[cfg(target_pointer_width = "64")]
-    let fraction = shifted_x.as_limbs()[0].0 as f64;
-    #[cfg(target_pointer_width = "32")]
     let fraction = {
-        let lo = shifted_x.as_limbs()[0].0;
-        let hi = shifted_x.as_limbs()[1].0;
-        let fraction = (hi as u64) << 32 | lo as u64;
-        fraction as f64
+        cpubits! {
+            32 => {
+                let lo = shifted_x.as_limbs()[0].0;
+                let hi = shifted_x.as_limbs()[1].0;
+                let fraction = (hi as u64) << 32 | lo as u64;
+                fraction as f64
+            }
+            64 => {
+                shifted_x.as_limbs()[0].0 as f64
+            }
+        }
     };
 
     // Fraction is now m * 2^52, where m is the top 53 bits of x. Take log2(m) and subtract 52 to scale the result back

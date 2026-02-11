@@ -1,6 +1,6 @@
 //! Prime-finding functions that can parallelize across multiple cores.
 
-use crypto_bigint::{RandomBits, RandomMod, UnsignedMontyForm};
+use crypto_bigint::{RandomBits, RandomMod, UnsignedWithMontyForm};
 use rand_core::{CryptoRng, SeedableRng};
 use rayon::iter::{ParallelBridge, ParallelIterator};
 
@@ -105,7 +105,7 @@ where
 /// Panics if the platform is unable to spawn threads.
 pub fn random_prime<T, R>(rng: &mut R, flavor: Flavor, bit_length: u32, threadcount: usize) -> T
 where
-    T: UnsignedMontyForm + RandomBits + RandomMod,
+    T: UnsignedWithMontyForm + RandomBits + RandomMod,
     R: CryptoRng + Send + Sync + SeedableRng,
 {
     let factory = SmallFactorsSieveFactory::new(flavor, bit_length, SetBits::Msb)
@@ -140,7 +140,7 @@ mod tests {
         for bit_length in (28..=128).step_by(10) {
             let p: BoxedUint = random_prime(&mut rng, Flavor::Any, bit_length, 2);
             assert!(p.bits_vartime() == bit_length);
-            assert!(p.to_words().len() == nlimbs!(bit_length));
+            assert!(p.to_words().len() == nlimbs(bit_length));
             assert!(is_prime(Flavor::Any, &p));
         }
     }
@@ -161,7 +161,7 @@ mod tests {
         for bit_length in (28..=128).step_by(10) {
             let p: BoxedUint = random_prime(&mut rng, Flavor::Safe, bit_length, 4);
             assert!(p.bits_vartime() == bit_length);
-            assert!(p.to_words().len() == nlimbs!(bit_length));
+            assert!(p.to_words().len() == nlimbs(bit_length));
             assert!(is_prime(Flavor::Safe, &p));
         }
     }

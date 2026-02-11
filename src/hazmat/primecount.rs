@@ -1,6 +1,6 @@
 use crate::hazmat::float::ln;
 use core::f64;
-use crypto_bigint::{Concat, NonZero, Split, Uint};
+use crypto_bigint::{Concat, NonZero, Uint, cpubits};
 
 /// Estimate the number of primes smaller than x using the asymptotic expansion of `Li(x)` with 4 terms, i.e.:
 ///
@@ -75,16 +75,17 @@ use crypto_bigint::{Concat, NonZero, Split, Uint};
 ///   [arXiv:1401.2689](https://arxiv.org/abs/1401.2689) (2014)
 pub fn estimate_primecount<const LIMBS: usize, const RHS_LIMBS: usize>(x: &Uint<LIMBS>) -> Uint<LIMBS>
 where
-    Uint<LIMBS>: Concat<Output = Uint<RHS_LIMBS>>,
-    Uint<RHS_LIMBS>: Split<Output = Uint<LIMBS>>,
+    Uint<LIMBS>: Concat<LIMBS, Output = Uint<RHS_LIMBS>>,
 {
     // Number of bits to scale by (fractional bits during division)
     // On 64 bit CPUs and x is a U64, we use 32 bits (1 limb * 32). Else 64.
     // On 32 bit CPUs and x is a U64, we use 32 bits (2 limb * 16). Else 64.
-    #[cfg(target_pointer_width = "32")]
-    let scale_bits = (LIMBS as u32 * 16).min(64);
-    #[cfg(target_pointer_width = "64")]
-    let scale_bits = (LIMBS as u32 * 32).min(64);
+    let scale_bits = {
+        cpubits! {
+            32 => { (LIMBS as u32 * 16).min(64) }
+            64 => { (LIMBS as u32 * 32).min(64) }
+        }
+    };
     let total_scale_bits = 2 * scale_bits;
     // Scaling factor for the denominators of the expansion terms, 2^64.
     let denom_scale_factor = (1u128 << scale_bits) as f64;
@@ -134,9 +135,8 @@ where
 
     // Descale by right-shifting
     let li_x = sum_scaled >> scale_bits;
-    let (lo, hi) = li_x.split();
-    assert_eq!(hi, Uint::ZERO, "De-scaling should leave the high half zero");
-    lo
+    li_x.resize_checked()
+        .expect("de-scaling should leave the high half zero")
 }
 
 #[cfg(test)]
@@ -277,12 +277,17 @@ mod tests {
 
     fn uint_to_u128<const LIMBS: usize>(x: &Uint<LIMBS>) -> u128 {
         let limbs = x.as_limbs();
-        #[cfg(target_pointer_width = "32")]
-        return (limbs[3].0 as u128) << 96
-            | (limbs[2].0 as u128) << 64
-            | (limbs[1].0 as u128) << 32
-            | limbs[0].0 as u128;
-        #[cfg(target_pointer_width = "64")]
-        return ((limbs[1].0 as u128) << 64) | limbs[0].0 as u128;
+
+        cpubits! {
+            32 => {
+                (limbs[3].0 as u128) << 96
+                | (limbs[2].0 as u128) << 64
+                | (limbs[1].0 as u128) << 32
+                | limbs[0].0 as u128
+            }
+            64 => {
+                ((limbs[1].0 as u128) << 64) | limbs[0].0 as u128
+            }
+        }
     }
 }

@@ -10,9 +10,9 @@ categories = ["cryptography", "no-std"]
 rust-version = "1.85"
 
 [dependencies]
-crypto-bigint = { version = "0.7.0-rc.22", default-features = false, features = ["rand_core"] }
+crypto-bigint = { version = "0.7.0-rc.27", default-features = false, features = ["rand_core"] }
 libm = { version = "0.2.13", default-features = false, features = ["arch"] }
-rand_core = { version = "0.10.0-rc-6", default-features = false }
+rand_core = { version = "0.10", default-features = false }
 rayon = { version = "1", optional = true, default-features = false }
 
 # Optional dependencies used in tests and benchmarks
@@ -21,9 +21,9 @@ rug = { version = "1.26", optional = true, default-features = false, features = 
 glass_pumpkin = { version = "1", optional = true }
 
 [dev-dependencies]
-rand = { version = "0.10.0-rc.7", features = ["chacha"] }
+rand = { version = "0.10", features = ["chacha"] }
 # need `crypto-bigint` with `alloc` to test `BoxedUint`
-crypto-bigint = { version = "0.7.0-pre.22", default-features = false, features = ["alloc"] }
+crypto-bigint = { version = "0.7.0-pre.27", default-features = false, features = ["alloc"] }
 criterion = { version = "0.5", features = ["html_reports"] }
 num-modular = { version = "0.5", features = ["num-bigint"] }
 num-bigint = "0.4"
@@ -62,6 +62,6 @@ harness = false
 name = "cctv"
 harness = false
 
-[patch.crates-io.rand]
-git = "https://github.com/rust-random/rand"
-branch = "rand_core/v0.10.0-rc-6"
+[lints.rust.unexpected_cfgs]
+level = "warn"
+check-cfg = ['cfg(cpubits, values("16", "32", "64"))']

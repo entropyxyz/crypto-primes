@@ -2,7 +2,7 @@
 //!
 //! [^FIPS]: FIPS-186.5 standard, <https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.186-5.pdf>
 
-use crypto_bigint::{RandomMod, UnsignedMontyForm};
+use crypto_bigint::{RandomMod, UnsignedWithMontyForm};
 use rand_core::CryptoRng;
 
 use crate::{
@@ -84,7 +84,7 @@ impl FipsOptions {
 /// [^FIPS]: FIPS-186.5 standard, <https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.186-5.pdf>
 pub fn is_prime<T>(rng: &mut (impl CryptoRng + ?Sized), flavor: Flavor, candidate: &T, options: FipsOptions) -> bool
 where
-    T: UnsignedMontyForm + RandomMod,
+    T: UnsignedWithMontyForm + RandomMod,
 {
     match flavor {
         Flavor::Any => {}
@@ -128,7 +128,7 @@ where
 /// [^FIPS]: FIPS-186.5 standard, <https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.186-5.pdf>
 fn is_safe_prime<T>(rng: &mut (impl CryptoRng + ?Sized), candidate: &T, options: FipsOptions) -> bool
 where
-    T: UnsignedMontyForm + RandomMod,
+    T: UnsignedWithMontyForm + RandomMod,
 {
     // Since, by the definition of safe prime, `(candidate - 1) / 2` must also be prime,
     // and therefore odd, `candidate` has to be equal to 3 modulo 4.

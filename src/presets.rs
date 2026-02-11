@@ -1,4 +1,4 @@
-use crypto_bigint::{RandomBits, RandomMod, UnsignedMontyForm};
+use crypto_bigint::{RandomBits, RandomMod, UnsignedWithMontyForm};
 use rand_core::CryptoRng;
 
 use crate::{
@@ -27,7 +27,7 @@ pub enum Flavor {
 /// See [`is_prime`] for details about the performed checks.
 pub fn random_prime<T, R>(rng: &mut R, flavor: Flavor, bit_length: u32) -> T
 where
-    T: UnsignedMontyForm + RandomBits + RandomMod,
+    T: UnsignedWithMontyForm + RandomBits + RandomMod,
     R: CryptoRng + ?Sized,
 {
     let factory = SmallFactorsSieveFactory::new(flavor, bit_length, SetBits::Msb)
@@ -63,7 +63,7 @@ where
 ///       DOI: [10.1090/mcom/3616](https://doi.org/10.1090/mcom/3616)
 pub fn is_prime<T>(flavor: Flavor, candidate: &T) -> bool
 where
-    T: UnsignedMontyForm + RandomMod,
+    T: UnsignedWithMontyForm + RandomMod,
 {
     match flavor {
         Flavor::Any => {}
@@ -94,7 +94,7 @@ where
 /// See [`is_prime`] for details about the performed checks.
 fn is_safe_prime<T>(candidate: &T) -> bool
 where
-    T: UnsignedMontyForm + RandomMod,
+    T: UnsignedWithMontyForm + RandomMod,
 {
     // Since, by the definition of safe prime, `(candidate - 1) / 2` must also be prime,
     // and therefore odd, `candidate` has to be equal to 3 modulo 4.
@@ -115,7 +115,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crypto_bigint::{BoxedUint, CheckedAdd, RandomMod, U64, U128, Uint, UnsignedMontyForm, Word, nlimbs};
+    use crypto_bigint::{BoxedUint, CheckedAdd, RandomMod, U64, U128, Uint, UnsignedWithMontyForm, Word, nlimbs};
     use num_prime::nt_funcs::is_prime64;
 
     use super::{Flavor, is_prime, random_prime};
@@ -124,7 +124,7 @@ mod tests {
         hazmat::{primes, pseudoprimes},
     };
 
-    fn fips_is_prime<T: UnsignedMontyForm + RandomMod>(flavor: Flavor, num: &T) -> bool {
+    fn fips_is_prime<T: UnsignedWithMontyForm + RandomMod>(flavor: Flavor, num: &T) -> bool {
         let mut rng = rand::rng();
         fips::is_prime(
             &mut rng,
@@ -134,7 +134,7 @@ mod tests {
         )
     }
 
-    fn fips_is_prime_trial_division<T: UnsignedMontyForm + RandomMod>(flavor: Flavor, num: &T) -> bool {
+    fn fips_is_prime_trial_division<T: UnsignedWithMontyForm + RandomMod>(flavor: Flavor, num: &T) -> bool {
         let mut rng = rand::rng();
         fips::is_prime(
             &mut rng,
@@ -248,7 +248,7 @@ mod tests {
         for bit_length in (28..=128).step_by(10) {
             let p: BoxedUint = random_prime(&mut rng, Flavor::Any, bit_length);
             assert!(p.bits_vartime() == bit_length);
-            assert!(p.to_words().len() == nlimbs!(bit_length));
+            assert!(p.to_words().len() == nlimbs(bit_length));
             assert!(is_prime(Flavor::Any, &p));
             assert!(fips_is_prime(Flavor::Any, &p));
             assert!(fips_is_prime_trial_division(Flavor::Any, &p));
@@ -275,7 +275,7 @@ mod tests {
         for bit_length in (28..=189).step_by(10) {
             let p: BoxedUint = random_prime(&mut rng, Flavor::Safe, bit_length);
             assert!(p.bits_vartime() == bit_length);
-            assert!(p.to_words().len() == nlimbs!(bit_length));
+            assert!(p.to_words().len() == nlimbs(bit_length));
             assert!(is_prime(Flavor::Safe, &p));
             assert!(fips_is_prime(Flavor::Safe, &p));
             assert!(fips_is_prime_trial_division(Flavor::Safe, &p));

@@ -1,6 +1,6 @@
 //! Lucas primality test.
 use core::num::NonZero;
-use crypto_bigint::{Limb, MontyForm, MontyMultiplier, Odd, Square, UnsignedMontyForm, Word};
+use crypto_bigint::{Limb, MontyForm, MontyMultiplier, Odd, Square, UnsignedWithMontyForm, Word};
 
 use super::{
     Primality,
@@ -28,7 +28,7 @@ pub trait LucasBase {
     /// Given an odd integer, returns `Ok((P, abs(Q), is_negative(Q)))` on success,
     /// or `Err(Primality)` if the primality for the given integer was discovered
     /// during the search for a base.
-    fn generate<T: UnsignedMontyForm>(&self, n: &Odd<T>) -> Result<(Word, Word, bool), Primality>;
+    fn generate<T: UnsignedWithMontyForm>(&self, n: &Odd<T>) -> Result<(Word, Word, bool), Primality>;
 }
 
 /// "Method A" for selecting the base given in Baillie & Wagstaff[^Baillie1980],
@@ -45,7 +45,7 @@ pub trait LucasBase {
 pub struct SelfridgeBase;
 
 impl LucasBase for SelfridgeBase {
-    fn generate<T: UnsignedMontyForm>(&self, n: &Odd<T>) -> Result<(Word, Word, bool), Primality> {
+    fn generate<T: UnsignedWithMontyForm>(&self, n: &Odd<T>) -> Result<(Word, Word, bool), Primality> {
         let mut abs_d = 5;
         let mut d_is_negative = false;
         let n_is_small = n.bits_vartime() < Word::BITS; // if true, `n` fits into one `Word`
@@ -109,7 +109,7 @@ impl LucasBase for SelfridgeBase {
 pub struct AStarBase;
 
 impl LucasBase for AStarBase {
-    fn generate<T: UnsignedMontyForm>(&self, n: &Odd<T>) -> Result<(Word, Word, bool), Primality> {
+    fn generate<T: UnsignedWithMontyForm>(&self, n: &Odd<T>) -> Result<(Word, Word, bool), Primality> {
         SelfridgeBase.generate(n).map(|(p, abs_q, q_is_negative)| {
             if abs_q == 1 && q_is_negative {
                 (5, 5, false)
@@ -131,7 +131,7 @@ impl LucasBase for AStarBase {
 pub struct BruteForceBase;
 
 impl LucasBase for BruteForceBase {
-    fn generate<T: UnsignedMontyForm>(&self, n: &Odd<T>) -> Result<(Word, Word, bool), Primality> {
+    fn generate<T: UnsignedWithMontyForm>(&self, n: &Odd<T>) -> Result<(Word, Word, bool), Primality> {
         let mut p = 3;
         let mut attempts = 0;
 
@@ -178,7 +178,7 @@ impl LucasBase for BruteForceBase {
 /// For the given odd `n`, finds `s` and odd `d` such that `n + 1 == 2^s * d`.
 fn decompose<T>(n: &Odd<T>) -> (u32, Odd<T>)
 where
-    T: UnsignedMontyForm,
+    T: UnsignedWithMontyForm,
 {
     // Need to be careful here since `n + 1` can overflow.
     // Instead of adding 1 and counting trailing 0s, we count trailing ones on the original `n`.
@@ -320,7 +320,7 @@ pub enum LucasCheck {
 /// [^FIPS]: FIPS-186.5 standard, <https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.186-5.pdf>
 pub fn lucas_test<T>(candidate: Odd<T>, base: impl LucasBase, check: LucasCheck) -> Primality
 where
-    T: UnsignedMontyForm,
+    T: UnsignedWithMontyForm,
 {
     // The comments in this function use references in `LucasCheck`, plus this one:
     //
@@ -375,10 +375,10 @@ where
     let (s, d) = decompose(&candidate);
 
     // Some constants in Montgomery form
-    let params = <T as UnsignedMontyForm>::MontyForm::new_params_vartime(candidate.clone());
+    let params = <T as UnsignedWithMontyForm>::MontyForm::new_params_vartime(candidate.clone());
 
-    let zero = <T as UnsignedMontyForm>::MontyForm::zero(&params);
-    let one = <T as UnsignedMontyForm>::MontyForm::one(&params);
+    let zero = <T as UnsignedWithMontyForm>::MontyForm::zero(&params);
+    let one = <T as UnsignedWithMontyForm>::MontyForm::one(&params);
     let two = one.clone() + &one;
     let minus_two = -two.clone();
 
@@ -387,7 +387,7 @@ where
     let q = if q_is_one {
         one.clone()
     } else {
-        let abs_q = <T as UnsignedMontyForm>::MontyForm::new(to_integer(abs_q), &params);
+        let abs_q = <T as UnsignedWithMontyForm>::MontyForm::new(to_integer(abs_q), &params);
         if q_is_negative { -abs_q } else { abs_q }
     };
 
@@ -396,7 +396,7 @@ where
     let p = if p_is_one {
         one.clone()
     } else {
-        <T as UnsignedMontyForm>::MontyForm::new(to_integer(p), &params)
+        <T as UnsignedWithMontyForm>::MontyForm::new(to_integer(p), &params)
     };
 
     // Compute d-th element of Lucas sequence (U_d(P, Q), V_d(P, Q)), where:
@@ -415,15 +415,15 @@ where
 
     // Starting with k = 0
     let mut vk = two.clone(); // keeps V_k
-    let mut uk = <T as UnsignedMontyForm>::MontyForm::zero(&params); // keeps U_k
+    let mut uk = <T as UnsignedWithMontyForm>::MontyForm::zero(&params); // keeps U_k
     let mut qk = one.clone(); // keeps Q^k
 
-    let mut temp = <T as UnsignedMontyForm>::MontyForm::zero(&params);
+    let mut temp = <T as UnsignedWithMontyForm>::MontyForm::zero(&params);
 
-    let mut mm = <<T as UnsignedMontyForm>::MontyForm as MontyForm>::Multiplier::from(&params);
+    let mut mm = <<T as UnsignedWithMontyForm>::MontyForm as MontyForm>::Multiplier::from(&params);
 
     // D in Montgomery representation - note that it can be negative.
-    let abs_d = <T as UnsignedMontyForm>::MontyForm::new(to_integer(abs_d), &params);
+    let abs_d = <T as UnsignedWithMontyForm>::MontyForm::new(to_integer(abs_d), &params);
     let d_m = if d_is_negative { -abs_d } else { abs_d };
 
     for i in (0..d.bits_vartime()).rev() {
@@ -606,7 +606,7 @@ mod tests {
 
     use alloc::format;
 
-    use crypto_bigint::{Odd, U64, U128, Uint, UnsignedMontyForm, Word};
+    use crypto_bigint::{Odd, U64, U128, Uint, UnsignedWithMontyForm, Word};
 
     #[cfg(feature = "tests-exhaustive")]
     use num_prime::nt_funcs::is_prime64;
@@ -657,7 +657,7 @@ mod tests {
         struct TestBase;
 
         impl LucasBase for TestBase {
-            fn generate<T: UnsignedMontyForm>(&self, _n: &Odd<T>) -> Result<(Word, Word, bool), Primality> {
+            fn generate<T: UnsignedWithMontyForm>(&self, _n: &Odd<T>) -> Result<(Word, Word, bool), Primality> {
                 Ok((5, 5, false))
             }
         }
