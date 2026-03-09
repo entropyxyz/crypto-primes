@@ -485,10 +485,6 @@ fn bench_glass_pumpkin(c: &mut Criterion) {
     use crypto_bigint::Limb;
     use crypto_primes::hazmat::{AStarBase, LucasCheck, MillerRabin, Primality, lucas_test};
 
-    fn make_rng_gp() -> rand_chacha_03::ChaCha8Rng {
-        <rand_chacha_03::ChaCha8Rng as rand_core_06::SeedableRng>::from_seed(*b"01234567890123456789012345678901")
-    }
-
     // The `glass-pumpkin` implementation is doing a different number of M-R checks than this crate.
     // For a fair comparison we make a custom implementation here,
     // using the same number of checks that `glass-pumpkin` does.
@@ -579,9 +575,9 @@ fn bench_glass_pumpkin(c: &mut Criterion) {
         b.iter(|| prime_like_gp(1024, &mut rng))
     });
 
-    let mut rng_gp = make_rng_gp();
+    let mut rng = make_rng();
     group.bench_function("(U1024) Random prime", |b| {
-        b.iter(|| glass_pumpkin::prime::from_rng(1024, &mut rng_gp))
+        b.iter(|| glass_pumpkin::prime::from_rng(1024, &mut rng))
     });
 
     group.sample_size(20);
@@ -597,9 +593,9 @@ fn bench_glass_pumpkin(c: &mut Criterion) {
         |b| b.iter(|| safe_prime_like_gp(1024, &mut rng)),
     );
 
-    let mut rng_gp = make_rng_gp();
+    let mut rng = make_rng();
     group.bench_function("(U1024) Random safe prime", |b| {
-        b.iter(|| glass_pumpkin::safe_prime::from_rng(1024, &mut rng_gp))
+        b.iter(|| glass_pumpkin::safe_prime::from_rng(1024, &mut rng))
     });
 }
 
