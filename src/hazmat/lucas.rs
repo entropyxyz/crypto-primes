@@ -631,7 +631,7 @@ mod tests {
     fn base_for_square() {
         // We can't find a base with Jacobi symbol = -1 for a square,
         // check that it is handled properly.
-        let num = Odd::new(U64::from(131u32).square()).unwrap();
+        let num = Odd::new(U64::from(131u32).concatenating_square()).unwrap();
         assert_eq!(SelfridgeBase.generate(&num), Err(Primality::Composite));
         assert_eq!(AStarBase.generate(&num), Err(Primality::Composite));
         assert_eq!(BruteForceBase.generate(&num), Err(Primality::Composite));
