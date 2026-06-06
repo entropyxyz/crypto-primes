@@ -40,6 +40,8 @@ tests-glass-pumpkin = ["glass_pumpkin"]
 tests-exhaustive = []
 tests-all = ["tests-openssl", "tests-gmp", "tests-exhaustive", "tests-glass-pumpkin"]
 multicore = ["rayon"]
+alloc = []
+default = ["alloc"]
 
 [package.metadata.docs.rs]
 all-features = true
