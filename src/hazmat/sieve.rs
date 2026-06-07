@@ -111,6 +111,7 @@ pub struct SmallFactorsSieve<T: Unsigned> {
     residues: Vec<SmallPrime>,
     #[cfg(not(feature = "alloc"))]
     residues: [SmallPrime; SMALL_PRIMES.len()],
+    #[cfg(not(feature = "alloc"))]
     residues_len: usize,
     max_bit_length: u32,
     produces_nothing: bool,
@@ -176,6 +177,7 @@ where
             residues: vec![0; residues_len],
             #[cfg(not(feature = "alloc"))]
             residues: [0; SMALL_PRIMES.len()],
+            #[cfg(not(feature = "alloc"))]
             residues_len,
             max_bit_length,
             produces_nothing,
@@ -205,7 +207,11 @@ where
         self.incr = 0;
 
         // Re-calculate residues. This is taking up most of the sieving time.
-        for (i, rec) in RECIPROCALS.iter().enumerate().take(self.residues_len) {
+        #[cfg(feature = "alloc")]
+        let residues_len = self.residues.len();
+        #[cfg(not(feature = "alloc"))]
+        let residues_len = self.residues_len;
+        for (i, rec) in RECIPROCALS.iter().enumerate().take(residues_len) {
             let rem = self.base.rem_limb_with_reciprocal(rec);
             self.residues[i] = rem.0 as SmallPrime;
         }
@@ -236,7 +242,11 @@ where
 
     // Returns `true` if the current `base + incr` is divisible by any of the small primes.
     fn current_is_composite(&self) -> bool {
-        self.residues.iter().take(self.residues_len).enumerate().any(|(i, m)| {
+        #[cfg(feature = "alloc")]
+        let residues_len = self.residues.len();
+        #[cfg(not(feature = "alloc"))]
+        let residues_len = self.residues_len;
+        self.residues.iter().take(residues_len).enumerate().any(|(i, m)| {
             let d = SMALL_PRIMES[i] as Residue;
             let r = (*m as Residue + self.incr) % d;
 
