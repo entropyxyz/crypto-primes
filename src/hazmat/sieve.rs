@@ -15,6 +15,50 @@ use super::{
 };
 use crate::{error::Error, presets::Flavor};
 
+#[cfg(not(feature = "alloc"))]
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct Residues {
+    residues: [SmallPrime; SMALL_PRIMES.len()],
+    length: usize,
+}
+
+#[cfg(not(feature = "alloc"))]
+impl Residues {
+    fn empty(length: usize) -> Self {
+        Self {
+            residues: [0; SMALL_PRIMES.len()],
+            length,
+        }
+    }
+
+    fn iter(&self) -> impl Iterator<Item = &SmallPrime> {
+        self.residues.iter().take(self.length)
+    }
+
+    fn iter_mut(&mut self) -> impl Iterator<Item = &mut SmallPrime> {
+        self.residues.iter_mut().take(self.length)
+    }
+}
+
+#[cfg(feature = "alloc")]
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct Residues(Vec<SmallPrime>);
+
+#[cfg(feature = "alloc")]
+impl Residues {
+    fn empty(length: usize) -> Self {
+        Self(vec![0; length])
+    }
+
+    fn iter(&self) -> impl Iterator<Item = &SmallPrime> {
+        self.0.iter()
+    }
+
+    fn iter_mut(&mut self) -> impl Iterator<Item = &mut SmallPrime> {
+        self.0.iter_mut()
+    }
+}
+
 /// Decide how prime candidates are manipulated by setting certain bits before primality testing,
 /// influencing the range of the prime.
 #[derive(Debug, Clone, Copy)]
@@ -107,12 +151,7 @@ pub struct SmallFactorsSieve<T: Unsigned> {
     incr: Residue,
     incr_limit: Residue,
     safe_primes: bool,
-    #[cfg(feature = "alloc")]
-    residues: Vec<SmallPrime>,
-    #[cfg(not(feature = "alloc"))]
-    residues: [SmallPrime; SMALL_PRIMES.len()],
-    #[cfg(not(feature = "alloc"))]
-    residues_len: usize,
+    residues: Residues,
     max_bit_length: u32,
     produces_nothing: bool,
     starts_from_exception: bool,
@@ -173,12 +212,7 @@ where
             incr: 0, // This will ensure that `update_residues()` is called right away.
             incr_limit: 0,
             safe_primes,
-            #[cfg(feature = "alloc")]
-            residues: vec![0; residues_len],
-            #[cfg(not(feature = "alloc"))]
-            residues: [0; SMALL_PRIMES.len()],
-            #[cfg(not(feature = "alloc"))]
-            residues_len,
+            residues: Residues::empty(residues_len),
             max_bit_length,
             produces_nothing,
             starts_from_exception,
@@ -207,13 +241,9 @@ where
         self.incr = 0;
 
         // Re-calculate residues. This is taking up most of the sieving time.
-        #[cfg(feature = "alloc")]
-        let residues_len = self.residues.len();
-        #[cfg(not(feature = "alloc"))]
-        let residues_len = self.residues_len;
-        for (i, rec) in RECIPROCALS.iter().enumerate().take(residues_len) {
-            let rem = self.base.rem_limb_with_reciprocal(rec);
-            self.residues[i] = rem.0 as SmallPrime;
+        for (residue, reciprocal) in self.residues.iter_mut().zip(RECIPROCALS.iter()) {
+            let rem = self.base.rem_limb_with_reciprocal(reciprocal);
+            *residue = rem.0 as SmallPrime;
         }
 
         // Find the increment limit.
@@ -242,11 +272,7 @@ where
 
     // Returns `true` if the current `base + incr` is divisible by any of the small primes.
     fn current_is_composite(&self) -> bool {
-        #[cfg(feature = "alloc")]
-        let residues_len = self.residues.len();
-        #[cfg(not(feature = "alloc"))]
-        let residues_len = self.residues_len;
-        self.residues.iter().take(residues_len).enumerate().any(|(i, m)| {
+        self.residues.iter().enumerate().any(|(i, m)| {
             let d = SMALL_PRIMES[i] as Residue;
             let r = (*m as Residue + self.incr) % d;
 
