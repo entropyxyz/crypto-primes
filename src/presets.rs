@@ -84,8 +84,7 @@ where
 
     match lucas_test(odd_candidate, AStarBase, LucasCheck::Bpsw21) {
         Primality::Composite => false,
-        Primality::Prime => true,
-        Primality::ProbablyPrime => true,
+        Primality::Prime | Primality::ProbablyPrime => true,
     }
 }
 
@@ -434,7 +433,7 @@ mod tests_openssl {
         for _ in 0..100 {
             let p: U128 = random_prime(&mut rng, Flavor::Any, 128);
             let p_bn = to_openssl(&p);
-            assert!(openssl_is_prime(&p_bn, &mut ctx), "OpenSSL reports {p} as composite",);
+            assert!(openssl_is_prime(&p_bn, &mut ctx), "OpenSSL reports {p} as composite");
         }
 
         let mr_iterations = minimum_mr_iterations(U128::BITS, 100).unwrap();

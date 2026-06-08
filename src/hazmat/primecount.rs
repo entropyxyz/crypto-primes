@@ -45,13 +45,14 @@ use crypto_bigint::{Concat, NonZero, Uint, cpubits};
 ///
 /// ## Discussion
 ///
-/// Assuming RH, the dominant error term in estimating $\pi(x)$ with $Li_{approx}(x)$ comes from truncating the asymptotic
-/// expansion of Li(x). While this truncation error is extremely small in relative terms, it is large in absolute terms.
+/// Assuming RH, the dominant error term in estimating $\pi(x)$ with $Li_{approx}(x)$
+/// comes from truncating the asymptotic expansion of Li(x).
+/// While this truncation error is extremely small in relative terms, it is large in absolute terms.
 /// Improving the Li(x) approximation to be the same order of magnitude as the Schoenfeld bound would require using
 /// hundreds of terms from the asymptotic series (or employing more complex methods like continued fractions for the
 /// remainder, which is beyond the scope of this simple approximation). In relative terms the error bound is
-/// approximately $2^{-33}$ (for 1024 bits) down to $\sim 2^{-41}$ (for 4096 bits). This corresponds to an extremely small
-/// percentage error (significantly less than $10^{-8}$ %).
+/// approximately $2^{-33}$ (for 1024 bits) down to $\sim 2^{-41}$ (for 4096 bits).
+/// This corresponds to an extremely small percentage error (significantly less than $10^{-8}$ %).
 ///
 /// It should be noted that while Li(x) is generally smaller than $\pi(x)$ for 'small' x, it is known that the sign of
 /// $\pi(x) - Li(x)$ changes infinitely often. It has been proven that there must be a crossing below $\sim 10^{316}$
@@ -73,6 +74,7 @@ use crypto_bigint::{Concat, NonZero, Uint, cpubits};
 ///
 /// [^Trudgian2014]: T. Trudgian, "Updating the error term in the prime number theorem",
 ///   [arXiv:1401.2689](https://arxiv.org/abs/1401.2689) (2014)
+#[must_use]
 pub fn estimate_primecount<const LIMBS: usize, const RHS_LIMBS: usize>(x: &Uint<LIMBS>) -> Uint<LIMBS>
 where
     Uint<LIMBS>: Concat<LIMBS, Output = Uint<RHS_LIMBS>>,
@@ -213,17 +215,23 @@ mod tests {
             candidate - reference
         };
         assert!(
-            reference.bits_vartime() - delta.bits_vartime() >= min_bit_diff,
-            "Estimate not close enough: delta has {} bits, reference has {} bits. Difference should be >= {}\nEstimate: {candidate},\nReference: {reference}",
+            reference.bits_vartime().abs_diff(delta.bits_vartime()) >= min_bit_diff,
+            concat!(
+                "Estimate not close enough: delta has {} bits, reference has {} bits. ",
+                "Difference should be >= {}\nEstimate: {},\nReference: {}"
+            ),
             delta.bits_vartime(),
             reference.bits_vartime(),
-            min_bit_diff
+            min_bit_diff,
+            candidate,
+            reference,
         );
     }
 
     #[test]
     fn pi_x_estimates_for_known_values() {
-        // List of known values for π(x), expressed as a tuple of `(π(x), exponent)`, where the `exponent` is used with base 10.
+        // List of known values for π(x), expressed as a tuple of `(π(x), exponent)`,
+        // where the `exponent` is used with base 10.
         let pi_xs: Vec<(u128, u32)> = vec![
             // The error is large for small x, so we skip them.
             // (4, 1),
@@ -256,7 +264,7 @@ mod tests {
             (157589269275973410412739598, 28),
             (1520698109714272166094258063, 29),
         ];
-        for (pi_x, exponent) in pi_xs.iter() {
+        for (pi_x, exponent) in &pi_xs {
             let pi_x_wide = U256::from_u128(*pi_x);
             let n = U256::from_u128(10u128.pow(*exponent));
             let estimate = estimate_primecount(&n);
@@ -280,13 +288,13 @@ mod tests {
 
         cpubits! {
             32 => {
-                (limbs[3].0 as u128) << 96
-                | (limbs[2].0 as u128) << 64
-                | (limbs[1].0 as u128) << 32
-                | limbs[0].0 as u128
+                u128::from(limbs[3].0) << 96
+                | u128::from(limbs[2].0) << 64
+                | u128::from(limbs[1].0) << 32
+                | u128::from(limbs[0].0)
             }
             64 => {
-                ((limbs[1].0 as u128) << 64) | limbs[0].0 as u128
+                (u128::from(limbs[1].0) << 64) | u128::from(limbs[0].0)
             }
         }
     }

@@ -37,19 +37,19 @@ pub enum Primality {
 
 impl Primality {
     /// Returns `true` if the result indicates that the number is definitely composite.
-    pub fn is_composite(&self) -> bool {
+    #[must_use]
+    pub const fn is_composite(&self) -> bool {
         match self {
-            Self::Prime => false,
-            Self::ProbablyPrime => false,
+            Self::Prime | Self::ProbablyPrime => false,
             Self::Composite => true,
         }
     }
 
     /// Returns `true` if the result indicates that the number is probably or definitely prime.
-    pub fn is_probably_prime(&self) -> bool {
+    #[must_use]
+    pub const fn is_probably_prime(&self) -> bool {
         match self {
-            Self::Prime => true,
-            Self::ProbablyPrime => true,
+            Self::Prime | Self::ProbablyPrime => true,
             Self::Composite => false,
         }
     }

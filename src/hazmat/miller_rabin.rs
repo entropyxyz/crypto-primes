@@ -174,6 +174,11 @@ const fn pseudoprime_probability(k: u32, t: u32, cap_m: u32) -> f64 {
 
     // `2.00743 ln(2) k` comes from Proposition 2 in [^Damgard], from the estimate for `(pi(2^k) - pi(2^{k-1}))^{-1}`.
 
+    const PI: f64 = core::f64::consts::PI;
+
+    // `2.00743 * ln(2) * 2^(-2)`
+    const COEFF: f64 = 0.3478611111678627;
+
     // Calculate the powers of 2 under the summations.
     //
     // Technically, only a few terms really contribute to the result, and the rest are extremely small in comparison.
@@ -193,11 +198,6 @@ const fn pseudoprime_probability(k: u32, t: u32, cap_m: u32) -> f64 {
         m += 1;
     }
 
-    const PI: f64 = core::f64::consts::PI;
-
-    // `2.00743 * ln(2) * 2^(-2)`
-    const COEFF: f64 = 0.3478611111678627;
-
     COEFF * k as f64 * (1. / two_powi(cap_m * t) + 8. * (PI * PI - 6.) / 3. * s)
 }
 
@@ -210,6 +210,7 @@ const fn pseudoprime_probability(k: u32, t: u32, cap_m: u32) -> f64 {
 /// This function implements the formula prescribed by the FIPS.186-5 standard[^FIPS].
 ///
 /// [^FIPS]: FIPS-186.5 standard, <https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.186-5.pdf>
+#[must_use]
 pub const fn minimum_mr_iterations(bit_length: u32, log2_target: u32) -> Option<usize> {
     let mut t = 1;
     while t <= log2_target.div_ceil(2) {
@@ -279,7 +280,7 @@ mod tests {
 
     fn test_composites(numbers: &[u32], expected_result: bool) {
         let mut rng = ChaCha8Rng::from_seed(*b"01234567890123456789012345678901");
-        for num in numbers.iter() {
+        for num in numbers {
             let base_2_false_positive = is_spsp(*num);
             let actual_expected_result = if base_2_false_positive { true } else { expected_result };
 
@@ -331,7 +332,7 @@ mod tests {
     fn strong_fibonacci_pseudoprimes() {
         let mut rng = ChaCha8Rng::from_seed(*b"01234567890123456789012345678901");
 
-        for num in pseudoprimes::STRONG_FIBONACCI.iter() {
+        for num in pseudoprimes::STRONG_FIBONACCI {
             let mr = MillerRabin::new(Odd::new(*num).unwrap());
             assert!(!mr.test_base_two().is_probably_prime());
             for _ in 0..1000 {

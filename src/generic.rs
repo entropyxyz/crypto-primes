@@ -18,9 +18,8 @@ where
     // Unlike the parallel version, it is avoidable here.
 
     let mut sieve_factory = sieve_factory;
-    let mut sieve = match sieve_factory.make_sieve(rng, None)? {
-        Some(sieve) => sieve,
-        None => return Ok(None),
+    let Some(mut sieve) = sieve_factory.make_sieve(rng, None)? else {
+        return Ok(None);
     };
 
     loop {

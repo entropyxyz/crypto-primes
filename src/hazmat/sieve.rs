@@ -315,10 +315,9 @@ where
         // Main loop
 
         while self.update_residues() {
-            match self.maybe_next() {
-                Some(x) => return Some(x),
-                None => continue,
-            };
+            if let Some(x) = self.maybe_next() {
+                return Some(x);
+            }
         }
         None
     }
@@ -374,7 +373,7 @@ where
     /// Some bits may be guaranteed to set depending on the requested `set_bits`.
     ///
     /// Depending on the requested `flavor`, additional filters may be applied.
-    pub fn new(flavor: Flavor, max_bit_length: u32, set_bits: SetBits) -> Result<Self, Error> {
+    pub const fn new(flavor: Flavor, max_bit_length: u32, set_bits: SetBits) -> Result<Self, Error> {
         match flavor {
             Flavor::Any => {
                 if max_bit_length < 2 {
@@ -393,7 +392,7 @@ where
                 }
             }
         }
-        let max_bit_length = NonZero::new(max_bit_length).expect("`bit_length` should be non-zero");
+        let max_bit_length = NonZero::new(max_bit_length).expect("`max_bit_length` is non-zero");
         Ok(Self {
             max_bit_length,
             safe_primes: match flavor {
@@ -555,7 +554,7 @@ mod tests {
 
         // The start of the interval is lower than the last prime,
         // so the number of factors is determined by it.
-        let len = trial_primes_num(&U64::from(LAST_SMALL_PRIME as u64 - 1), 64.try_into().unwrap());
+        let len = trial_primes_num(&U64::from(u64::from(LAST_SMALL_PRIME) - 1), 64.try_into().unwrap());
         assert_eq!(len, SMALL_PRIMES.len() - 1);
     }
 
@@ -602,7 +601,7 @@ mod tests {
             let factors_and_powers = factorize64(num_u64);
             let factors = factors_and_powers.into_keys().collect::<Vec<_>>();
 
-            assert!(factors[0] > max_prime as u64);
+            assert!(factors[0] > u64::from(max_prime));
         }
     }
     #[test]
@@ -620,14 +619,14 @@ mod tests {
             .take(100)
         {
             // For 32-bit targets
-            #[allow(clippy::useless_conversion)]
-            let num_u64: u64 = num.as_words()[0].into();
+            #[expect(clippy::useless_conversion)]
+            let num_u64 = u64::from(num.as_words()[0]);
             assert!(num_u64.leading_zeros() == 32);
 
             let factors_and_powers = factorize64(num_u64);
             let factors = factors_and_powers.into_keys().collect::<Vec<_>>();
 
-            assert!(factors[0] > max_prime as u64);
+            assert!(factors[0] > u64::from(max_prime));
         }
     }
 

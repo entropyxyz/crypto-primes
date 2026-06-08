@@ -32,9 +32,8 @@ where
         .build()
         .expect("If the platform can spawn threads, then this call will work.");
 
-    let iter = match SieveIterator::new(rng, sieve_factory)? {
-        Some(iter) => iter,
-        None => return Ok(None),
+    let Some(iter) = SieveIterator::new(rng, sieve_factory)? else {
+        return Ok(None);
     };
 
     threadpool.install(|| {
@@ -61,14 +60,13 @@ where
     /// Creates a new chained iterator producing results from sieves returned from `sieve_factory`.
     pub fn new(rng: &'a mut R, sieve_factory: S) -> Result<Option<Self>, Error> {
         let mut sieve_factory = sieve_factory;
-        let sieve = match sieve_factory.make_sieve(rng, None)? {
-            Some(sieve) => sieve,
-            None => return Ok(None),
+        let Some(sieve) = sieve_factory.make_sieve(rng, None)? else {
+            return Ok(None);
         };
         Ok(Some(Self {
             sieve_factory,
-            rng,
             sieve,
+            rng,
         }))
     }
 }

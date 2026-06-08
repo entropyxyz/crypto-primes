@@ -47,6 +47,12 @@ const fn floor(x: f64) -> f64 {
 
 /// Calculates a lower bound approximation of `2^exp` where `0 <= exp <= 1`.
 const fn two_powf_normalized_lower_bound(exp: f64) -> f64 {
+    // The coefficients are `ln(2)^n / n!`, where `n` is the power of the corresponding term.
+    const LN_2: f64 = f64::consts::LN_2;
+    const C1: f64 = LN_2;
+    const C2: f64 = LN_2 * LN_2 / 2.;
+    const C3: f64 = LN_2 * LN_2 * LN_2 / 6.;
+
     debug_assert!(exp >= 0.);
     debug_assert!(exp <= 1.);
 
@@ -57,12 +63,6 @@ const fn two_powf_normalized_lower_bound(exp: f64) -> f64 {
 
     let exp_2 = exp * exp;
     let exp_3 = exp_2 * exp;
-
-    // The coefficients are `ln(2)^n / n!`, where `n` is the power of the corresponding term.
-    const LN_2: f64 = f64::consts::LN_2;
-    const C1: f64 = LN_2;
-    const C2: f64 = LN_2 * LN_2 / 2.;
-    const C3: f64 = LN_2 * LN_2 * LN_2 / 6.;
 
     1. + C1 * exp + C2 * exp_2 + C3 * exp_3
 }
@@ -96,7 +96,7 @@ pub(crate) const fn floor_sqrt(x: u32) -> u32 {
     let mut high = x / 2;
 
     while low <= high {
-        let mid = (low + high) / 2;
+        let mid = u32::midpoint(low, high);
         let mid_squared = mid * mid;
 
         // Check if `mid` is the floor of the square root of `x`.
@@ -105,11 +105,11 @@ pub(crate) const fn floor_sqrt(x: u32) -> u32 {
         } else if mid_squared < x {
             low = mid + 1;
         } else {
-            high = mid - 1
+            high = mid - 1;
         }
     }
 
-    (low + high) / 2
+    u32::midpoint(low, high)
 }
 
 // Calculate the natural logarithm of a big integer using the relation ln(x) = log₂(x) / log₂(e).
@@ -161,8 +161,8 @@ pub(crate) fn ln<const LIMBS: usize>(x: &Uint<LIMBS>) -> f64 {
 
     // Fraction is now m * 2^52, where m is the top 53 bits of x. Take log2(m) and subtract 52 to scale the result back
     // to the expected range.
-    let fraction = libm::log2(fraction) - (f64::MANTISSA_DIGITS - 1) as f64;
-    let log2_x = ilog2_x as f64 + fraction;
+    let fraction = libm::log2(fraction) - f64::from(f64::MANTISSA_DIGITS - 1);
+    let log2_x = f64::from(ilog2_x) + fraction;
     log2_x * f64::consts::LN_2
 }
 
@@ -187,9 +187,9 @@ mod tests {
     proptest! {
         #[test]
         fn fuzzy_pow(base in 0..100u32, exp in 0..30u32) {
-            let base_f = base as f64 / 100.;
+            let base_f = f64::from(base) / 100.;
             let test = pow(base_f, exp);
-            let reference = base_f.powf(exp as f64);
+            let reference = base_f.powf(f64::from(exp));
             assert_approx_eq!(f64, test, reference, ulps = 20);
         }
 
@@ -202,7 +202,7 @@ mod tests {
 
         #[test]
         fn fuzzy_two_powf_upper_bound(exp in 0..1000) {
-            let exp_f = exp as f64 / 1000.;
+            let exp_f = f64::from(exp) / 1000.;
             let test = two_powf_normalized_lower_bound(exp_f);
             let reference = 2f64.powf(exp_f);
             assert!(test <= reference);
@@ -211,7 +211,7 @@ mod tests {
 
         #[test]
         fn fuzzy_floor_sqrt(x in 0..100000u32) {
-            let x_f = x as f64;
+            let x_f = f64::from(x);
             let test = floor_sqrt(x);
             let reference = x_f.sqrt().floor() as u32;
             assert_eq!(test, reference);
@@ -263,7 +263,7 @@ mod tests {
             (10u128.pow(37), 85.19564844077969),
             (10u128.pow(38), 87.49823353377374),
         ];
-        for (x, expected) in test_cases.iter() {
+        for (x, expected) in &test_cases {
             let x_big = U128::from_u128(*x);
             let result = ln(&x_big);
             assert!(

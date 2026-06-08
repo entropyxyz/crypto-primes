@@ -395,7 +395,7 @@ where
     // Starting with k = 0
     let mut vk = two.clone(); // keeps V_k
     let mut uk = <T as UnsignedWithMontyForm>::MontyForm::zero(&params); // keeps U_k
-    let mut qk = one.clone(); // keeps Q^k
+    let mut qk = one; // keeps Q^k
 
     let mut temp = <T as UnsignedWithMontyForm>::MontyForm::zero(&params);
 
@@ -435,7 +435,7 @@ where
             mm.mul_assign(&mut temp, &d_m);
             if !p_is_one {
                 mm.mul_assign(&mut vk, &p);
-            };
+            }
             vk += &temp;
             vk.div_by_2_assign();
 
@@ -539,9 +539,8 @@ where
         uk *= &vk; // now `uk = U_{d * 2^s} = U_{n+1}`
         if uk == zero {
             return Primality::ProbablyPrime;
-        } else {
-            return Primality::Composite;
         }
+        return Primality::Composite;
     }
 
     // Double the index again:
@@ -552,9 +551,8 @@ where
     if check == LucasCheck::LucasV {
         if !lucas_v {
             return Primality::Composite;
-        } else {
-            return Primality::ProbablyPrime;
         }
+        return Primality::ProbablyPrime;
     }
 
     // The only remaining variant at this point.
@@ -622,7 +620,7 @@ mod tests {
         assert_eq!(
             BruteForceBase.generate(&Odd::new(U64::from(5u32)).unwrap()),
             Err(Primality::Prime)
-        )
+        );
     }
 
     #[test]
@@ -706,7 +704,7 @@ mod tests {
     }
 
     fn test_pseudoprimes<T: HasBaseType>(numbers: &[u32], base: T, check: LucasCheck, expected_result: bool) {
-        for num in numbers.iter() {
+        for num in numbers {
             let false_positive = is_pseudoprime::<T>(*num, check);
             let actual_expected_result = if false_positive { true } else { expected_result };
 
@@ -729,7 +727,7 @@ mod tests {
     #[test]
     fn strong_fibonacci_pseudoprimes() {
         // Can't use `test_pseudoprimes()` since `STRONG_FIBONACCI` is `U64`.
-        for num in pseudoprimes::STRONG_FIBONACCI.iter() {
+        for num in pseudoprimes::STRONG_FIBONACCI {
             assert!(lucas_test(Odd::new(*num).unwrap(), SelfridgeBase, LucasCheck::Regular).is_composite());
             assert!(lucas_test(Odd::new(*num).unwrap(), SelfridgeBase, LucasCheck::Strong).is_composite());
             assert!(lucas_test(Odd::new(*num).unwrap(), AStarBase, LucasCheck::LucasV).is_composite());

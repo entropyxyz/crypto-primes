@@ -24,7 +24,7 @@ pub enum Error {
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
         match self {
-            Error::BitLengthTooLarge {
+            Self::BitLengthTooLarge {
                 bit_length,
                 bits_precision,
             } => write!(
@@ -35,7 +35,7 @@ impl fmt::Display for Error {
                 ],
                 bit_length, bits_precision
             ),
-            Error::BitLengthTooSmall { bit_length, flavor } => write!(
+            Self::BitLengthTooSmall { bit_length, flavor } => write!(
                 f,
                 concat![
                     "The requested bit length of the candidate ({}) ",
