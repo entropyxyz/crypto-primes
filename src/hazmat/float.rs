@@ -70,11 +70,17 @@ const fn two_powf_normalized_lower_bound(exp: f64) -> f64 {
 /// Calculates an approximation of `2^exp` where `exp < 0`.
 /// The approximation is guaranteed to always be greater than `2^exp`.
 pub(crate) const fn two_powf_upper_bound(exp: f64) -> f64 {
-    debug_assert!(exp < 0.);
+    assert!(exp < 0.);
 
     let positive_exp = -exp;
 
     let int_part = floor(positive_exp);
+
+    // 2^(-1075) is smaller than f64 can represent.
+    if int_part > 1074. {
+        return 0.0;
+    }
+
     let frac_part = positive_exp - int_part;
 
     let int_res = two_powi(int_part as u32);
