@@ -42,17 +42,14 @@ pub struct SelfridgeBase;
 
 impl LucasBase for SelfridgeBase {
     fn generate<T: UnsignedWithMontyForm>(&self, n: &Odd<T>) -> Result<(Word, Word, bool), Primality> {
-        let mut abs_d = 5;
-        let mut d_is_negative = false;
         let n_is_small = n.bits_vartime() < Word::BITS; // if true, `n` fits into one `Word`
         let small_n = first_limb(n.as_ref());
-        let mut attempts = 0;
-        loop {
-            if attempts >= MAX_ATTEMPTS {
-                panic!("internal error: cannot find (D/n) = -1 for {:?}", n)
-            }
 
-            if attempts >= ATTEMPTS_BEFORE_SQRT {
+        for ((abs_d, d_is_negative), attempts) in ((5..).step_by(2))
+            .zip([false, true].iter().copied().cycle())
+            .zip(0..MAX_ATTEMPTS)
+        {
+            if attempts == ATTEMPTS_BEFORE_SQRT {
                 let sqrt_n = n.floor_sqrt_vartime();
                 if &sqrt_n.wrapping_mul(&sqrt_n) == n.as_ref() {
                     return Err(Primality::Composite);
@@ -62,7 +59,15 @@ impl LucasBase for SelfridgeBase {
             let j = jacobi_symbol_vartime(abs_d, d_is_negative, n);
 
             if j == JacobiSymbol::MinusOne {
-                break;
+                // Calculate `q = (1 - d) / 4`.
+                // No remainder from division by 4, by construction of `d`.
+                let (abs_q, q_is_negative) = if d_is_negative {
+                    ((abs_d + 1) / 4, false)
+                } else {
+                    ((abs_d - 1) / 4, true)
+                };
+
+                return Ok((1, abs_q, q_is_negative));
             }
             if j == JacobiSymbol::Zero {
                 // Modification of Method A by Baillie, in an example to OEIS:A217120
@@ -75,21 +80,9 @@ impl LucasBase for SelfridgeBase {
                     return Err(Primality::Composite);
                 }
             }
-
-            attempts += 1;
-            d_is_negative = !d_is_negative;
-            abs_d += 2;
         }
 
-        // Calculate `q = (1 - d) / 4`.
-        // No remainder from division by 4, by construction of `d`.
-        let (abs_q, q_is_negative) = if d_is_negative {
-            ((abs_d + 1) / 4, false)
-        } else {
-            ((abs_d - 1) / 4, true)
-        };
-
-        Ok((1, abs_q, q_is_negative))
+        panic!("internal error: cannot find (D/n) = -1 for {:?}", n);
     }
 }
 
@@ -128,15 +121,8 @@ pub struct BruteForceBase;
 
 impl LucasBase for BruteForceBase {
     fn generate<T: UnsignedWithMontyForm>(&self, n: &Odd<T>) -> Result<(Word, Word, bool), Primality> {
-        let mut p = 3;
-        let mut attempts = 0;
-
-        loop {
-            if attempts >= MAX_ATTEMPTS {
-                panic!("internal error: cannot find (D/n) = -1 for {:?}", n)
-            }
-
-            if attempts >= ATTEMPTS_BEFORE_SQRT {
+        for (p, attempts) in (3..).zip(0..MAX_ATTEMPTS) {
+            if attempts == ATTEMPTS_BEFORE_SQRT {
                 let sqrt_n = n.floor_sqrt_vartime();
                 if &sqrt_n.wrapping_mul(&sqrt_n) == n.as_ref() {
                     return Err(Primality::Composite);
@@ -147,7 +133,7 @@ impl LucasBase for BruteForceBase {
             let j = jacobi_symbol_vartime(p * p - 4, false, n);
 
             if j == JacobiSymbol::MinusOne {
-                break;
+                return Ok((p, 1, false));
             }
             if j == JacobiSymbol::Zero {
                 // D = P^2 - 4 = (P - 2)(P + 2).
@@ -162,12 +148,9 @@ impl LucasBase for BruteForceBase {
                 };
                 return Err(primality);
             }
-
-            attempts += 1;
-            p += 1;
         }
 
-        Ok((p, 1, false))
+        panic!("internal error: cannot find (D/n) = -1 for {:?}", n);
     }
 }
 
