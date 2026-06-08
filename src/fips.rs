@@ -8,7 +8,7 @@ use rand_core::CryptoRng;
 use crate::{
     hazmat::{
         ConventionsTestResult, LucasCheck, MillerRabin, Primality, SelfridgeBase, conventions_test, equals_primitive,
-        lucas_test, minimum_mr_iterations, small_factors_test,
+        first_limb, lucas_test, minimum_mr_iterations, small_factors_test,
     },
     presets::Flavor,
 };
@@ -140,7 +140,7 @@ where
     // Safe primes are always of the form 4k + 3 (i.e. n ≡ 3 mod 4)
     // The last two digits of a binary number give you its value modulo 4.
     // Primes p=4n+3 will always end in 11 in binary because p ≡ 3 mod 4.
-    if candidate.as_limbs()[0].0 & 3 != 3 {
+    if first_limb(candidate) & 3 != 3 {
         return false;
     }
 

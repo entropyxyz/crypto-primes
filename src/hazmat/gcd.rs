@@ -1,6 +1,8 @@
 use core::num::NonZero;
 use crypto_bigint::{Limb, NonZero as CTNonZero, Unsigned, Word};
 
+use super::utils::first_limb;
+
 /// Calculates the greatest common divisor of `n` and `m`.
 /// By definition, `gcd(0, m) == m`.
 /// `n` must be non-zero.
@@ -23,7 +25,7 @@ where
     } else {
         // In this branch `n` is `Word::BITS` bits or shorter,
         // so we can safely take the first limb.
-        let n = n.as_limbs()[0].0;
+        let n = first_limb(n);
         if n > m { (n, m) } else { (m, n) }
     };
 

@@ -6,12 +6,13 @@ use alloc::{vec, vec::Vec};
 use core::marker::PhantomData;
 use core::num::{NonZero, NonZeroU32};
 
-use crypto_bigint::{Limb, Odd, RandomBits, RandomBitsError, Unsigned, Word};
+use crypto_bigint::{Limb, Odd, RandomBits, RandomBitsError, Unsigned};
 use rand_core::CryptoRng;
 
 use super::{
     Primality,
     precomputed::{LAST_SMALL_PRIME, RECIPROCALS, SMALL_PRIMES, SmallPrime},
+    utils::{equals_primitive, first_limb},
 };
 use crate::{error::Error, presets::Flavor};
 
@@ -123,13 +124,6 @@ where
     }
 
     Ok(Odd::new(random).expect("the number is odd by construction"))
-}
-
-pub(crate) fn equals_primitive<T>(num: &T, primitive: Word) -> bool
-where
-    T: Unsigned,
-{
-    num.bits_vartime() <= Word::BITS && num.as_limbs()[0].0 == primitive
 }
 
 // The type we use to calculate incremental residues.
@@ -260,8 +254,7 @@ where
             self.last_round = true;
             // Can unwrap here since we just checked above that `incr_limit <= INCR_LIMIT`,
             // and `INCR_LIMIT` fits into `Residue`.
-            let incr_limit_small: Residue = incr_limit.as_limbs()[0]
-                .0
+            let incr_limit_small: Residue = first_limb(&incr_limit)
                 .try_into()
                 .expect("the increment limit should fit within `Residue`");
             incr_limit_small
@@ -469,7 +462,7 @@ where
     };
     let start_limit: SmallPrime = if start_bits <= max_prime_bits {
         // Can convert since we just checked the bit size
-        start.as_limbs()[0].0.try_into().expect("The number is in range")
+        first_limb(start).try_into().expect("The number is in range")
     } else {
         SmallPrime::MAX
     };

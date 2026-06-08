@@ -6,6 +6,7 @@ use super::{
     Primality,
     gcd::gcd_vartime,
     jacobi::{JacobiSymbol, jacobi_symbol_vartime},
+    utils::first_limb,
 };
 
 /// The maximum number of attempts to find `D` such that `(D/n) == -1`.
@@ -49,7 +50,7 @@ impl LucasBase for SelfridgeBase {
         let mut abs_d = 5;
         let mut d_is_negative = false;
         let n_is_small = n.bits_vartime() < Word::BITS; // if true, `n` fits into one `Word`
-        let small_n = n.as_ref().as_limbs()[0].0;
+        let small_n = first_limb(n.as_ref());
         let mut attempts = 0;
         loop {
             if attempts >= MAX_ATTEMPTS {
