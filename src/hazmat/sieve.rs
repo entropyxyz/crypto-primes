@@ -239,7 +239,8 @@ where
         // Re-calculate residues. This is taking up most of the sieving time.
         for (residue, reciprocal) in self.residues.iter_mut().zip(RECIPROCALS.iter()) {
             let rem = self.base.rem_limb_with_reciprocal(reciprocal);
-            *residue = rem.0 as SmallPrime;
+            *residue = SmallPrime::try_from(rem.0)
+                .expect("the remainder is smaller than the divisor, which is of type `SmallPrime`");
         }
 
         // Find the increment limit.
@@ -267,9 +268,12 @@ where
 
     // Returns `true` if the current `base + incr` is divisible by any of the small primes.
     fn current_is_composite(&self) -> bool {
-        self.residues.iter().enumerate().any(|(i, m)| {
-            let d = SMALL_PRIMES[i] as Residue;
-            let r = (*m as Residue + self.incr) % d;
+        self.residues.iter().zip(SMALL_PRIMES.iter()).any(|(residue, prime)| {
+            let d = NonZero::new(Residue::from(*prime)).expect("all `SMALL_PRIMES` are odd");
+            let r = (Residue::from(*residue)
+                .checked_add(self.incr)
+                .expect("the increment is reset in `update_residues()` if it grows too large"))
+                % d;
 
             // A trick from "Safe Prime Generation with a Combined Sieve" by Michael J. Wiener
             // (https://eprint.iacr.org/2003/186).
@@ -277,7 +281,7 @@ where
             // If `(n - 1)/2 mod d == (d - 1)/2`, it means that `n mod d == 0`.
             // In other words, we are checking the remainder of `n mod d`
             // for virtually no additional cost.
-            r == 0 || (self.safe_primes && r == (d - 1) >> 1)
+            r == 0 || (self.safe_primes && r == (d.get().checked_sub(1).expect("`d` is NonZero")) >> 1)
         })
     }
 
@@ -299,7 +303,10 @@ where
             }
         };
 
-        self.incr += 2;
+        self.incr = self
+            .incr
+            .checked_add(2)
+            .expect("the increment is reset in `update_residues()` if it grows too large");
         result
     }
 
@@ -450,7 +457,9 @@ where
 
     let start_bits = start.bits_vartime();
 
-    let max_prime_bits = SmallPrime::BITS - LAST_SMALL_PRIME.leading_zeros();
+    let max_prime_bits = SmallPrime::BITS
+        .checked_sub(LAST_SMALL_PRIME.leading_zeros())
+        .expect("the number of leading zeros is not greater than the total number of bits");
 
     // Both the limits defined by `start`, and by the sqrt of the end of the interval are large,
     // so we use all the available factors.
