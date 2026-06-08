@@ -98,9 +98,10 @@ where
 ///
 /// Uses `threadcount` cores to parallelize the prime search.
 ///
-/// Panics if `bit_length` is less than the bit length of the smallest possible prime with the requested `flavor`.
+/// # Panics
 ///
-/// Panics if the platform is unable to spawn threads.
+/// * if `bit_length` is less than the bit length of the smallest possible prime with the requested `flavor`.
+/// * if the platform is unable to spawn threads.
 pub fn random_prime<T, R>(rng: &mut R, flavor: Flavor, bit_length: u32, threadcount: usize) -> T
 where
     T: UnsignedWithMontyForm + RandomBits + RandomMod,

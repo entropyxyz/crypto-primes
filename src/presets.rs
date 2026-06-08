@@ -22,9 +22,11 @@ pub enum Flavor {
 ///
 /// The returned prime will have its MSB set.
 ///
-/// Panics if `bit_length` is less than the bit length of the smallest possible prime with the requested `flavor`.
-///
 /// See [`is_prime`] for details about the performed checks.
+///
+/// # Panics
+///
+/// * if `bit_length` is less than the bit length of the smallest possible prime with the requested `flavor`.
 pub fn random_prime<T, R>(rng: &mut R, flavor: Flavor, bit_length: u32) -> T
 where
     T: UnsignedWithMontyForm + RandomBits + RandomMod,

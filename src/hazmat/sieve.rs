@@ -163,9 +163,11 @@ where
     /// Note that `start` is adjusted to `2`, or the next `1 mod 2` number (`safe_primes = false`);
     /// and `5`, or `3 mod 4` number (`safe_primes = true`).
     ///
-    /// Panics if `max_bit_length` greater than the precision of `start`.
-    ///
     /// If `safe_primes` is `true`, both the returned `n` and `n/2` are sieved.
+    ///
+    /// # Panics
+    ///
+    /// * if `max_bit_length` greater than the precision of `start`.
     pub fn new(start: T, max_bit_length: NonZeroU32, safe_primes: bool) -> Result<Self, Error> {
         let max_bit_length_nz = max_bit_length;
         let max_bit_length = max_bit_length.get();
@@ -373,6 +375,10 @@ where
     /// Some bits may be guaranteed to set depending on the requested `set_bits`.
     ///
     /// Depending on the requested `flavor`, additional filters may be applied.
+    ///
+    /// # Panics
+    ///
+    /// * if `max_bit_length` is zero.
     pub const fn new(flavor: Flavor, max_bit_length: u32, set_bits: SetBits) -> Result<Self, Error> {
         match flavor {
             Flavor::Any => {
