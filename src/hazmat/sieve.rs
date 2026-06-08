@@ -112,13 +112,13 @@ where
     // `bit_length - 1`-th bit exists since `bit_length` is non-zero.
     match set_bits {
         SetBits::None => {}
-        SetBits::Msb => random.set_bit_vartime(bit_length - 1, true),
+        SetBits::Msb => random.set_bit_vartime(bit_length.checked_sub(1).expect("`bit_length` is non-zero"), true),
         SetBits::TwoMsb => {
-            random.set_bit_vartime(bit_length - 1, true);
+            random.set_bit_vartime(bit_length.checked_sub(1).expect("`bit_length` is non-zero"), true);
             // We could panic here, but since the primary purpose of `TwoMsb` is to ensure the bit length
             // of the product of two numbers, ignoring this for `bit_length = 1` leads to the desired result.
             if bit_length > 1 {
-                random.set_bit_vartime(bit_length - 2, true);
+                random.set_bit_vartime(bit_length.checked_sub(2).expect("`bit_length` is > 1"), true);
             }
         }
     }
