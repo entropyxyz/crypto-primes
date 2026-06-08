@@ -1,13 +1,8 @@
 //! Lucas primality test.
 use core::num::NonZero;
-use crypto_bigint::{Limb, MontyForm, MontyMultiplier, Odd, Square, UnsignedWithMontyForm, Word};
+use crypto_bigint::{JacobiSymbol, Limb, MontyForm, MontyMultiplier, Odd, Square, UnsignedWithMontyForm, Word};
 
-use super::{
-    Primality,
-    gcd::gcd_vartime,
-    jacobi::{JacobiSymbol, jacobi_symbol_vartime},
-    utils::first_limb,
-};
+use super::{Primality, gcd::gcd_vartime, jacobi::jacobi_symbol_vartime, utils::first_limb};
 
 /// The maximum number of attempts to find `D` such that `(D/n) == -1`.
 // This is widely believed to be impossible.

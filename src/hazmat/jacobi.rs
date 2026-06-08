@@ -1,8 +1,6 @@
 //! Jacobi symbol calculation.
 
-pub(crate) use crypto_bigint::JacobiSymbol;
-
-use crypto_bigint::{Limb, NonZero as CTNonZero, Odd, Unsigned, Word};
+use crypto_bigint::{JacobiSymbol, Limb, NonZero as CTNonZero, Odd, Unsigned, Word};
 
 use super::utils::first_limb;
 
