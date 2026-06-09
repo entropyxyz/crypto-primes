@@ -60,11 +60,11 @@ jobs:
       - name: Test in release
         run: cargo test --features multicore --benches --workspace --release
       - name: Generate code coverage (no-alloc)
-        run: cargo llvm-cov --no-default-features --workspace --lcov --no-report
+        run: cargo llvm-cov --no-default-features --workspace --no-report
       - name: Generate code coverage (main features)
-        run: cargo llvm-cov --features multicore --workspace --lcov --no-report
+        run: cargo llvm-cov --features multicore --workspace --no-report
       - name: Generate coverage report
-        run: cargo llvm-cov report --output-path lcov.info
+        run: cargo llvm-cov report  --lcov --output-path lcov.info
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v7
         with:
