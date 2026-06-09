@@ -18,7 +18,7 @@ const fn pow(mut base: f64, mut exp: u32) -> f64 {
 
 /// Calculates `2^exp`.
 pub(crate) const fn two_powi(exp: u32) -> f64 {
-    pow(2f64, exp.abs_diff(0))
+    pow(2f64, exp)
 }
 
 /// Calculates `floor(x)`.
@@ -27,6 +27,7 @@ const fn floor(x: f64) -> f64 {
     const TOINT: f64 = 1. / f64::EPSILON;
 
     let ui = x.to_bits();
+    #[expect(clippy::as_conversions)] // `ui` is pre-shifted so there will be no overflow
     let e = ((ui >> 52) & 0x7ff) as i32;
 
     if (e >= 0x3ff + 52) || (x == 0.) {
@@ -83,7 +84,10 @@ pub(crate) const fn two_powf_upper_bound(exp: f64) -> f64 {
 
     let frac_part = positive_exp - int_part;
 
+    // Can convert safely since we checked abouve that it is < 1075 and positive
+    #[expect(clippy::as_conversions, clippy::cast_sign_loss, clippy::cast_possible_truncation)]
     let int_res = two_powi(int_part as u32);
+
     let frac_res = two_powf_normalized_lower_bound(frac_part);
 
     // `int_res * frac_res <= 2^(int_part + frac_part)`,
@@ -144,6 +148,9 @@ pub(crate) fn ln<const LIMBS: usize>(x: &Uint<LIMBS>) -> f64 {
                 }
             }
         };
+
+        // We don't mind losing precision here.
+        #[expect(clippy::as_conversions, clippy::cast_precision_loss)]
         return libm::log2(x as f64) * f64::consts::LN_2;
     }
     // x can be approximated by M*2^shift, where shift is `ilog2(x) - 52` and M is the integer value represented by the
@@ -151,19 +158,23 @@ pub(crate) fn ln<const LIMBS: usize>(x: &Uint<LIMBS>) -> f64 {
     // log2(x) ~ log2(M*2^shift) ~ log2(M) + shift ~ log2(M) + ilog2(x) - 52
     let shift = ilog2_x.saturating_sub(f64::MANTISSA_DIGITS - 1);
     let shifted_x = x.wrapping_shr_vartime(shift);
+
     let fraction = {
         cpubits! {
             32 => {
                 let lo = shifted_x.as_limbs()[0].0;
                 let hi = shifted_x.as_limbs()[1].0;
-                let fraction = (hi as u64) << 32 | lo as u64;
-                fraction as f64
+                (hi as u64) << 32 | lo as u64
             }
             64 => {
-                shifted_x.as_limbs()[0].0 as f64
+                shifted_x.as_limbs()[0].0
             }
         }
     };
+
+    // We don't mind losing precision here.
+    #[expect(clippy::as_conversions, clippy::cast_precision_loss)]
+    let fraction = fraction as f64;
 
     // Fraction is now m * 2^52, where m is the top 53 bits of x. Take log2(m) and subtract 52 to scale the result back
     // to the expected range.
@@ -219,6 +230,7 @@ mod tests {
         fn fuzzy_floor_sqrt(x in 0..100000u32) {
             let x_f = f64::from(x);
             let test = floor_sqrt(x);
+            #[expect(clippy::as_conversions, clippy::cast_possible_truncation, clippy::cast_sign_loss)]
             let reference = x_f.sqrt().floor() as u32;
             assert_eq!(test, reference);
         }

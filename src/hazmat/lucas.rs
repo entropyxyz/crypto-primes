@@ -297,6 +297,11 @@ pub enum LucasCheck {
 /// prescribed by the FIPS.186-5 standard[^FIPS].
 ///
 /// [^FIPS]: FIPS-186.5 standard, <https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.186-5.pdf>
+#[expect(
+    clippy::needless_pass_by_value, // TODO: would be a breaking change, has to wait for 0.8
+    clippy::cognitive_complexity,
+    clippy::too_many_lines,
+)]
 pub fn lucas_test<T>(candidate: Odd<T>, base: impl LucasBase, check: LucasCheck) -> Primality
 where
     T: UnsignedWithMontyForm,

@@ -82,14 +82,22 @@ where
     // Number of bits to scale by (fractional bits during division)
     // On 64 bit CPUs and x is a U64, we use 32 bits (1 limb * 32). Else 64.
     // On 32 bit CPUs and x is a U64, we use 32 bits (2 limb * 16). Else 64.
+    let limbs = u32::try_from(LIMBS).expect("the number of limbs fits into `u32`");
     let scale_bits = {
         cpubits! {
-            32 => { (LIMBS as u32 * 16).min(64) }
-            64 => { (LIMBS as u32 * 32).min(64) }
+            32 => { limbs.min(4).checked_mul(16) }
+            64 => { limbs.min(2).checked_mul(32) }
         }
-    };
-    let total_scale_bits = 2 * scale_bits;
+    }
+    .expect("scale bits fit into `u32`");
+
+    let total_scale_bits = scale_bits.checked_mul(2).expect("scale bits times 2 fit into `u32`");
+
     // Scaling factor for the denominators of the expansion terms, 2^64.
+    //
+    // The number of limbs needed for precision loss is very large,
+    // and in any case some precision loss is acceptable here.
+    #[expect(clippy::as_conversions, clippy::cast_precision_loss)]
     let denom_scale_factor = (1u128 << scale_bits) as f64;
 
     let ln_x = ln(x);
@@ -106,7 +114,16 @@ where
     // Scale up a float by 2^64, round, cast to u128 and then to a wide `Uint`.
     let f64_to_scaled_uint = |value: f64| -> NonZero<Uint<RHS_LIMBS>> {
         let scaled = value * denom_scale_factor;
+
+        #[expect(
+            clippy::as_conversions,
+            // We checked above that ln_x > 1, and `value` will be `ln_x` to a small power.
+            clippy::cast_sign_loss,
+            // `value` won't be big enough for truncation
+            clippy::cast_possible_truncation,
+        )]
         let scaled = libm::round(scaled).max(1.0) as u128;
+
         let denom = Uint::<RHS_LIMBS>::from_u128(scaled);
         NonZero::new(denom).expect("max(1.0) ensures value is at least 1")
     };
@@ -136,7 +153,9 @@ where
         .wrapping_add(&term4_scaled);
 
     // Descale by right-shifting
-    let li_x = sum_scaled >> scale_bits;
+    let li_x = sum_scaled
+        .overflowing_shr_vartime(scale_bits)
+        .expect("the scaling factor is small enough to not overflow");
     li_x.resize_checked()
         .expect("de-scaling should leave the high half zero")
 }
@@ -275,7 +294,11 @@ mod tests {
             };
             let delta = uint_to_u128(&delta);
             let estimate_128 = uint_to_u128(&estimate);
+
+            // Some precision loss is acceptable here
+            #[expect(clippy::as_conversions, clippy::cast_precision_loss)]
             let error = (delta as f64 / *pi_x as f64) * 100.0;
+
             assert!(
                 error < 2.2,
                 "10^{exponent}:\t{pi_x} - {estimate_128} = {delta}, err: {error:.2}"

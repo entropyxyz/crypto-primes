@@ -132,11 +132,13 @@ type Residue = u32;
 
 // The maximum increment that won't overflow the type we use to calculate residues of increments:
 // we need `(max_prime - 1) + max_incr <= Type::MAX`.
+#[expect(clippy::as_conversions)] // `From` is not available in a const context
 const INCR_LIMIT: Residue = Residue::MAX - LAST_SMALL_PRIME as Residue + 1;
 
 /// An iterator returning numbers with up to and including given bit length,
 /// starting from a given number, that are not multiples of the first 2048 small primes.
 #[derive(Clone, Debug, PartialEq, Eq)]
+#[expect(clippy::struct_excessive_bools)] // There's no point in custom enums here
 pub struct SmallFactorsSieve<T: Unsigned> {
     // Instead of dividing a big integer by small primes every time (which is slow),
     // we keep a "base" and a small increment separately,
@@ -533,6 +535,7 @@ where
 }
 
 #[cfg(test)]
+#[expect(clippy::indexing_slicing)]
 mod tests {
 
     use alloc::format;

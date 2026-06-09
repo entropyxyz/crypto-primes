@@ -58,7 +58,6 @@ impl<T: UnsignedWithMontyForm + RandomMod> MillerRabin<T> {
         } else {
             let candidate_minus_one = candidate.wrapping_sub(&one);
             let s = candidate_minus_one.trailing_zeros_vartime();
-            // Will not overflow because `candidate` is odd and greater than 1.
             let d = candidate_minus_one
                 .overflowing_shr_vartime(s)
                 .expect("shifting by `s` is within range by construction: `candidate` is odd and greater than 1");
@@ -166,6 +165,7 @@ composite number would survive an attempt to validate its primality.
     Probable Prime Test. Mathematics of Computation 61(203):177-194 (1993),
     <https://www.ams.org/journals/mcom/1993-61-203/S0025-5718-1993-1189518-9/S0025-5718-1993-1189518-9.pdf>
 */
+#[expect(clippy::as_conversions)] // `From` is not available in a `const fn`
 const fn pseudoprime_probability(k: u32, t: u32, cap_m: u32) -> f64 {
     // Simplify Eq. (2) from [^FIPS] by factoring out `2^{k-2}`, which makes it
     // p_{k,t} = 2.000743 ln(2) k 2^{-2} (
@@ -179,6 +179,14 @@ const fn pseudoprime_probability(k: u32, t: u32, cap_m: u32) -> f64 {
     // `2.00743 * ln(2) * 2^(-2)`
     const COEFF: f64 = 0.3478611111678627;
 
+    assert!(cap_m < i32::MAX as u32);
+    #[expect(clippy::cast_possible_wrap)] // small enough that a wrap won't happen
+    let signed_cap_m = cap_m as i32;
+
+    assert!(t < i32::MAX as u32);
+    #[expect(clippy::cast_possible_wrap)] // small enough that a wrap won't happen
+    let signed_t = t as i32;
+
     // Calculate the powers of 2 under the summations.
     //
     // Technically, only a few terms really contribute to the result, and the rest are extremely small in comparison.
@@ -186,13 +194,13 @@ const fn pseudoprime_probability(k: u32, t: u32, cap_m: u32) -> f64 {
     // Can be done if more performance is desired.
     let mut s = 0.;
     let mut m = 3i32;
-    while m <= cap_m as i32 {
+    while m <= signed_cap_m {
         let mut j = 2i32;
         while j <= m {
             // Note that we are using `two_powf_upper_bound()` which means we are getting a slightly larger result,
             // and therefore very slightly overestimating the resulting probability.
             // This means safety is not compromised.
-            s += two_powf_upper_bound((m - (m - 1) * (t as i32) - j) as f64 - (k - 1) as f64 / j as f64);
+            s += two_powf_upper_bound((m - (m - 1) * signed_t - j) as f64 - (k - 1) as f64 / j as f64);
             j += 1;
         }
         m += 1;
@@ -201,8 +209,11 @@ const fn pseudoprime_probability(k: u32, t: u32, cap_m: u32) -> f64 {
     COEFF * k as f64 * (1. / two_powi(cap_m * t) + 8. * (PI * PI - 6.) / 3. * s)
 }
 
-/// For a candidate of size `bit_length`, returns the minimum number of Miller-Rabin tests with random bases
-/// required for the probability of hitting a pseudoprime (that is, a composite for which all M-R tests pass)
+/// Returns the minimum number of Miller-Rabin tests with random bases
+/// required for the given bound on the probability of hitting a pseudoprime.
+///
+/// More formally, for a candidate of size `bit_length`, returns the minimum number of Miller-Rabin tests
+/// with random bases required for the probability of reporting a composite as a prime
 /// to be smaller than `2^{-log2_target}`.
 ///
 /// Returns `None` if the number of iterations could not be found for the given bounds.
@@ -210,6 +221,7 @@ const fn pseudoprime_probability(k: u32, t: u32, cap_m: u32) -> f64 {
 /// This function implements the formula prescribed by the FIPS.186-5 standard[^FIPS].
 ///
 /// [^FIPS]: FIPS-186.5 standard, <https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.186-5.pdf>
+#[expect(clippy::as_conversions)] // `From` is not available in a `const fn`
 #[must_use]
 pub const fn minimum_mr_iterations(bit_length: u32, log2_target: u32) -> Option<usize> {
     let mut t = 1;

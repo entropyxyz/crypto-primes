@@ -1,3 +1,10 @@
+#![allow(
+    clippy::unwrap_used,
+    clippy::indexing_slicing,
+    clippy::significant_drop_tightening, // Bugged with Criterion groups.
+    missing_docs,
+)]
+
 use core::num::NonZero;
 
 use criterion::{BatchSize, Criterion, criterion_group, criterion_main};
@@ -434,7 +441,7 @@ fn bench_openssl(c: &mut Criterion) {
             || BigNum::new().unwrap(),
             |p| {
                 let mut p = p;
-                p.generate_prime(128, false, None, None).unwrap()
+                p.generate_prime(128, false, None, None).unwrap();
             },
             BatchSize::SmallInput,
         );
@@ -445,7 +452,7 @@ fn bench_openssl(c: &mut Criterion) {
             || BigNum::new().unwrap(),
             |p| {
                 let mut p = p;
-                p.generate_prime(1024, false, None, None).unwrap()
+                p.generate_prime(1024, false, None, None).unwrap();
             },
             BatchSize::SmallInput,
         );
@@ -456,7 +463,7 @@ fn bench_openssl(c: &mut Criterion) {
             || BigNum::new().unwrap(),
             |p| {
                 let mut p = p;
-                p.generate_prime(128, true, None, None).unwrap()
+                p.generate_prime(128, true, None, None).unwrap();
             },
             BatchSize::SmallInput,
         );
@@ -468,7 +475,7 @@ fn bench_openssl(c: &mut Criterion) {
             || BigNum::new().unwrap(),
             |p| {
                 let mut p = p;
-                p.generate_prime(1024, true, None, None).unwrap()
+                p.generate_prime(1024, true, None, None).unwrap();
             },
             BatchSize::SmallInput,
         );
@@ -488,6 +495,7 @@ fn bench_glass_pumpkin(c: &mut Criterion) {
     // The `glass-pumpkin` implementation is doing a different number of M-R checks than this crate.
     // For a fair comparison we make a custom implementation here,
     // using the same number of checks that `glass-pumpkin` does.
+    #[expect(clippy::as_conversions, clippy::cast_sign_loss, clippy::cast_possible_truncation)]
     fn required_checks(bits: u32) -> usize {
         (f64::from(bits).log2() as usize) + 5
     }

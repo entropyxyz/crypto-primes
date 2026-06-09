@@ -1,3 +1,5 @@
+#![allow(clippy::unwrap_used, clippy::indexing_slicing, missing_docs)]
+
 use std::io::BufRead;
 
 use criterion::{Criterion, black_box, criterion_group, criterion_main};

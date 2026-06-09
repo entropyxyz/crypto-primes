@@ -122,8 +122,12 @@ pub(crate) const SMALL_PRIMES: [SmallPrime; 2047] = [
     17863,
 ];
 
+// If anything goes wrong here, we'll get an error in compile time.
+#[expect(clippy::indexing_slicing)]
 pub(crate) const LAST_SMALL_PRIME: SmallPrime = SMALL_PRIMES[SMALL_PRIMES.len() - 1];
 
+// If anything goes wrong here, we'll get an error in compile time.
+#[expect(clippy::indexing_slicing, clippy::as_conversions, clippy::large_stack_arrays)]
 const fn create_reciprocals() -> [Reciprocal; SMALL_PRIMES.len()] {
     let mut arr = [Reciprocal::default(); SMALL_PRIMES.len()];
     let mut i = 0;
