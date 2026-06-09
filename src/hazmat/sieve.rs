@@ -6,14 +6,59 @@ use alloc::{vec, vec::Vec};
 use core::marker::PhantomData;
 use core::num::{NonZero, NonZeroU32};
 
-use crypto_bigint::{Limb, Odd, RandomBits, RandomBitsError, Unsigned, Word};
+use crypto_bigint::{Limb, Odd, RandomBits, RandomBitsError, Unsigned};
 use rand_core::CryptoRng;
 
 use super::{
     Primality,
     precomputed::{LAST_SMALL_PRIME, RECIPROCALS, SMALL_PRIMES, SmallPrime},
+    utils::{equals_primitive, first_limb},
 };
 use crate::{error::Error, presets::Flavor};
+
+#[cfg(not(feature = "alloc"))]
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct Residues {
+    residues: [SmallPrime; SMALL_PRIMES.len()],
+    length: usize,
+}
+
+#[cfg(not(feature = "alloc"))]
+impl Residues {
+    fn empty(length: usize) -> Self {
+        Self {
+            residues: [0; SMALL_PRIMES.len()],
+            length,
+        }
+    }
+
+    fn iter(&self) -> impl Iterator<Item = &SmallPrime> {
+        self.residues.iter().take(self.length)
+    }
+
+    fn iter_mut(&mut self) -> impl Iterator<Item = &mut SmallPrime> {
+        self.residues.iter_mut().take(self.length)
+    }
+}
+
+#[cfg(feature = "alloc")]
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct Residues(Vec<SmallPrime>);
+
+#[cfg(feature = "alloc")]
+impl Residues {
+    fn empty(length: usize) -> Self {
+        Self(vec![0; length])
+    }
+
+    fn iter(&self) -> impl Iterator<Item = &SmallPrime> {
+        self.0.iter()
+    }
+
+    fn iter_mut(&mut self) -> impl Iterator<Item = &mut SmallPrime> {
+        self.0.iter_mut()
+    }
+}
 
 /// Decide how prime candidates are manipulated by setting certain bits before primality testing,
 /// influencing the range of the prime.
@@ -67,25 +112,18 @@ where
     // `bit_length - 1`-th bit exists since `bit_length` is non-zero.
     match set_bits {
         SetBits::None => {}
-        SetBits::Msb => random.set_bit_vartime(bit_length - 1, true),
+        SetBits::Msb => random.set_bit_vartime(bit_length.checked_sub(1).expect("`bit_length` is non-zero"), true),
         SetBits::TwoMsb => {
-            random.set_bit_vartime(bit_length - 1, true);
+            random.set_bit_vartime(bit_length.checked_sub(1).expect("`bit_length` is non-zero"), true);
             // We could panic here, but since the primary purpose of `TwoMsb` is to ensure the bit length
             // of the product of two numbers, ignoring this for `bit_length = 1` leads to the desired result.
             if bit_length > 1 {
-                random.set_bit_vartime(bit_length - 2, true);
+                random.set_bit_vartime(bit_length.checked_sub(2).expect("`bit_length` is > 1"), true);
             }
         }
     }
 
     Ok(Odd::new(random).expect("the number is odd by construction"))
-}
-
-pub(crate) fn equals_primitive<T>(num: &T, primitive: Word) -> bool
-where
-    T: Unsigned,
-{
-    num.bits_vartime() <= Word::BITS && num.as_limbs()[0].0 == primitive
 }
 
 // The type we use to calculate incremental residues.
@@ -94,11 +132,13 @@ type Residue = u32;
 
 // The maximum increment that won't overflow the type we use to calculate residues of increments:
 // we need `(max_prime - 1) + max_incr <= Type::MAX`.
+#[expect(clippy::as_conversions)] // `From` is not available in a const context
 const INCR_LIMIT: Residue = Residue::MAX - LAST_SMALL_PRIME as Residue + 1;
 
 /// An iterator returning numbers with up to and including given bit length,
 /// starting from a given number, that are not multiples of the first 2048 small primes.
 #[derive(Clone, Debug, PartialEq, Eq)]
+#[expect(clippy::struct_excessive_bools)] // There's no point in custom enums here
 pub struct SmallFactorsSieve<T: Unsigned> {
     // Instead of dividing a big integer by small primes every time (which is slow),
     // we keep a "base" and a small increment separately,
@@ -107,12 +147,7 @@ pub struct SmallFactorsSieve<T: Unsigned> {
     incr: Residue,
     incr_limit: Residue,
     safe_primes: bool,
-    #[cfg(feature = "alloc")]
-    residues: Vec<SmallPrime>,
-    #[cfg(not(feature = "alloc"))]
-    residues: [SmallPrime; SMALL_PRIMES.len()],
-    #[cfg(not(feature = "alloc"))]
-    residues_len: usize,
+    residues: Residues,
     max_bit_length: u32,
     produces_nothing: bool,
     starts_from_exception: bool,
@@ -130,9 +165,11 @@ where
     /// Note that `start` is adjusted to `2`, or the next `1 mod 2` number (`safe_primes = false`);
     /// and `5`, or `3 mod 4` number (`safe_primes = true`).
     ///
-    /// Panics if `max_bit_length` greater than the precision of `start`.
-    ///
     /// If `safe_primes` is `true`, both the returned `n` and `n/2` are sieved.
+    ///
+    /// # Panics
+    ///
+    /// * if `max_bit_length` greater than the precision of `start`.
     pub fn new(start: T, max_bit_length: NonZeroU32, safe_primes: bool) -> Result<Self, Error> {
         let max_bit_length_nz = max_bit_length;
         let max_bit_length = max_bit_length.get();
@@ -173,12 +210,7 @@ where
             incr: 0, // This will ensure that `update_residues()` is called right away.
             incr_limit: 0,
             safe_primes,
-            #[cfg(feature = "alloc")]
-            residues: vec![0; residues_len],
-            #[cfg(not(feature = "alloc"))]
-            residues: [0; SMALL_PRIMES.len()],
-            #[cfg(not(feature = "alloc"))]
-            residues_len,
+            residues: Residues::empty(residues_len),
             max_bit_length,
             produces_nothing,
             starts_from_exception,
@@ -207,13 +239,10 @@ where
         self.incr = 0;
 
         // Re-calculate residues. This is taking up most of the sieving time.
-        #[cfg(feature = "alloc")]
-        let residues_len = self.residues.len();
-        #[cfg(not(feature = "alloc"))]
-        let residues_len = self.residues_len;
-        for (i, rec) in RECIPROCALS.iter().enumerate().take(residues_len) {
-            let rem = self.base.rem_limb_with_reciprocal(rec);
-            self.residues[i] = rem.0 as SmallPrime;
+        for (residue, reciprocal) in self.residues.iter_mut().zip(RECIPROCALS.iter()) {
+            let rem = self.base.rem_limb_with_reciprocal(reciprocal);
+            *residue = SmallPrime::try_from(rem.0)
+                .expect("the remainder is smaller than the divisor, which is of type `SmallPrime`");
         }
 
         // Find the increment limit.
@@ -230,8 +259,7 @@ where
             self.last_round = true;
             // Can unwrap here since we just checked above that `incr_limit <= INCR_LIMIT`,
             // and `INCR_LIMIT` fits into `Residue`.
-            let incr_limit_small: Residue = incr_limit.as_limbs()[0]
-                .0
+            let incr_limit_small: Residue = first_limb(&incr_limit)
                 .try_into()
                 .expect("the increment limit should fit within `Residue`");
             incr_limit_small
@@ -242,13 +270,12 @@ where
 
     // Returns `true` if the current `base + incr` is divisible by any of the small primes.
     fn current_is_composite(&self) -> bool {
-        #[cfg(feature = "alloc")]
-        let residues_len = self.residues.len();
-        #[cfg(not(feature = "alloc"))]
-        let residues_len = self.residues_len;
-        self.residues.iter().take(residues_len).enumerate().any(|(i, m)| {
-            let d = SMALL_PRIMES[i] as Residue;
-            let r = (*m as Residue + self.incr) % d;
+        self.residues.iter().zip(SMALL_PRIMES.iter()).any(|(residue, prime)| {
+            let d = NonZero::new(Residue::from(*prime)).expect("all `SMALL_PRIMES` are odd");
+            let r = (Residue::from(*residue)
+                .checked_add(self.incr)
+                .expect("the increment is reset in `update_residues()` if it grows too large"))
+                % d;
 
             // A trick from "Safe Prime Generation with a Combined Sieve" by Michael J. Wiener
             // (https://eprint.iacr.org/2003/186).
@@ -256,7 +283,7 @@ where
             // If `(n - 1)/2 mod d == (d - 1)/2`, it means that `n mod d == 0`.
             // In other words, we are checking the remainder of `n mod d`
             // for virtually no additional cost.
-            r == 0 || (self.safe_primes && r == (d - 1) >> 1)
+            r == 0 || (self.safe_primes && r == (d.get().checked_sub(1).expect("`d` is NonZero")) >> 1)
         })
     }
 
@@ -278,7 +305,10 @@ where
             }
         };
 
-        self.incr += 2;
+        self.incr = self
+            .incr
+            .checked_add(2)
+            .expect("the increment is reset in `update_residues()` if it grows too large");
         result
     }
 
@@ -296,10 +326,9 @@ where
         // Main loop
 
         while self.update_residues() {
-            match self.maybe_next() {
-                Some(x) => return Some(x),
-                None => continue,
-            };
+            if let Some(x) = self.maybe_next() {
+                return Some(x);
+            }
         }
         None
     }
@@ -355,7 +384,11 @@ where
     /// Some bits may be guaranteed to set depending on the requested `set_bits`.
     ///
     /// Depending on the requested `flavor`, additional filters may be applied.
-    pub fn new(flavor: Flavor, max_bit_length: u32, set_bits: SetBits) -> Result<Self, Error> {
+    ///
+    /// # Panics
+    ///
+    /// * if `max_bit_length` is zero.
+    pub const fn new(flavor: Flavor, max_bit_length: u32, set_bits: SetBits) -> Result<Self, Error> {
         match flavor {
             Flavor::Any => {
                 if max_bit_length < 2 {
@@ -374,7 +407,7 @@ where
                 }
             }
         }
-        let max_bit_length = NonZero::new(max_bit_length).expect("`bit_length` should be non-zero");
+        let max_bit_length = NonZero::new(max_bit_length).expect("`max_bit_length` is non-zero");
         Ok(Self {
             max_bit_length,
             safe_primes: match flavor {
@@ -426,7 +459,9 @@ where
 
     let start_bits = start.bits_vartime();
 
-    let max_prime_bits = SmallPrime::BITS - LAST_SMALL_PRIME.leading_zeros();
+    let max_prime_bits = SmallPrime::BITS
+        .checked_sub(LAST_SMALL_PRIME.leading_zeros())
+        .expect("the number of leading zeros is not greater than the total number of bits");
 
     // Both the limits defined by `start`, and by the sqrt of the end of the interval are large,
     // so we use all the available factors.
@@ -443,7 +478,7 @@ where
     };
     let start_limit: SmallPrime = if start_bits <= max_prime_bits {
         // Can convert since we just checked the bit size
-        start.as_limbs()[0].0.try_into().expect("The number is in range")
+        first_limb(start).try_into().expect("The number is in range")
     } else {
         SmallPrime::MAX
     };
@@ -500,6 +535,7 @@ where
 }
 
 #[cfg(test)]
+#[expect(clippy::indexing_slicing)]
 mod tests {
 
     use alloc::format;
@@ -536,7 +572,7 @@ mod tests {
 
         // The start of the interval is lower than the last prime,
         // so the number of factors is determined by it.
-        let len = trial_primes_num(&U64::from(LAST_SMALL_PRIME as u64 - 1), 64.try_into().unwrap());
+        let len = trial_primes_num(&U64::from(u64::from(LAST_SMALL_PRIME) - 1), 64.try_into().unwrap());
         assert_eq!(len, SMALL_PRIMES.len() - 1);
     }
 
@@ -583,7 +619,7 @@ mod tests {
             let factors_and_powers = factorize64(num_u64);
             let factors = factors_and_powers.into_keys().collect::<Vec<_>>();
 
-            assert!(factors[0] > max_prime as u64);
+            assert!(factors[0] > u64::from(max_prime));
         }
     }
     #[test]
@@ -601,14 +637,14 @@ mod tests {
             .take(100)
         {
             // For 32-bit targets
-            #[allow(clippy::useless_conversion)]
-            let num_u64: u64 = num.as_words()[0].into();
+            #[expect(clippy::useless_conversion)]
+            let num_u64 = u64::from(num.as_words()[0]);
             assert!(num_u64.leading_zeros() == 32);
 
             let factors_and_powers = factorize64(num_u64);
             let factors = factors_and_powers.into_keys().collect::<Vec<_>>();
 
-            assert!(factors[0] > max_prime as u64);
+            assert!(factors[0] > u64::from(max_prime));
         }
     }
 

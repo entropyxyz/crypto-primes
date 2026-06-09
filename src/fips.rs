@@ -8,7 +8,7 @@ use rand_core::CryptoRng;
 use crate::{
     hazmat::{
         ConventionsTestResult, LucasCheck, MillerRabin, Primality, SelfridgeBase, conventions_test, equals_primitive,
-        lucas_test, minimum_mr_iterations, small_factors_test,
+        first_limb, lucas_test, minimum_mr_iterations, small_factors_test,
     },
     presets::Flavor,
 };
@@ -26,6 +26,7 @@ impl FipsOptions {
     ///
     /// The number of iterations given the required error bound can be calculated with
     /// [`minimum_mr_iterations`](`crate::hazmat::minimum_mr_iterations`).
+    #[must_use]
     pub const fn with_mr_iterations(mr_iterations: usize) -> Self {
         Self {
             mr_iterations,
@@ -36,10 +37,10 @@ impl FipsOptions {
 
     /// Use the minimum number of Miller-Rabin iterations (see [`MillerRabin`] for details)
     /// required for the error to be below `1/2^log2_target` for candidates of size `bit_length`.
+    #[must_use]
     pub const fn with_error_bound(bit_length: u32, log2_target: u32) -> Option<Self> {
-        let iterations = match minimum_mr_iterations(bit_length, log2_target) {
-            None => return None,
-            Some(iterations) => iterations,
+        let Some(iterations) = minimum_mr_iterations(bit_length, log2_target) else {
+            return None;
         };
         Some(Self::with_mr_iterations(iterations))
     }
@@ -47,6 +48,7 @@ impl FipsOptions {
     /// Use an additional strong Lucas test with Selfridge base (see [`lucas_test`] and [`SelfridgeBase`] for details).
     ///
     /// `false` by default.
+    #[must_use]
     pub const fn with_lucas_test(self) -> Self {
         Self {
             mr_iterations: self.mr_iterations,
@@ -62,6 +64,7 @@ impl FipsOptions {
     /// Note that it is a performance optimization for the cases when you expect the candidates to be random
     /// (and thus likely to have small factors).
     /// It does not affect the failure probability of the primality check.
+    #[must_use]
     pub const fn with_trial_division_test(self) -> Self {
         Self {
             mr_iterations: self.mr_iterations,
@@ -140,7 +143,7 @@ where
     // Safe primes are always of the form 4k + 3 (i.e. n ≡ 3 mod 4)
     // The last two digits of a binary number give you its value modulo 4.
     // Primes p=4n+3 will always end in 11 in binary because p ≡ 3 mod 4.
-    if candidate.as_limbs()[0].0 & 3 != 3 {
+    if first_limb(candidate) & 3 != 3 {
         return false;
     }
 

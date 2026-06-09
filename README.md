@@ -70,7 +70,8 @@ assert!(is_prime(flavor, &prime));
 
 The following features are available:
 
-- `multicore`: Enables additional parallel prime finding functions. Disabled by default.
+- `alloc`: Use heap allocations (enabled by default).
+- `multicore`: Enables additional parallel prime finding functions.
 
 
 [crate-image]: https://img.shields.io/crates/v/crypto-primes.svg

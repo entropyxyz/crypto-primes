@@ -45,13 +45,14 @@ use crypto_bigint::{Concat, NonZero, Uint, cpubits};
 ///
 /// ## Discussion
 ///
-/// Assuming RH, the dominant error term in estimating $\pi(x)$ with $Li_{approx}(x)$ comes from truncating the asymptotic
-/// expansion of Li(x). While this truncation error is extremely small in relative terms, it is large in absolute terms.
+/// Assuming RH, the dominant error term in estimating $\pi(x)$ with $Li_{approx}(x)$
+/// comes from truncating the asymptotic expansion of Li(x).
+/// While this truncation error is extremely small in relative terms, it is large in absolute terms.
 /// Improving the Li(x) approximation to be the same order of magnitude as the Schoenfeld bound would require using
 /// hundreds of terms from the asymptotic series (or employing more complex methods like continued fractions for the
 /// remainder, which is beyond the scope of this simple approximation). In relative terms the error bound is
-/// approximately $2^{-33}$ (for 1024 bits) down to $\sim 2^{-41}$ (for 4096 bits). This corresponds to an extremely small
-/// percentage error (significantly less than $10^{-8}$ %).
+/// approximately $2^{-33}$ (for 1024 bits) down to $\sim 2^{-41}$ (for 4096 bits).
+/// This corresponds to an extremely small percentage error (significantly less than $10^{-8}$ %).
 ///
 /// It should be noted that while Li(x) is generally smaller than $\pi(x)$ for 'small' x, it is known that the sign of
 /// $\pi(x) - Li(x)$ changes infinitely often. It has been proven that there must be a crossing below $\sim 10^{316}$
@@ -73,6 +74,7 @@ use crypto_bigint::{Concat, NonZero, Uint, cpubits};
 ///
 /// [^Trudgian2014]: T. Trudgian, "Updating the error term in the prime number theorem",
 ///   [arXiv:1401.2689](https://arxiv.org/abs/1401.2689) (2014)
+#[must_use]
 pub fn estimate_primecount<const LIMBS: usize, const RHS_LIMBS: usize>(x: &Uint<LIMBS>) -> Uint<LIMBS>
 where
     Uint<LIMBS>: Concat<LIMBS, Output = Uint<RHS_LIMBS>>,
@@ -80,14 +82,22 @@ where
     // Number of bits to scale by (fractional bits during division)
     // On 64 bit CPUs and x is a U64, we use 32 bits (1 limb * 32). Else 64.
     // On 32 bit CPUs and x is a U64, we use 32 bits (2 limb * 16). Else 64.
+    let limbs = u32::try_from(LIMBS).expect("the number of limbs fits into `u32`");
     let scale_bits = {
         cpubits! {
-            32 => { (LIMBS as u32 * 16).min(64) }
-            64 => { (LIMBS as u32 * 32).min(64) }
+            32 => { limbs.min(4).checked_mul(16) }
+            64 => { limbs.min(2).checked_mul(32) }
         }
-    };
-    let total_scale_bits = 2 * scale_bits;
+    }
+    .expect("scale bits fit into `u32`");
+
+    let total_scale_bits = scale_bits.checked_mul(2).expect("scale bits times 2 fit into `u32`");
+
     // Scaling factor for the denominators of the expansion terms, 2^64.
+    //
+    // The number of limbs needed for precision loss is very large,
+    // and in any case some precision loss is acceptable here.
+    #[expect(clippy::as_conversions, clippy::cast_precision_loss)]
     let denom_scale_factor = (1u128 << scale_bits) as f64;
 
     let ln_x = ln(x);
@@ -104,7 +114,16 @@ where
     // Scale up a float by 2^64, round, cast to u128 and then to a wide `Uint`.
     let f64_to_scaled_uint = |value: f64| -> NonZero<Uint<RHS_LIMBS>> {
         let scaled = value * denom_scale_factor;
+
+        #[expect(
+            clippy::as_conversions,
+            // We checked above that ln_x > 1, and `value` will be `ln_x` to a small power.
+            clippy::cast_sign_loss,
+            // `value` won't be big enough for truncation
+            clippy::cast_possible_truncation,
+        )]
         let scaled = libm::round(scaled).max(1.0) as u128;
+
         let denom = Uint::<RHS_LIMBS>::from_u128(scaled);
         NonZero::new(denom).expect("max(1.0) ensures value is at least 1")
     };
@@ -134,7 +153,9 @@ where
         .wrapping_add(&term4_scaled);
 
     // Descale by right-shifting
-    let li_x = sum_scaled >> scale_bits;
+    let li_x = sum_scaled
+        .overflowing_shr_vartime(scale_bits)
+        .expect("the scaling factor is small enough to not overflow");
     li_x.resize_checked()
         .expect("de-scaling should leave the high half zero")
 }
@@ -213,17 +234,23 @@ mod tests {
             candidate - reference
         };
         assert!(
-            reference.bits_vartime() - delta.bits_vartime() >= min_bit_diff,
-            "Estimate not close enough: delta has {} bits, reference has {} bits. Difference should be >= {}\nEstimate: {candidate},\nReference: {reference}",
+            reference.bits_vartime().abs_diff(delta.bits_vartime()) >= min_bit_diff,
+            concat!(
+                "Estimate not close enough: delta has {} bits, reference has {} bits. ",
+                "Difference should be >= {}\nEstimate: {},\nReference: {}"
+            ),
             delta.bits_vartime(),
             reference.bits_vartime(),
-            min_bit_diff
+            min_bit_diff,
+            candidate,
+            reference,
         );
     }
 
     #[test]
     fn pi_x_estimates_for_known_values() {
-        // List of known values for π(x), expressed as a tuple of `(π(x), exponent)`, where the `exponent` is used with base 10.
+        // List of known values for π(x), expressed as a tuple of `(π(x), exponent)`,
+        // where the `exponent` is used with base 10.
         let pi_xs: Vec<(u128, u32)> = vec![
             // The error is large for small x, so we skip them.
             // (4, 1),
@@ -256,7 +283,7 @@ mod tests {
             (157589269275973410412739598, 28),
             (1520698109714272166094258063, 29),
         ];
-        for (pi_x, exponent) in pi_xs.iter() {
+        for (pi_x, exponent) in &pi_xs {
             let pi_x_wide = U256::from_u128(*pi_x);
             let n = U256::from_u128(10u128.pow(*exponent));
             let estimate = estimate_primecount(&n);
@@ -267,7 +294,11 @@ mod tests {
             };
             let delta = uint_to_u128(&delta);
             let estimate_128 = uint_to_u128(&estimate);
+
+            // Some precision loss is acceptable here
+            #[expect(clippy::as_conversions, clippy::cast_precision_loss)]
             let error = (delta as f64 / *pi_x as f64) * 100.0;
+
             assert!(
                 error < 2.2,
                 "10^{exponent}:\t{pi_x} - {estimate_128} = {delta}, err: {error:.2}"
@@ -280,13 +311,13 @@ mod tests {
 
         cpubits! {
             32 => {
-                (limbs[3].0 as u128) << 96
-                | (limbs[2].0 as u128) << 64
-                | (limbs[1].0 as u128) << 32
-                | limbs[0].0 as u128
+                u128::from(limbs[3].0) << 96
+                | u128::from(limbs[2].0) << 64
+                | u128::from(limbs[1].0) << 32
+                | u128::from(limbs[0].0)
             }
             64 => {
-                ((limbs[1].0 as u128) << 64) | limbs[0].0 as u128
+                (u128::from(limbs[1].0) << 64) | u128::from(limbs[0].0)
             }
         }
     }

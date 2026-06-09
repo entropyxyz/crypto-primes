@@ -1,3 +1,10 @@
+#![allow(
+    clippy::unwrap_used,
+    clippy::indexing_slicing,
+    clippy::significant_drop_tightening, // Bugged with Criterion groups.
+    missing_docs,
+)]
+
 use core::num::NonZero;
 
 use criterion::{BatchSize, Criterion, criterion_group, criterion_main};
@@ -51,7 +58,7 @@ fn bench_sieve(c: &mut Criterion) {
     let mut rng = rand::rng();
 
     group.bench_function("(U128) random start", |b| {
-        b.iter(|| random_odd_uint::<U128, _>(&mut rng, 128))
+        b.iter(|| random_odd_uint::<U128, _>(&mut rng, 128));
     });
 
     group.bench_function("(U128) creation", |b| {
@@ -59,7 +66,7 @@ fn bench_sieve(c: &mut Criterion) {
             || random_odd_uint::<U128, _>(&mut rng, 128),
             |start| SmallFactorsSieve::new(start.get(), NonZero::new(128).unwrap(), false),
             BatchSize::SmallInput,
-        )
+        );
     });
 
     // 5 is the average number of pre-sieved samples we need to take before we encounter a prime
@@ -68,11 +75,11 @@ fn bench_sieve(c: &mut Criterion) {
             || make_sieve::<{ nlimbs(128) }, _>(&mut rng),
             |sieve| sieve.take(5).for_each(drop),
             BatchSize::SmallInput,
-        )
+        );
     });
 
     group.bench_function("(U1024) random start", |b| {
-        b.iter(|| random_odd_uint::<U1024, _>(&mut rng, 1024))
+        b.iter(|| random_odd_uint::<U1024, _>(&mut rng, 1024));
     });
 
     group.bench_function("(U1024) creation", |b| {
@@ -80,7 +87,7 @@ fn bench_sieve(c: &mut Criterion) {
             || random_odd_uint::<U1024, _>(&mut rng, 1024),
             |start| SmallFactorsSieve::new(start.get(), NonZero::new(1024).unwrap(), false),
             BatchSize::SmallInput,
-        )
+        );
     });
 
     // 42 is the average number of pre-sieved samples we need to take before we encounter a prime
@@ -89,7 +96,7 @@ fn bench_sieve(c: &mut Criterion) {
             || make_sieve::<{ nlimbs(1024) }, _>(&mut rng),
             |sieve| sieve.take(42).for_each(drop),
             BatchSize::SmallInput,
-        )
+        );
     });
 
     // 42^2 is the average number of pre-sieved samples we need to take
@@ -99,10 +106,10 @@ fn bench_sieve(c: &mut Criterion) {
             || make_sieve::<{ nlimbs(1024) }, _>(&mut rng),
             |sieve| sieve.take(42 * 42).for_each(drop),
             BatchSize::SmallInput,
-        )
+        );
     });
 
-    group.finish()
+    group.finish();
 }
 
 fn bench_miller_rabin(c: &mut Criterion) {
@@ -114,7 +121,7 @@ fn bench_miller_rabin(c: &mut Criterion) {
             || random_odd_uint::<U128, _>(&mut rng, 128),
             MillerRabin::<U128>::new,
             BatchSize::SmallInput,
-        )
+        );
     });
 
     group.bench_function("(U128) random base test (pre-sieved)", |b| {
@@ -122,7 +129,7 @@ fn bench_miller_rabin(c: &mut Criterion) {
             || MillerRabin::new(make_presieved_num::<{ nlimbs(128) }, _>(&mut rng.clone())),
             |mr| mr.test_random_base(&mut rng.clone()),
             BatchSize::SmallInput,
-        )
+        );
     });
 
     group.bench_function("(U1024) creation", |b| {
@@ -130,7 +137,7 @@ fn bench_miller_rabin(c: &mut Criterion) {
             || random_odd_uint::<U1024, _>(&mut rng, 1024),
             MillerRabin::<U1024>::new,
             BatchSize::SmallInput,
-        )
+        );
     });
 
     group.bench_function("(U1024) random base test (pre-sieved)", |b| {
@@ -138,7 +145,7 @@ fn bench_miller_rabin(c: &mut Criterion) {
             || MillerRabin::new(make_presieved_num::<{ nlimbs(1024) }, _>(&mut rng.clone())),
             |mr| mr.test_random_base(&mut rng.clone()),
             BatchSize::SmallInput,
-        )
+        );
     });
 }
 
@@ -151,7 +158,7 @@ fn bench_lucas(c: &mut Criterion) {
             || make_presieved_num::<{ nlimbs(128) }, _>(&mut rng),
             |n| lucas_test(n, SelfridgeBase, LucasCheck::Strong),
             BatchSize::SmallInput,
-        )
+        );
     });
 
     let mut rng = make_rng();
@@ -160,7 +167,7 @@ fn bench_lucas(c: &mut Criterion) {
             || make_presieved_num::<{ nlimbs(1024) }, _>(&mut rng),
             |n| lucas_test(n, SelfridgeBase, LucasCheck::Strong),
             BatchSize::SmallInput,
-        )
+        );
     });
 
     let mut rng = make_rng();
@@ -169,7 +176,7 @@ fn bench_lucas(c: &mut Criterion) {
             || make_presieved_num::<{ nlimbs(1024) }, _>(&mut rng),
             |n| lucas_test(n, AStarBase, LucasCheck::LucasV),
             BatchSize::SmallInput,
-        )
+        );
     });
 
     let mut rng = make_rng();
@@ -178,7 +185,7 @@ fn bench_lucas(c: &mut Criterion) {
             || make_presieved_num::<{ nlimbs(1024) }, _>(&mut rng),
             |n| lucas_test(n, BruteForceBase, LucasCheck::AlmostExtraStrong),
             BatchSize::SmallInput,
-        )
+        );
     });
 
     let mut rng = make_rng();
@@ -187,7 +194,7 @@ fn bench_lucas(c: &mut Criterion) {
             || make_presieved_num::<{ nlimbs(1024) }, _>(&mut rng),
             |n| lucas_test(n, BruteForceBase, LucasCheck::ExtraStrong),
             BatchSize::SmallInput,
-        )
+        );
     });
 
     // A number triggering a slow path through the Lucas test, invoking all the available checks:
@@ -206,7 +213,7 @@ fn bench_lucas(c: &mut Criterion) {
     group.bench_function("(U1024) Selfridge base, strong check, slow path", |b| {
         b.iter(|| {
             lucas_test(slow_path, SelfridgeBase, LucasCheck::Strong);
-        })
+        });
     });
 
     group.finish();
@@ -221,7 +228,7 @@ fn bench_presets(c: &mut Criterion) {
             || random_odd_uint::<U128, _>(&mut rng, 128),
             |num| is_prime(Flavor::Any, num.as_ref()),
             BatchSize::SmallInput,
-        )
+        );
     });
 
     group.bench_function("(U1024) Prime test", |b| {
@@ -229,7 +236,7 @@ fn bench_presets(c: &mut Criterion) {
             || random_odd_uint::<U1024, _>(&mut rng, 1024),
             |num| is_prime(Flavor::Any, num.as_ref()),
             BatchSize::SmallInput,
-        )
+        );
     });
 
     let iters = minimum_mr_iterations(1024, 128).unwrap();
@@ -248,7 +255,7 @@ fn bench_presets(c: &mut Criterion) {
                     )
                 },
                 BatchSize::SmallInput,
-            )
+            );
         },
     );
 
@@ -266,7 +273,7 @@ fn bench_presets(c: &mut Criterion) {
                     )
                 },
                 BatchSize::SmallInput,
-            )
+            );
         },
     );
 
@@ -275,39 +282,39 @@ fn bench_presets(c: &mut Criterion) {
             || random_odd_uint::<U128, _>(&mut rng, 128),
             |num| is_prime(Flavor::Safe, num.as_ref()),
             BatchSize::SmallInput,
-        )
+        );
     });
 
     let mut rng = make_rng();
     group.bench_function("(U128) Random prime", |b| {
-        b.iter(|| random_prime::<U128, _>(&mut rng, Flavor::Any, 128))
+        b.iter(|| random_prime::<U128, _>(&mut rng, Flavor::Any, 128));
     });
 
     let mut rng = make_rng();
     group.bench_function("(U1024) Random prime", |b| {
-        b.iter(|| random_prime::<U1024, _>(&mut rng, Flavor::Any, 1024))
+        b.iter(|| random_prime::<U1024, _>(&mut rng, Flavor::Any, 1024));
     });
 
     let mut rng = make_rng();
     group.bench_function("(U128) Random safe prime", |b| {
-        b.iter(|| random_prime::<U128, _>(&mut rng, Flavor::Safe, 128))
+        b.iter(|| random_prime::<U128, _>(&mut rng, Flavor::Safe, 128));
     });
 
     group.sample_size(20);
     let mut rng = make_rng();
     group.bench_function("(U1024) Random safe prime", |b| {
-        b.iter(|| random_prime::<U1024, _>(&mut rng, Flavor::Safe, 1024))
+        b.iter(|| random_prime::<U1024, _>(&mut rng, Flavor::Safe, 1024));
     });
 
     let mut rng = make_rng();
     group.bench_function("(Boxed128) Random safe prime", |b| {
-        b.iter(|| random_prime::<BoxedUint, _>(&mut rng, Flavor::Safe, 128))
+        b.iter(|| random_prime::<BoxedUint, _>(&mut rng, Flavor::Safe, 128));
     });
 
     group.sample_size(20);
     let mut rng = make_rng();
     group.bench_function("(Boxed1024) Random safe prime", |b| {
-        b.iter(|| random_prime::<BoxedUint, _>(&mut rng, Flavor::Safe, 1024))
+        b.iter(|| random_prime::<BoxedUint, _>(&mut rng, Flavor::Safe, 1024));
     });
 
     group.finish();
@@ -317,19 +324,19 @@ fn bench_presets(c: &mut Criterion) {
 
     let mut rng = make_rng();
     group.bench_function("(U128) Random safe prime", |b| {
-        b.iter(|| random_prime::<U128, _>(&mut rng, Flavor::Safe, 128))
+        b.iter(|| random_prime::<U128, _>(&mut rng, Flavor::Safe, 128));
     });
 
     // The performance should scale with the prime size, not with the Uint size.
     // So we should strive for this test's result to be as close as possible
     // to that of the previous one and as far away as possible from the next one.
     group.bench_function("(U256) Random 128 bit safe prime", |b| {
-        b.iter(|| random_prime::<U256, _>(&mut rng, Flavor::Safe, 128))
+        b.iter(|| random_prime::<U256, _>(&mut rng, Flavor::Safe, 128));
     });
 
     // The upper bound for the previous test.
     group.bench_function("(U256) Random 256 bit safe prime", |b| {
-        b.iter(|| random_prime::<U256, _>(&mut rng, Flavor::Safe, 256))
+        b.iter(|| random_prime::<U256, _>(&mut rng, Flavor::Safe, 256));
     });
 
     group.finish();
@@ -344,7 +351,7 @@ fn bench_multicore_presets(c: &mut Criterion) {
             make_random_rng,
             |mut rng| multicore::random_prime::<U128, _>(&mut rng, Flavor::Any, 128, num_cpus::get()),
             BatchSize::SmallInput,
-        )
+        );
     });
 
     group.bench_function("(U1024) Random prime", |b| {
@@ -352,7 +359,7 @@ fn bench_multicore_presets(c: &mut Criterion) {
             make_random_rng,
             |mut rng| multicore::random_prime::<U1024, _>(&mut rng, Flavor::Any, 1024, num_cpus::get()),
             BatchSize::SmallInput,
-        )
+        );
     });
 
     group.bench_function("(U128) Random safe prime", |b| {
@@ -360,7 +367,7 @@ fn bench_multicore_presets(c: &mut Criterion) {
             make_random_rng,
             |mut rng| multicore::random_prime::<U128, _>(&mut rng, Flavor::Safe, 128, num_cpus::get()),
             BatchSize::SmallInput,
-        )
+        );
     });
 
     group.sample_size(20);
@@ -369,7 +376,7 @@ fn bench_multicore_presets(c: &mut Criterion) {
             make_random_rng,
             |mut rng| multicore::random_prime::<U1024, _>(&mut rng, Flavor::Safe, 1024, num_cpus::get()),
             BatchSize::SmallInput,
-        )
+        );
     });
 
     group.bench_function("(Boxed128) Random safe prime", |b| {
@@ -377,7 +384,7 @@ fn bench_multicore_presets(c: &mut Criterion) {
             make_random_rng,
             |mut rng| multicore::random_prime::<BoxedUint, _>(&mut rng, Flavor::Safe, 128, num_cpus::get()),
             BatchSize::SmallInput,
-        )
+        );
     });
 
     group.sample_size(20);
@@ -386,7 +393,7 @@ fn bench_multicore_presets(c: &mut Criterion) {
             make_random_rng,
             |mut rng| multicore::random_prime::<BoxedUint, _>(&mut rng, Flavor::Safe, 1024, num_cpus::get()),
             BatchSize::SmallInput,
-        )
+        );
     });
 }
 
@@ -395,28 +402,28 @@ fn bench_multicore_presets(_c: &mut Criterion) {}
 
 #[cfg(feature = "tests-gmp")]
 fn bench_gmp(c: &mut Criterion) {
-    let mut group = c.benchmark_group("GMP");
-    let mut rng = rand::rng();
-
     fn random<const L: usize, R: CryptoRng + ?Sized>(rng: &mut R) -> GmpInteger {
         let num = random_odd_uint::<Uint<L>, R>(rng, Uint::<L>::BITS).get();
         GmpInteger::from_digits(num.as_words(), Order::Lsf)
     }
 
+    let mut group = c.benchmark_group("GMP");
+    let mut rng = rand::rng();
+
     group.bench_function("(U128) Random prime", |b| {
         b.iter_batched(
             || random::<{ nlimbs(128) }, _>(&mut rng),
-            |n| n.next_prime(),
+            rug::Integer::next_prime,
             BatchSize::SmallInput,
-        )
+        );
     });
 
     group.bench_function("(U1024) Random prime", |b| {
         b.iter_batched(
             || random::<{ nlimbs(1024) }, _>(&mut rng),
-            |n| n.next_prime(),
+            rug::Integer::next_prime,
             BatchSize::SmallInput,
-        )
+        );
     });
 
     group.finish();
@@ -434,10 +441,10 @@ fn bench_openssl(c: &mut Criterion) {
             || BigNum::new().unwrap(),
             |p| {
                 let mut p = p;
-                p.generate_prime(128, false, None, None).unwrap()
+                p.generate_prime(128, false, None, None).unwrap();
             },
             BatchSize::SmallInput,
-        )
+        );
     });
 
     group.bench_function("(U1024) Random prime", |b| {
@@ -445,10 +452,10 @@ fn bench_openssl(c: &mut Criterion) {
             || BigNum::new().unwrap(),
             |p| {
                 let mut p = p;
-                p.generate_prime(1024, false, None, None).unwrap()
+                p.generate_prime(1024, false, None, None).unwrap();
             },
             BatchSize::SmallInput,
-        )
+        );
     });
 
     group.bench_function("(U128) Random safe prime", |b| {
@@ -456,10 +463,10 @@ fn bench_openssl(c: &mut Criterion) {
             || BigNum::new().unwrap(),
             |p| {
                 let mut p = p;
-                p.generate_prime(128, true, None, None).unwrap()
+                p.generate_prime(128, true, None, None).unwrap();
             },
             BatchSize::SmallInput,
-        )
+        );
     });
 
     group.sample_size(20);
@@ -468,10 +475,10 @@ fn bench_openssl(c: &mut Criterion) {
             || BigNum::new().unwrap(),
             |p| {
                 let mut p = p;
-                p.generate_prime(1024, true, None, None).unwrap()
+                p.generate_prime(1024, true, None, None).unwrap();
             },
             BatchSize::SmallInput,
-        )
+        );
     });
 
     group.finish();
@@ -488,8 +495,9 @@ fn bench_glass_pumpkin(c: &mut Criterion) {
     // The `glass-pumpkin` implementation is doing a different number of M-R checks than this crate.
     // For a fair comparison we make a custom implementation here,
     // using the same number of checks that `glass-pumpkin` does.
+    #[expect(clippy::as_conversions, clippy::cast_sign_loss, clippy::cast_possible_truncation)]
     fn required_checks(bits: u32) -> usize {
-        ((bits as f64).log2() as usize) + 5
+        (f64::from(bits).log2() as usize) + 5
     }
 
     // Mimics the sequence of checks `glass-pumpkin` does to find a prime.
@@ -510,7 +518,7 @@ fn bench_glass_pumpkin(c: &mut Criterion) {
                 match lucas_test(odd_num, AStarBase, LucasCheck::Strong) {
                     Primality::Composite => continue,
                     Primality::Prime => return num,
-                    _ => {}
+                    Primality::ProbablyPrime => {}
                 }
 
                 return num;
@@ -555,7 +563,7 @@ fn bench_glass_pumpkin(c: &mut Criterion) {
                 match lucas_test(odd_half, AStarBase, LucasCheck::Strong) {
                     Primality::Composite => continue,
                     Primality::Prime => return num,
-                    _ => {}
+                    Primality::ProbablyPrime => {}
                 }
 
                 return num;
@@ -567,24 +575,24 @@ fn bench_glass_pumpkin(c: &mut Criterion) {
 
     let mut rng = make_rng();
     group.bench_function("(U1024) Random prime (crypto-primes default)", |b| {
-        b.iter(|| random_prime::<BoxedUint, _>(&mut rng, Flavor::Any, 1024))
+        b.iter(|| random_prime::<BoxedUint, _>(&mut rng, Flavor::Any, 1024));
     });
 
     let mut rng = make_rng();
     group.bench_function("(U1024) Random prime (crypto-primes mimicking glass-pumpkin)", |b| {
-        b.iter(|| prime_like_gp(1024, &mut rng))
+        b.iter(|| prime_like_gp(1024, &mut rng));
     });
 
     let mut rng = make_rng();
     group.bench_function("(U1024) Random prime", |b| {
-        b.iter(|| glass_pumpkin::prime::from_rng(1024, &mut rng))
+        b.iter(|| glass_pumpkin::prime::from_rng(1024, &mut rng));
     });
 
     group.sample_size(20);
 
     let mut rng = make_rng();
     group.bench_function("(U1024) Random safe prime (crypto-primes default)", |b| {
-        b.iter(|| random_prime::<BoxedUint, _>(&mut rng, Flavor::Safe, 1024))
+        b.iter(|| random_prime::<BoxedUint, _>(&mut rng, Flavor::Safe, 1024));
     });
 
     let mut rng = make_rng();
@@ -595,7 +603,7 @@ fn bench_glass_pumpkin(c: &mut Criterion) {
 
     let mut rng = make_rng();
     group.bench_function("(U1024) Random safe prime", |b| {
-        b.iter(|| glass_pumpkin::safe_prime::from_rng(1024, &mut rng))
+        b.iter(|| glass_pumpkin::safe_prime::from_rng(1024, &mut rng));
     });
 }
 

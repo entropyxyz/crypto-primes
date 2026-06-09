@@ -1,18 +1,6 @@
 #![no_std]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 #![doc = include_str!("../README.md")]
-#![deny(unsafe_code)]
-#![warn(
-    clippy::mod_module_files,
-    missing_docs,
-    missing_debug_implementations,
-    missing_copy_implementations,
-    rust_2018_idioms,
-    trivial_casts,
-    trivial_numeric_casts,
-    unused_qualifications,
-    clippy::unwrap_used
-)]
 
 #[cfg(any(feature = "alloc", test))]
 extern crate alloc;

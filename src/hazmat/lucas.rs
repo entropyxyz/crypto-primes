@@ -1,12 +1,8 @@
 //! Lucas primality test.
 use core::num::NonZero;
-use crypto_bigint::{Limb, MontyForm, MontyMultiplier, Odd, Square, UnsignedWithMontyForm, Word};
+use crypto_bigint::{JacobiSymbol, Limb, MontyForm, MontyMultiplier, Odd, Square, UnsignedWithMontyForm, Word};
 
-use super::{
-    Primality,
-    gcd::gcd_vartime,
-    jacobi::{JacobiSymbol, jacobi_symbol_vartime},
-};
+use super::{Primality, gcd::gcd_vartime, jacobi::jacobi_symbol_vartime, utils::first_limb};
 
 /// The maximum number of attempts to find `D` such that `(D/n) == -1`.
 // This is widely believed to be impossible.
@@ -46,17 +42,14 @@ pub struct SelfridgeBase;
 
 impl LucasBase for SelfridgeBase {
     fn generate<T: UnsignedWithMontyForm>(&self, n: &Odd<T>) -> Result<(Word, Word, bool), Primality> {
-        let mut abs_d = 5;
-        let mut d_is_negative = false;
         let n_is_small = n.bits_vartime() < Word::BITS; // if true, `n` fits into one `Word`
-        let small_n = n.as_ref().as_limbs()[0].0;
-        let mut attempts = 0;
-        loop {
-            if attempts >= MAX_ATTEMPTS {
-                panic!("internal error: cannot find (D/n) = -1 for {:?}", n)
-            }
+        let small_n = first_limb(n.as_ref());
 
-            if attempts >= ATTEMPTS_BEFORE_SQRT {
+        for ((abs_d, d_is_negative), attempts) in ((5..).step_by(2))
+            .zip([false, true].iter().copied().cycle())
+            .zip(0..MAX_ATTEMPTS)
+        {
+            if attempts == ATTEMPTS_BEFORE_SQRT {
                 let sqrt_n = n.floor_sqrt_vartime();
                 if &sqrt_n.wrapping_mul(&sqrt_n) == n.as_ref() {
                     return Err(Primality::Composite);
@@ -66,7 +59,15 @@ impl LucasBase for SelfridgeBase {
             let j = jacobi_symbol_vartime(abs_d, d_is_negative, n);
 
             if j == JacobiSymbol::MinusOne {
-                break;
+                // Calculate `q = (1 - d) / 4`.
+                // No remainder from division by 4, by construction of `d`.
+                let (abs_q, q_is_negative) = if d_is_negative {
+                    ((abs_d + 1) / 4, false)
+                } else {
+                    ((abs_d - 1) / 4, true)
+                };
+
+                return Ok((1, abs_q, q_is_negative));
             }
             if j == JacobiSymbol::Zero {
                 // Modification of Method A by Baillie, in an example to OEIS:A217120
@@ -79,21 +80,9 @@ impl LucasBase for SelfridgeBase {
                     return Err(Primality::Composite);
                 }
             }
-
-            attempts += 1;
-            d_is_negative = !d_is_negative;
-            abs_d += 2;
         }
 
-        // Calculate `q = (1 - d) / 4`.
-        // No remainder from division by 4, by construction of `d`.
-        let (abs_q, q_is_negative) = if d_is_negative {
-            ((abs_d + 1) / 4, false)
-        } else {
-            ((abs_d - 1) / 4, true)
-        };
-
-        Ok((1, abs_q, q_is_negative))
+        panic!("internal error: cannot find (D/n) = -1 for {:?}", n);
     }
 }
 
@@ -132,15 +121,8 @@ pub struct BruteForceBase;
 
 impl LucasBase for BruteForceBase {
     fn generate<T: UnsignedWithMontyForm>(&self, n: &Odd<T>) -> Result<(Word, Word, bool), Primality> {
-        let mut p = 3;
-        let mut attempts = 0;
-
-        loop {
-            if attempts >= MAX_ATTEMPTS {
-                panic!("internal error: cannot find (D/n) = -1 for {:?}", n)
-            }
-
-            if attempts >= ATTEMPTS_BEFORE_SQRT {
+        for (p, attempts) in (3..).zip(0..MAX_ATTEMPTS) {
+            if attempts == ATTEMPTS_BEFORE_SQRT {
                 let sqrt_n = n.floor_sqrt_vartime();
                 if &sqrt_n.wrapping_mul(&sqrt_n) == n.as_ref() {
                     return Err(Primality::Composite);
@@ -151,7 +133,7 @@ impl LucasBase for BruteForceBase {
             let j = jacobi_symbol_vartime(p * p - 4, false, n);
 
             if j == JacobiSymbol::MinusOne {
-                break;
+                return Ok((p, 1, false));
             }
             if j == JacobiSymbol::Zero {
                 // D = P^2 - 4 = (P - 2)(P + 2).
@@ -166,12 +148,9 @@ impl LucasBase for BruteForceBase {
                 };
                 return Err(primality);
             }
-
-            attempts += 1;
-            p += 1;
         }
 
-        Ok((p, 1, false))
+        panic!("internal error: cannot find (D/n) = -1 for {:?}", n);
     }
 }
 
@@ -318,6 +297,11 @@ pub enum LucasCheck {
 /// prescribed by the FIPS.186-5 standard[^FIPS].
 ///
 /// [^FIPS]: FIPS-186.5 standard, <https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.186-5.pdf>
+#[expect(
+    clippy::needless_pass_by_value, // TODO: would be a breaking change, has to wait for 0.8
+    clippy::cognitive_complexity,
+    clippy::too_many_lines,
+)]
 pub fn lucas_test<T>(candidate: Odd<T>, base: impl LucasBase, check: LucasCheck) -> Primality
 where
     T: UnsignedWithMontyForm,
@@ -416,7 +400,7 @@ where
     // Starting with k = 0
     let mut vk = two.clone(); // keeps V_k
     let mut uk = <T as UnsignedWithMontyForm>::MontyForm::zero(&params); // keeps U_k
-    let mut qk = one.clone(); // keeps Q^k
+    let mut qk = one; // keeps Q^k
 
     let mut temp = <T as UnsignedWithMontyForm>::MontyForm::zero(&params);
 
@@ -456,7 +440,7 @@ where
             mm.mul_assign(&mut temp, &d_m);
             if !p_is_one {
                 mm.mul_assign(&mut vk, &p);
-            };
+            }
             vk += &temp;
             vk.div_by_2_assign();
 
@@ -560,9 +544,8 @@ where
         uk *= &vk; // now `uk = U_{d * 2^s} = U_{n+1}`
         if uk == zero {
             return Primality::ProbablyPrime;
-        } else {
-            return Primality::Composite;
         }
+        return Primality::Composite;
     }
 
     // Double the index again:
@@ -573,9 +556,8 @@ where
     if check == LucasCheck::LucasV {
         if !lucas_v {
             return Primality::Composite;
-        } else {
-            return Primality::ProbablyPrime;
         }
+        return Primality::ProbablyPrime;
     }
 
     // The only remaining variant at this point.
@@ -643,7 +625,7 @@ mod tests {
         assert_eq!(
             BruteForceBase.generate(&Odd::new(U64::from(5u32)).unwrap()),
             Err(Primality::Prime)
-        )
+        );
     }
 
     #[test]
@@ -727,7 +709,7 @@ mod tests {
     }
 
     fn test_pseudoprimes<T: HasBaseType>(numbers: &[u32], base: T, check: LucasCheck, expected_result: bool) {
-        for num in numbers.iter() {
+        for num in numbers {
             let false_positive = is_pseudoprime::<T>(*num, check);
             let actual_expected_result = if false_positive { true } else { expected_result };
 
@@ -750,7 +732,7 @@ mod tests {
     #[test]
     fn strong_fibonacci_pseudoprimes() {
         // Can't use `test_pseudoprimes()` since `STRONG_FIBONACCI` is `U64`.
-        for num in pseudoprimes::STRONG_FIBONACCI.iter() {
+        for num in pseudoprimes::STRONG_FIBONACCI {
             assert!(lucas_test(Odd::new(*num).unwrap(), SelfridgeBase, LucasCheck::Regular).is_composite());
             assert!(lucas_test(Odd::new(*num).unwrap(), SelfridgeBase, LucasCheck::Strong).is_composite());
             assert!(lucas_test(Odd::new(*num).unwrap(), AStarBase, LucasCheck::LucasV).is_composite());

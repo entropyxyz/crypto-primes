@@ -13,13 +13,15 @@ pub(crate) mod primes;
 #[cfg(test)]
 pub(crate) mod pseudoprimes;
 mod sieve;
+mod utils;
 
 pub use lucas::{AStarBase, BruteForceBase, LucasBase, LucasCheck, SelfridgeBase, lucas_test};
 pub use miller_rabin::{MillerRabin, minimum_mr_iterations};
 pub use primecount::estimate_primecount;
 pub use sieve::{SetBits, SieveFactory, SmallFactorsSieve, SmallFactorsSieveFactory, random_odd_integer};
 
-pub(crate) use sieve::{ConventionsTestResult, conventions_test, equals_primitive, small_factors_test};
+pub(crate) use sieve::{ConventionsTestResult, conventions_test, small_factors_test};
+pub(crate) use utils::{equals_primitive, first_limb};
 
 /// Possible results of various primality tests.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -35,19 +37,19 @@ pub enum Primality {
 
 impl Primality {
     /// Returns `true` if the result indicates that the number is definitely composite.
-    pub fn is_composite(&self) -> bool {
+    #[must_use]
+    pub const fn is_composite(&self) -> bool {
         match self {
-            Self::Prime => false,
-            Self::ProbablyPrime => false,
+            Self::Prime | Self::ProbablyPrime => false,
             Self::Composite => true,
         }
     }
 
     /// Returns `true` if the result indicates that the number is probably or definitely prime.
-    pub fn is_probably_prime(&self) -> bool {
+    #[must_use]
+    pub const fn is_probably_prime(&self) -> bool {
         match self {
-            Self::Prime => true,
-            Self::ProbablyPrime => true,
+            Self::Prime | Self::ProbablyPrime => true,
             Self::Composite => false,
         }
     }

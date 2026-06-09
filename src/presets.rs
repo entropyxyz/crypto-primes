@@ -5,7 +5,7 @@ use crate::{
     generic::sieve_and_find,
     hazmat::{
         AStarBase, ConventionsTestResult, LucasCheck, MillerRabin, Primality, SetBits, SmallFactorsSieveFactory,
-        conventions_test, equals_primitive, lucas_test,
+        conventions_test, equals_primitive, first_limb, lucas_test,
     },
 };
 
@@ -22,9 +22,11 @@ pub enum Flavor {
 ///
 /// The returned prime will have its MSB set.
 ///
-/// Panics if `bit_length` is less than the bit length of the smallest possible prime with the requested `flavor`.
-///
 /// See [`is_prime`] for details about the performed checks.
+///
+/// # Panics
+///
+/// * if `bit_length` is less than the bit length of the smallest possible prime with the requested `flavor`.
 pub fn random_prime<T, R>(rng: &mut R, flavor: Flavor, bit_length: u32) -> T
 where
     T: UnsignedWithMontyForm + RandomBits + RandomMod,
@@ -84,8 +86,7 @@ where
 
     match lucas_test(odd_candidate, AStarBase, LucasCheck::Bpsw21) {
         Primality::Composite => false,
-        Primality::Prime => true,
-        Primality::ProbablyPrime => true,
+        Primality::Prime | Primality::ProbablyPrime => true,
     }
 }
 
@@ -106,7 +107,7 @@ where
     // Safe primes are always of the form 4k + 3 (i.e. n ≡ 3 mod 4)
     // The last two digits of a binary number give you its value modulo 4.
     // Primes p=4n+3 will always end in 11 in binary because p ≡ 3 mod 4.
-    if candidate.as_limbs()[0].0 & 3 != 3 {
+    if first_limb(candidate) & 3 != 3 {
         return false;
     }
 
@@ -434,7 +435,7 @@ mod tests_openssl {
         for _ in 0..100 {
             let p: U128 = random_prime(&mut rng, Flavor::Any, 128);
             let p_bn = to_openssl(&p);
-            assert!(openssl_is_prime(&p_bn, &mut ctx), "OpenSSL reports {p} as composite",);
+            assert!(openssl_is_prime(&p_bn, &mut ctx), "OpenSSL reports {p} as composite");
         }
 
         let mr_iterations = minimum_mr_iterations(U128::BITS, 100).unwrap();

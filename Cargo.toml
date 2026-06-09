@@ -1,6 +1,6 @@
 [package]
 name = "crypto-primes"
-version = "0.7.0"
+version = "0.7.1-dev"
 edition = "2024"
 license = "Apache-2.0 OR MIT"
 description = "Random prime number generation and primality checking library"
@@ -63,3 +63,54 @@ harness = false
 [lints.rust.unexpected_cfgs]
 level = "warn"
 check-cfg = ['cfg(cpubits, values("16", "32", "64"))']
+
+[lints.clippy]
+all = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+nursery = { level = "warn", priority = -1 }
+perf = { level = "warn", priority = -1 }
+suspicious = { level = "warn", priority = -1 }
+correctness = { level = "warn", priority = -1 }
+complexity = { level = "warn", priority = -1 }
+style = { level = "warn", priority = -1 }
+
+# Good idea, but if you implement this change,
+# the compiler complains about a `pub(crate)` item being exported as `pub`.
+redundant_pub_crate = "allow"
+
+# Too restrictive, sometimes there's not need to specifically describe errors.
+missing_errors_doc = "allow"
+
+# Math code. What can you do.
+similar-names = "allow"
+many_single_char_names = "allow"
+
+# We have a lot of those, they are often copy-pasted from prime/pseudoprime databases,
+# and they can't be fixed automatically. Allowing for now.
+unreadable_literal = "allow"
+
+# Unfortunately it does not distinguish between panics that may occur for some inputs
+# and panics that may only occur if there is a bug in the code (expects).
+missing_panics_doc = "allow"
+
+# Select warning from the `restriction` category.
+alloc_instead_of_core = "warn"
+allow_attributes = "warn"
+as_conversions = "warn"
+indexing_slicing = "warn"
+mod_module_files = "warn"
+unwrap_used = "warn"
+
+# Due to https://github.com/rust-lang/rust-clippy/issues/13885, triggers on clippy.toml
+# TODO: can be removed when MSRV and therefore the clippy version in CI is 1.87 or higher.
+literal_string_with_formatting_args = "allow"
+
+[lints.rust]
+rust_2018_idioms = { level = "warn", priority = -1 }
+missing_copy_implementations = { level = "warn" }
+missing_debug_implementations = { level = "warn" }
+trivial_casts = { level = "warn" }
+trivial_numeric_casts = { level = "warn" }
+missing_docs = { level = "warn" }
+unused_qualifications = { level = "warn" }
+unsafe_code = { level = "deny" }
