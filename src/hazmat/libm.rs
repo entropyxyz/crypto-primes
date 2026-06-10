@@ -46,17 +46,12 @@ const LG7: f64 = 1.479819860511658591e-01; /* 3FC2F112 DF3E5244 */
 pub(crate) fn log2(mut x: f64) -> f64 {
     let x1p54 = f64::from_bits(0x4350000000000000); // 0x1p54 === 2 ^ 54
 
-    let mut ui: u64 = x.to_bits();
-    let mut w: f64;
-    let mut hi: f64;
-    let mut val_hi: f64;
-    let mut val_lo: f64;
-    let mut k: i32;
+    let mut ui = x.to_bits();
+    let mut k = 0i32;
 
     #[expect(clippy::as_conversions)] // pre-shifted, so no overflow can occur
     let mut hx = (ui >> 32) as u32;
 
-    k = 0;
     if hx < 0x00100000 || (hx >> 31) > 0 {
         if ui << 1 == 0 {
             return -1. / (x * x); /* log(+-0)=-inf */
@@ -95,24 +90,24 @@ pub(crate) fn log2(mut x: f64) -> f64 {
     let hfsq = 0.5 * f * f;
     let s = f / (2.0 + f);
     let z = s * s;
-    w = z * z;
+    let w = z * z;
     let t1 = w * (LG2 + w * (LG4 + w * LG6));
     let t2 = z * (LG1 + w * (LG3 + w * (LG5 + w * LG7)));
     let r = t2 + t1;
 
     /* hi+lo = f - hfsq + s*(hfsq+R) ~ log(1+f) */
-    hi = f - hfsq;
+    let mut hi = f - hfsq;
     ui = hi.to_bits();
     ui &= u64::MAX << 32;
     hi = f64::from_bits(ui);
     let lo = f - hi - hfsq + s * (hfsq + r);
 
-    val_hi = hi * IVLN2HI;
-    val_lo = (lo + hi) * IVLN2LO + lo * IVLN2HI;
+    let mut val_hi = hi * IVLN2HI;
+    let mut val_lo = (lo + hi) * IVLN2LO + lo * IVLN2HI;
 
     /* spadd(val_hi, val_lo, y), except for not using double_t: */
     let y: f64 = k.into();
-    w = y + val_hi;
+    let w = y + val_hi;
     val_lo += (y - w) + val_hi;
     val_hi = w;
 
