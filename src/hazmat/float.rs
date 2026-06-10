@@ -3,6 +3,8 @@
 use core::f64;
 use crypto_bigint::{Uint, cpubits};
 
+use super::libm::{floor, log2};
+
 /// Calculates `base^exp`.
 const fn pow(mut base: f64, mut exp: u32) -> f64 {
     let mut result = 1.;
@@ -19,31 +21,6 @@ const fn pow(mut base: f64, mut exp: u32) -> f64 {
 /// Calculates `2^exp`.
 pub(crate) const fn two_powi(exp: u32) -> f64 {
     pow(2f64, exp)
-}
-
-/// Calculates `floor(x)`.
-// Taken from `libm` crate.
-const fn floor(x: f64) -> f64 {
-    const TOINT: f64 = 1. / f64::EPSILON;
-
-    let ui = x.to_bits();
-    #[expect(clippy::as_conversions)] // `ui` is pre-shifted so there will be no overflow
-    let e = ((ui >> 52) & 0x7ff) as i32;
-
-    if (e >= 0x3ff + 52) || (x == 0.) {
-        return x;
-    }
-    /* y = int(x) - x, where int(x) is an integer neighbor of x */
-    let y = if (ui >> 63) != 0 {
-        x - TOINT + TOINT - x
-    } else {
-        x + TOINT - TOINT - x
-    };
-    /* special case because of non-nearest rounding modes */
-    if e < 0x3ff {
-        return if (ui >> 63) != 0 { -1. } else { 0. };
-    }
-    if y > 0. { x + y - 1. } else { x + y }
 }
 
 /// Calculates a lower bound approximation of `2^exp` where `0 <= exp <= 1`.
@@ -129,7 +106,7 @@ pub(crate) fn ln<const LIMBS: usize>(x: &Uint<LIMBS>) -> f64 {
         return 0.0;
     }
     let ilog2_x = x.bits_vartime().saturating_sub(1);
-    // if x is small enough to be cast losslessly to an f64 we use the normal 64-bit log2() from `libm`.
+    // if x is small enough to be cast losslessly to an f64 we use the normal 64-bit log2().
     if ilog2_x < f64::MANTISSA_DIGITS {
         let x = {
             cpubits! {
@@ -151,7 +128,7 @@ pub(crate) fn ln<const LIMBS: usize>(x: &Uint<LIMBS>) -> f64 {
 
         // We don't mind losing precision here.
         #[expect(clippy::as_conversions, clippy::cast_precision_loss)]
-        return libm::log2(x as f64) * f64::consts::LN_2;
+        return log2(x as f64) * f64::consts::LN_2;
     }
     // x can be approximated by M*2^shift, where shift is `ilog2(x) - 52` and M is the integer value represented by the
     // top 53 bits of x.
@@ -178,7 +155,7 @@ pub(crate) fn ln<const LIMBS: usize>(x: &Uint<LIMBS>) -> f64 {
 
     // Fraction is now m * 2^52, where m is the top 53 bits of x. Take log2(m) and subtract 52 to scale the result back
     // to the expected range.
-    let fraction = libm::log2(fraction) - f64::from(f64::MANTISSA_DIGITS - 1);
+    let fraction = log2(fraction) - f64::from(f64::MANTISSA_DIGITS - 1);
     let log2_x = f64::from(ilog2_x) + fraction;
     log2_x * f64::consts::LN_2
 }
@@ -192,7 +169,7 @@ mod tests {
     use float_cmp::assert_approx_eq;
     use proptest::prelude::*;
 
-    use super::{floor, floor_sqrt, ln, pow, two_powf_normalized_lower_bound};
+    use super::{floor_sqrt, ln, pow, two_powf_normalized_lower_bound};
 
     #[test]
     fn sqrt_corner_cases() {
@@ -208,13 +185,6 @@ mod tests {
             let test = pow(base_f, exp);
             let reference = base_f.powf(f64::from(exp));
             assert_approx_eq!(f64, test, reference, ulps = 20);
-        }
-
-        #[test]
-        fn fuzzy_floor(x in proptest::num::f64::NORMAL) {
-            let test = floor(x);
-            let reference = x.floor();
-            assert_approx_eq!(f64, test, reference);
         }
 
         #[test]
