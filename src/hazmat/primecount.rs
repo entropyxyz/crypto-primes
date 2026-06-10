@@ -2,6 +2,8 @@ use crate::hazmat::float::ln;
 use core::f64;
 use crypto_bigint::{Concat, NonZero, Uint, cpubits};
 
+use super::libm::round;
+
 /// Estimate the number of primes smaller than x using the asymptotic expansion of `Li(x)` with 4 terms, i.e.:
 ///
 ///   $$\pi(x) \approx \frac{x}{\ln x} \left(1 + \frac{1!}{\ln x} + \frac{2!}{\ln^2 x} + \frac{3!}{\ln^3 x}\right)$$
@@ -122,7 +124,7 @@ where
             // `value` won't be big enough for truncation
             clippy::cast_possible_truncation,
         )]
-        let scaled = libm::round(scaled).max(1.0) as u128;
+        let scaled = round(scaled).max(1.0) as u128;
 
         let denom = Uint::<RHS_LIMBS>::from_u128(scaled);
         NonZero::new(denom).expect("max(1.0) ensures value is at least 1")
