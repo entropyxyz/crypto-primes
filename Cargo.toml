@@ -28,7 +28,7 @@ num-modular = { version = "0.5", features = ["num-bigint"] }
 num-bigint = "0.4"
 num-integer = "0.1"
 proptest = "1"
-num-prime = "0.4.3"
+num-prime = "0.7"
 num_cpus = "1.16"
 float-cmp = "0.10"
 libm = "0.2"
