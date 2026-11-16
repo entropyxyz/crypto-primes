@@ -34,7 +34,7 @@ use super::libm::round;
 ///
 /// ## Theoretical Error
 ///
-/// Assuming RH, we can use Schoenfeld’s bound $|\pi(x) - \text{Li}(x)| < \frac{\sqrt{x} \ln x}{8\pi}$.
+/// Assuming RH, we can use Schoenfeld’s bound $|\pi(x) - \text{Li}(x)| < \frac{\sqrt{x} \ln x}{8\pi}$[^Schoenfeld1976].
 /// This gives a very small theoretical error bound compared to the best known unconditional bounds[^Trudgian2014].
 ///
 /// | Bits | Error Bound (abs) | Error Bound (rel) |
@@ -57,18 +57,14 @@ use super::libm::round;
 /// This corresponds to an extremely small percentage error (significantly less than $10^{-8}$ %).
 ///
 /// It should be noted that while Li(x) is generally smaller than $\pi(x)$ for 'small' x, it is known that the sign of
-/// $\pi(x) - Li(x)$ changes infinitely often. It has been proven that there must be a crossing below $\sim 10^{316}$
-/// ($\sim 2^{1051}$), which is well within the ranges used in this library. Thus, users should be aware that the
+/// $\pi(x) - Li(x)$ changes infinitely often. It has been proven[^Bays2000]
+/// that there must be a crossing below $\sim 10^{316}$ ($\sim 2^{1051}$),
+/// which is well within the ranges used in this library. Thus, users should be aware that the
 /// estimate provided here can be both greater than and smaller than the actual value of $\pi(x)$.
 ///
-/// [^Dusart2010]: P. Dusart, "Estimates of Some Functions Over Primes without R.H.",
-///   [arXiv:1002.0442](https://arxiv.org/pdf/1002.0442) (2010)
-///
-/// [^Dusart2018]: P. Dusart, "Explicit estimates of some functions over primes",
-///   The Ramanujan Journal 45(1) 227-251 (2018),
-///   DOI: [10.1007/s11139-016-9839-4](https://link.springer.com/article/10.1007/s11139-016-9839-4)
-///
-/// [^Wikipedia-pcf]: <https://en.wikipedia.org/wiki/Prime-counting_function>
+/// [^Bays2000]: C. Bays, R.H. Hudson, "A new bound for the smallest x with pi(x) > li(x)",
+///   Mathematics of Computation 69, 1285–1296 (2000),
+///   DOI: [10.1090/S0025-5718-99-01104-7](https://pubs.ams.org/MCOM/2000-69-231/S0025-5718-99-01104-7)
 ///
 /// [^Schoenfeld1976]: L. Schoenfeld, "Sharper Bounds for the Chebyshev Functions θ(x) and ψ(x). II",
 ///   Math. Comp. 30(134) 337-360 (1976),
@@ -236,13 +232,13 @@ mod tests {
             candidate - reference
         };
         assert!(
-            reference.bits_vartime().abs_diff(delta.bits_vartime()) >= min_bit_diff,
+            reference.bit_width_vartime().abs_diff(delta.bit_width_vartime()) >= min_bit_diff,
             concat!(
                 "Estimate not close enough: delta has {} bits, reference has {} bits. ",
                 "Difference should be >= {}\nEstimate: {},\nReference: {}"
             ),
-            delta.bits_vartime(),
-            reference.bits_vartime(),
+            delta.bit_width_vartime(),
+            reference.bit_width_vartime(),
             min_bit_diff,
             candidate,
             reference,

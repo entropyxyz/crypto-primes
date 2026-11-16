@@ -190,7 +190,7 @@ where
         };
 
         // This is easier than making all the methods generic enough to handle these corner cases.
-        let produces_nothing = max_bit_length < start.bits_vartime() || max_bit_length < 2;
+        let produces_nothing = max_bit_length < start.bit_width_vartime() || max_bit_length < 2;
 
         // Add the exception to the produced candidates - the only one that doesn't fit
         // the general pattern of incrementing the base by 2.
@@ -457,7 +457,7 @@ where
     // We don't need to test with factors greater than that.
     let end_bits = max_bit_length.get().div_ceil(2);
 
-    let start_bits = start.bits_vartime();
+    let start_bits = start.bit_width_vartime();
 
     let max_prime_bits = SmallPrime::BITS
         .checked_sub(LAST_SMALL_PRIME.leading_zeros())
@@ -523,7 +523,7 @@ pub(crate) fn small_factors_test<T>(candidate: &Odd<T>) -> Primality
 where
     T: Unsigned,
 {
-    let candidate_bits = NonZeroU32::new(candidate.bits_vartime()).expect("an odd integer is non-zero");
+    let candidate_bits = NonZeroU32::new(candidate.bit_width_vartime()).expect("an odd integer is non-zero");
     let len = trial_primes_num(candidate.as_ref(), candidate_bits);
     for rec in RECIPROCALS.iter().take(len) {
         if candidate.rem_limb_with_reciprocal(rec) == Limb::ZERO {
@@ -614,7 +614,7 @@ mod tests {
             .take(100)
         {
             let num_u64 = u64::from(num);
-            assert!(num_u64.leading_zeros() == 32);
+            assert_eq!(num_u64.leading_zeros(), 32);
 
             let factors_and_powers = factorize64(num_u64);
             let factors = factors_and_powers.into_keys().collect::<Vec<_>>();
@@ -639,7 +639,7 @@ mod tests {
             // For 32-bit targets
             #[expect(clippy::useless_conversion)]
             let num_u64 = u64::from(num.as_words()[0]);
-            assert!(num_u64.leading_zeros() == 32);
+            assert_eq!(num_u64.leading_zeros(), 32);
 
             let factors_and_powers = factorize64(num_u64);
             let factors = factors_and_powers.into_keys().collect::<Vec<_>>();
@@ -721,7 +721,7 @@ mod tests {
             let r = random_odd_integer::<U64, _>(&mut rng, NonZero::new(50).unwrap(), SetBits::Msb)
                 .unwrap()
                 .get();
-            assert_eq!(r.bits(), 50);
+            assert_eq!(r.bit_width_vartime(), 50);
         }
     }
 

@@ -66,7 +66,7 @@ mod tests {
     fn primality_derived_traits() {
         assert_eq!(format!("{:?}", Primality::Prime), "Prime");
         assert_eq!(Primality::Prime, Primality::Prime);
-        assert!(Primality::Prime != Primality::ProbablyPrime);
+        assert_ne!(Primality::Prime, Primality::ProbablyPrime);
         assert_eq!(Primality::Prime.clone(), Primality::Prime);
     }
 

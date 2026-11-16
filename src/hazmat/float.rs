@@ -1,6 +1,5 @@
 //! Const-context floating point functions that are currently not present in `core`.
 
-use core::f64;
 use crypto_bigint::{Uint, cpubits};
 
 use super::libm::{floor, log2};
@@ -26,7 +25,7 @@ pub(crate) const fn two_powi(exp: u32) -> f64 {
 /// Calculates a lower bound approximation of `2^exp` where `0 <= exp <= 1`.
 const fn two_powf_normalized_lower_bound(exp: f64) -> f64 {
     // The coefficients are `ln(2)^n / n!`, where `n` is the power of the corresponding term.
-    const LN_2: f64 = f64::consts::LN_2;
+    const LN_2: f64 = core::f64::consts::LN_2;
     const C1: f64 = LN_2;
     const C2: f64 = LN_2 * LN_2 / 2.;
     const C3: f64 = LN_2 * LN_2 * LN_2 / 6.;
@@ -105,7 +104,7 @@ pub(crate) fn ln<const LIMBS: usize>(x: &Uint<LIMBS>) -> f64 {
     if x <= &Uint::ONE {
         return 0.0;
     }
-    let ilog2_x = x.bits_vartime().saturating_sub(1);
+    let ilog2_x = x.bit_width_vartime().saturating_sub(1);
     // if x is small enough to be cast losslessly to an f64 we use the normal 64-bit log2().
     if ilog2_x < f64::MANTISSA_DIGITS {
         let x = {
@@ -128,7 +127,7 @@ pub(crate) fn ln<const LIMBS: usize>(x: &Uint<LIMBS>) -> f64 {
 
         // We don't mind losing precision here.
         #[expect(clippy::as_conversions, clippy::cast_precision_loss)]
-        return log2(x as f64) * f64::consts::LN_2;
+        return log2(x as f64) * core::f64::consts::LN_2;
     }
     // x can be approximated by M*2^shift, where shift is `ilog2(x) - 52` and M is the integer value represented by the
     // top 53 bits of x.
@@ -157,7 +156,7 @@ pub(crate) fn ln<const LIMBS: usize>(x: &Uint<LIMBS>) -> f64 {
     // to the expected range.
     let fraction = log2(fraction) - f64::from(f64::MANTISSA_DIGITS - 1);
     let log2_x = f64::from(ilog2_x) + fraction;
-    log2_x * f64::consts::LN_2
+    log2_x * core::f64::consts::LN_2
 }
 
 #[cfg(test)]

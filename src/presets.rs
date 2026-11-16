@@ -235,7 +235,7 @@ mod tests {
 
         for bit_length in (28..=128).step_by(10) {
             let p: U128 = random_prime(&mut rng, Flavor::Any, bit_length);
-            assert!(p.bits_vartime() == bit_length);
+            assert_eq!(p.bit_width_vartime(), bit_length);
             assert!(is_prime(Flavor::Any, &p));
             assert!(fips_is_prime(Flavor::Any, &p));
             assert!(fips_is_prime_trial_division(Flavor::Any, &p));
@@ -248,8 +248,8 @@ mod tests {
 
         for bit_length in (28..=128).step_by(10) {
             let p: BoxedUint = random_prime(&mut rng, Flavor::Any, bit_length);
-            assert!(p.bits_vartime() == bit_length);
-            assert!(p.to_words().len() == nlimbs(bit_length));
+            assert_eq!(p.bit_width_vartime(), bit_length);
+            assert_eq!(p.to_words().len(), nlimbs(bit_length));
             assert!(is_prime(Flavor::Any, &p));
             assert!(fips_is_prime(Flavor::Any, &p));
             assert!(fips_is_prime_trial_division(Flavor::Any, &p));
@@ -262,7 +262,7 @@ mod tests {
 
         for bit_length in (28..=128).step_by(10) {
             let p: U128 = random_prime(&mut rng, Flavor::Safe, bit_length);
-            assert!(p.bits_vartime() == bit_length);
+            assert_eq!(p.bit_width_vartime(), bit_length);
             assert!(is_prime(Flavor::Safe, &p));
             assert!(fips_is_prime(Flavor::Safe, &p));
             assert!(fips_is_prime_trial_division(Flavor::Safe, &p));
@@ -275,8 +275,8 @@ mod tests {
 
         for bit_length in (28..=189).step_by(10) {
             let p: BoxedUint = random_prime(&mut rng, Flavor::Safe, bit_length);
-            assert!(p.bits_vartime() == bit_length);
-            assert!(p.to_words().len() == nlimbs(bit_length));
+            assert_eq!(p.bit_width_vartime(), bit_length);
+            assert_eq!(p.to_words().len(), nlimbs(bit_length));
             assert!(is_prime(Flavor::Safe, &p));
             assert!(fips_is_prime(Flavor::Safe, &p));
             assert!(fips_is_prime_trial_division(Flavor::Safe, &p));
