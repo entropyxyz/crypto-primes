@@ -17,7 +17,6 @@ rayon = { version = "1", optional = true, default-features = false }
 # Optional dependencies used in tests and benchmarks
 openssl = { version = "0.10.39", optional = true, features = ["vendored"] }
 rug = { version = "1.26", optional = true, default-features = false, features = ["integer"] }
-glass_pumpkin = { version = "=2.0.0-rc0", optional = true }
 
 [dev-dependencies]
 rand = { version = "0.10", features = ["chacha"] }
@@ -36,9 +35,8 @@ libm = "0.2"
 [features]
 tests-openssl = ["openssl"]
 tests-gmp = ["rug/std"]
-tests-glass-pumpkin = ["glass_pumpkin"]
 tests-exhaustive = []
-tests-all = ["tests-openssl", "tests-gmp", "tests-exhaustive", "tests-glass-pumpkin"]
+tests-all = ["tests-openssl", "tests-gmp", "tests-exhaustive"]
 multicore = ["rayon"]
 alloc = []
 default = ["alloc"]
