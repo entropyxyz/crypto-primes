@@ -73,7 +73,7 @@ where
     let a_limb = Limb::from(abs_a);
 
     // Normalize input: at the end we want `a < p`, `p` odd, and both fitting into a `Word`.
-    let (result, a, p): (JacobiSymbol, Word, Word) = if p_long.bits_vartime() <= Limb::BITS {
+    let (result, a, p): (JacobiSymbol, Word, Word) = if p_long.bit_width_vartime() <= Limb::BITS {
         let a = a_limb.0;
         let p = first_limb(p_long.as_ref());
         (result, a % p, p)
@@ -134,7 +134,7 @@ mod tests {
     fn jacobi_symbol_derived_traits() {
         assert_eq!(format!("{:?}", JacobiSymbol::One), "One");
         assert_eq!(JacobiSymbol::One, JacobiSymbol::One);
-        assert!(JacobiSymbol::One != JacobiSymbol::MinusOne);
+        assert_ne!(JacobiSymbol::One, JacobiSymbol::MinusOne);
         assert_eq!(JacobiSymbol::One.clone(), JacobiSymbol::One);
     }
 

@@ -42,7 +42,7 @@ pub struct SelfridgeBase;
 
 impl LucasBase for SelfridgeBase {
     fn generate<T: UnsignedWithMontyForm>(&self, n: &Odd<T>) -> Result<(Word, Word, bool), Primality> {
-        let n_is_small = n.bits_vartime() < Word::BITS; // if true, `n` fits into one `Word`
+        let n_is_small = n.bit_width_vartime() < Word::BITS; // if true, `n` fits into one `Word`
         let small_n = first_limb(n.as_ref());
 
         for ((abs_d, d_is_negative), attempts) in ((5..).step_by(2))
@@ -82,7 +82,7 @@ impl LucasBase for SelfridgeBase {
             }
         }
 
-        panic!("internal error: cannot find (D/n) = -1 for {:?}", n);
+        panic!("internal error: cannot find (D/n) = -1 for {n:?}");
     }
 }
 
@@ -150,7 +150,7 @@ impl LucasBase for BruteForceBase {
             }
         }
 
-        panic!("internal error: cannot find (D/n) = -1 for {:?}", n);
+        panic!("internal error: cannot find (D/n) = -1 for {n:?}");
     }
 }
 
@@ -410,7 +410,7 @@ where
     let abs_d = <T as UnsignedWithMontyForm>::MontyForm::new(to_integer(abs_d), &params);
     let d_m = if d_is_negative { -abs_d } else { abs_d };
 
-    for i in (0..d.bits_vartime()).rev() {
+    for i in (0..d.bit_width_vartime()).rev() {
         // k' = 2k
         // U_{k'} = U_k V_k;
         // V_{k'} = V_k^2 - 2 Q_k
@@ -561,7 +561,7 @@ where
     }
 
     // The only remaining variant at this point.
-    debug_assert!(check == LucasCheck::Bpsw21);
+    debug_assert_eq!(check, LucasCheck::Bpsw21);
 
     // In case of BPSW'21, even if the Lucas-V check is passed we have another check to apply
     if !lucas_v {

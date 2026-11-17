@@ -8,5 +8,5 @@ pub(crate) fn equals_primitive<T>(num: &T, primitive: Word) -> bool
 where
     T: Unsigned,
 {
-    num.bits_vartime() <= Word::BITS && first_limb(num) == primitive
+    num.bit_width_vartime() <= Word::BITS && first_limb(num) == primitive
 }

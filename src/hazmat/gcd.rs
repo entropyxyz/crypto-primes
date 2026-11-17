@@ -18,7 +18,7 @@ where
     }
 
     // Normalize input: the resulting (a, b) are both small, a >= b, and b != 0.
-    let (a, b): (Word, Word) = if n.bits() > Word::BITS {
+    let (a, b): (Word, Word) = if n.bit_width_vartime() > Word::BITS {
         // `m` is non-zero, so we can unwrap.
         let r = n.rem_limb(CTNonZero::new(Limb::from(m)).expect("divisor should be non-zero here"));
         (m, r.0)

@@ -110,7 +110,7 @@ where
     let factory = SmallFactorsSieveFactory::new(flavor, bit_length, SetBits::Msb)
         .unwrap_or_else(|err| panic!("Error creating the sieve: {err}"));
     sieve_and_find(rng, factory, |_rng, candidate| is_prime(flavor, candidate), threadcount)
-        .unwrap_or_else(|err| panic!("Error generating random candidates: {}", err))
+        .unwrap_or_else(|err| panic!("Error generating random candidates: {err}"))
         .expect("will produce a result eventually")
 }
 
@@ -128,7 +128,7 @@ mod tests {
         let mut rng = ChaCha12Rng::from_rng(&mut rand::rng());
         for bit_length in (28..=128).step_by(10) {
             let p: U128 = random_prime(&mut rng, Flavor::Any, bit_length, 4);
-            assert!(p.bits_vartime() == bit_length);
+            assert_eq!(p.bit_width_vartime(), bit_length);
             assert!(is_prime(Flavor::Any, &p));
         }
     }
@@ -138,8 +138,8 @@ mod tests {
         let mut rng = ChaCha12Rng::from_rng(&mut rand::rng());
         for bit_length in (28..=128).step_by(10) {
             let p: BoxedUint = random_prime(&mut rng, Flavor::Any, bit_length, 2);
-            assert!(p.bits_vartime() == bit_length);
-            assert!(p.to_words().len() == nlimbs(bit_length));
+            assert_eq!(p.bit_width_vartime(), bit_length);
+            assert_eq!(p.to_words().len(), nlimbs(bit_length));
             assert!(is_prime(Flavor::Any, &p));
         }
     }
@@ -149,7 +149,7 @@ mod tests {
         let mut rng = ChaCha12Rng::from_rng(&mut rand::rng());
         for bit_length in (28..=128).step_by(10) {
             let p: U128 = random_prime(&mut ChaCha12Rng::from_rng(&mut rng), Flavor::Safe, bit_length, 8);
-            assert!(p.bits_vartime() == bit_length);
+            assert_eq!(p.bit_width_vartime(), bit_length);
             assert!(is_prime(Flavor::Safe, &p));
         }
     }
@@ -159,8 +159,8 @@ mod tests {
         let mut rng = ChaCha12Rng::from_rng(&mut rand::rng());
         for bit_length in (28..=128).step_by(10) {
             let p: BoxedUint = random_prime(&mut rng, Flavor::Safe, bit_length, 4);
-            assert!(p.bits_vartime() == bit_length);
-            assert!(p.to_words().len() == nlimbs(bit_length));
+            assert_eq!(p.bit_width_vartime(), bit_length);
+            assert_eq!(p.to_words().len(), nlimbs(bit_length));
             assert!(is_prime(Flavor::Safe, &p));
         }
     }

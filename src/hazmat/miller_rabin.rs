@@ -65,7 +65,7 @@ impl<T: UnsignedWithMontyForm + RandomMod> MillerRabin<T> {
         };
 
         Self {
-            bits: candidate.bits_vartime(),
+            bits: candidate.bit_width_vartime(),
             candidate: candidate.get(),
             montgomery_params: params,
             one: m_one,
@@ -270,10 +270,10 @@ mod tests {
         let mut rng = rand::rng();
 
         let mr = MillerRabin::new(Odd::new(U64::from(1u32)).unwrap());
-        assert!(mr.test_random_base(&mut rng) == Primality::Composite);
+        assert_eq!(mr.test_random_base(&mut rng), Primality::Composite);
 
         let mr = MillerRabin::new(Odd::new(U64::from(3u32)).unwrap());
-        assert!(mr.test_random_base(&mut rng) == Primality::Prime);
+        assert_eq!(mr.test_random_base(&mut rng), Primality::Prime);
     }
 
     fn is_spsp(num: u32) -> bool {
